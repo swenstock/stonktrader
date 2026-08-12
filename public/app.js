@@ -265,18 +265,23 @@ function renderSatelliteCategories() {
         .map((lvl) => {
           const isPending = lvl.status === "pending";
           const isLocked = lvl.status === "resolved";
-          const disabled = lvl.joined || isPending || isLocked;
           const chipState = lvl.joined ? "in" : isPending ? "pending" : isLocked ? "locked" : "";
           const sub = lvl.joined
             ? "You're in"
             : isPending
-              ? `Opens ${new Date(lvl.opensAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+              ? `<span class="countdown-text" data-ends="${lvl.opensAt}">${fmtCountdown(lvl.opensAt)}</span>`
               : isLocked
                 ? "Locked"
                 : `${lvl.entrantCount} in`;
-          return `<button class="stake-chip ${chipState}" ${disabled ? "disabled" : ""} data-id="${lvl.id}">
+          // Pending tiers aren't disabled — tapping one opens the auto-fill
+          // allocation prompt scoped to that exact tier, since you can't
+          // enter directly yet but you CAN queue an allocation for it.
+          const clickAction = lvl.joined || isLocked ? "" : isPending ? "pending-alloc-chip" : "join-sat-row-btn";
+          const disabled = lvl.joined || isLocked;
+          return `<button class="stake-chip ${chipState} ${clickAction}" ${disabled ? "disabled" : ""} data-id="${lvl.id}" data-tier="${lvl.tierId}" data-level="${lvl.priceLevel}">
             <span class="stake-fee">${lvl.entryFee.toLocaleString()} STONK</span>
             <span class="stake-sub">${sub}</span>
+            ${isPending ? `<span class="stake-alloc-hint">⚙️ Set up allocation</span>` : ""}
           </button>`;
         })
         .join("");
@@ -287,8 +292,11 @@ function renderSatelliteCategories() {
     })
     .join("");
 
-  el.querySelectorAll(".stake-chip:not([disabled])").forEach((btn) => {
+  el.querySelectorAll(".join-sat-row-btn").forEach((btn) => {
     btn.addEventListener("click", () => joinSatellite(btn.dataset.id));
+  });
+  el.querySelectorAll(".pending-alloc-chip").forEach((btn) => {
+    btn.addEventListener("click", () => openAllocationModalForTier("satellite", btn.dataset.tier, btn.dataset.level));
   });
 }
 
@@ -991,14 +999,22 @@ function updateAllocTotal(containerId = "allocationRows", totalId = "allocTotalP
   document.getElementById(totalId).textContent = total.toFixed(1);
 }
 
-document.getElementById("openAllocationModalBtn").addEventListener("click", () => {
+function openAllocationModal(presetValue) {
   populateAllocTargetSelect();
+  if (presetValue) document.getElementById("allocTargetSelect").value = presetValue;
   document.getElementById("allocationRows").innerHTML = "";
   allocRowCount = 0;
   addAllocRow();
   document.getElementById("allocationMsg").textContent = "";
   document.getElementById("allocationModal").style.display = "flex";
-});
+}
+
+function openAllocationModalForTier(targetType, tierId, priceLevel) {
+  const value = targetType === "contest" ? "contest::" : `satellite:${tierId}:${priceLevel}`;
+  openAllocationModal(value);
+}
+
+document.getElementById("openAllocationModalBtn").addEventListener("click", () => openAllocationModal());
 document.getElementById("addAllocRowBtn").addEventListener("click", () => addAllocRow());
 document.getElementById("allocationModalClose").addEventListener("click", closeAllocationModal);
 document.getElementById("allocationModalBackdrop").addEventListener("click", closeAllocationModal);

@@ -110,17 +110,11 @@ router.get("/", (req, res) => {
       .get(tier.categoryId, tier.priceLevel);
     if (open) return serializeSatellite(open, myAccountId);
 
-    const lastResolved = db
-      .prepare("SELECT * FROM satellites WHERE tier_id = ? AND price_level = ? ORDER BY id DESC LIMIT 1")
-      .get(tier.categoryId, tier.priceLevel);
-    if (lastResolved) {
-      const opensAtDate = new Date(lastResolved.opens_at);
-      const isSameOccurrence =
-        tier.cadence === "weekly"
-          ? currentWeekWindow(now).weekStart.getTime() === opensAtDate.getTime()
-          : opensAtDate.toDateString() === now.toDateString();
-      if (isSameOccurrence) return serializeSatellite(lastResolved, myAccountId);
-    }
+    // No open instance right now — always show the NEXT occurrence with a
+    // countdown rather than a dead-end "Locked" display for one that
+    // already resolved today. Full results for resolved sessions remain
+    // available in the history list below, this is just what the lobby
+    // chip shows.
     return serializePendingTier(tier, now);
   });
 
