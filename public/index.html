@@ -53,6 +53,7 @@
       <button class="nav-tab" data-view="mycontests">My Contests</button>
       <button class="nav-tab" data-view="leaderboards">Leaderboards</button>
       <button class="nav-tab" data-view="howitworks">How It Works</button>
+      <button class="nav-tab" data-view="rules">Rules</button>
       <button class="nav-tab" data-view="referrals">Referrals</button>
     </div>
     <div class="nav-right">
@@ -72,7 +73,7 @@
       <div class="lobby-hero-text">
         <div class="eyebrow">STONK BROKER TERMINAL</div>
         <h1 class="pixel-headline">CAN'T BUY<br>THE BROKER?<br><span class="accent">EARN THE<br>BROKER.</span></h1>
-        <p>$100,000 in paper money. Real stocks. Real prices. Real competition. Your wallet doesn't decide if you become a Broker. Your picks do.</p>
+        <p>Satellites start around <b class="hero-price-callout">$5</b>. Win a Satellite → get a free ticket into the Main Event → win the Main Event → take home a real Stonk Broker. $100,000 in paper money to prove you can pick stocks.</p>
         <div class="live-stats-bar" id="liveStatsBar"></div>
       </div>
       <div class="broker-lineup">
@@ -280,6 +281,37 @@
     </div>
   </div>
 
+  <!-- ===== RULES ===== -->
+  <div id="rulesView" class="view" style="display:none;">
+    <div class="section-head">
+      <h2>Rules</h2>
+      <p>This is a stock-picking contest, not a casino. We build the rules to reward it.</p>
+    </div>
+    <div class="howitworks-page">
+      <div class="rules-philosophy">
+        <p><b>The whole point of this game is proving you can pick stocks — not proving you can hit "max buy" on one ticker thirty seconds before the bell and hope.</b> A portfolio that goes all-in on a single YOLO trade right before a session locks isn't skill, it's a coin flip wearing a trading costume. The rules below exist to keep the contest about picking, sizing, and managing a real portfolio — the same instincts that matter in real markets.</p>
+      </div>
+
+      <div class="hiw-block rule-block">
+        <div class="hiw-n">RULE 01</div>
+        <h3>$2B minimum market cap</h3>
+        <p>Every tradable symbol on the platform is a large, established company. No micro-caps, no penny stocks, no thinly-traded names that move 40% on a rumor. If a stock isn't listed here, it's below the bar — that's intentional.</p>
+      </div>
+
+      <div class="hiw-block rule-block">
+        <div class="hiw-n">RULE 02</div>
+        <h3>Max 5% of your portfolio per position — at entry</h3>
+        <p>Any single buy that would push a position's cost basis over 5% of your portfolio's current value gets blocked. This applies only to new purchases — if a position you already own grows past 5% because the stock ran up, that's completely fine and not restricted. The rule stops you from betting the whole portfolio on one name; it doesn't punish you for being right.</p>
+      </div>
+
+      <div class="hiw-block rule-block">
+        <div class="hiw-n">WHY</div>
+        <h3>No YOLO trades near the bell</h3>
+        <p>Dumping your entire portfolio into one position in the last few minutes before a contest locks isn't trading skill, it's a lottery ticket — and it makes every leaderboard about luck instead of picks. Sizing limits keep every entrant's result reflecting a real, diversified set of decisions made across the whole session, not one desperate swing at the buzzer.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== REFERRALS ===== -->
   <div id="referralsView" class="view" style="display:none;">
     <div class="section-head">
@@ -297,7 +329,7 @@
           <div class="ps-box"><span>Traders referred</span><b class="mono" id="referredCount">0</b></div>
           <div class="ps-box"><span>Total earned</span><b class="mono" id="totalEarned">0 STONK</b></div>
         </div>
-        <p class="referral-explainer">Share your link or code (<span class="mono" id="referralCodeInline">—</span>) with new traders. When a contest they play resolves with a real prize pool, you get a share of the surplus — credited straight to your STONK balance, no cap, no expiry.</p>
+        <p class="referral-explainer">Share your link or code (<span class="mono" id="referralCodeInline">—</span>) with new traders. You earn a flat <b style="color:var(--gold);">5% of every entry fee</b> a referred trader pays — any Satellite, any Main Event, guaranteed, credited straight to your STONK balance the moment that contest resolves. No cap, no expiry, not contingent on them winning anything.</p>
       </div>
       <div class="panel">
         <h3>Earnings history</h3>

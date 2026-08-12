@@ -219,6 +219,25 @@ satellites total:
 All twelve use the identical rake + ladder algorithm as the Main Event —
 see `server/satelliteScheduler.js`.
 
+## Trading rules — sensible sizing, not gambling
+
+Two rules enforced server-side on every BUY order (`server/routes/portfolios.js`),
+explained on the in-app Rules page:
+
+1. **$2B minimum market cap** — every tradable symbol already exceeds this
+   (see `MIN_MARKET_CAP` in `server/dataProvider.js`), but the check is real
+   and will reject anything added later that falls below it.
+2. **Max 5% of portfolio per position, at entry only** — a BUY that would
+   push a symbol's cost basis over 5% of the portfolio's current value gets
+   rejected with the exact dollar room still available. Positions that grow
+   past 5% purely from price appreciation are never touched — the rule only
+   evaluates new purchase cost, never unrealized market value. SELL orders
+   are never restricted.
+
+Verified with a dedicated test: buying exactly at the 5% boundary succeeds,
+one share over it is rejected, and appreciation-driven growth past 5% is
+confirmed untouched by the rule.
+
 ## Suggested next steps
 
 1. `npm install && npm start` locally, create a couple of test accounts, confirm

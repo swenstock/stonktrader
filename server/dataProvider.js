@@ -10,24 +10,26 @@
 // (Alpaca's free Market Data API covers US equities well; foreign markets need
 // a separate vendor per exchange — see the "Foreign markets" note in README.md).
 
+const MIN_MARKET_CAP = 2_000_000_000; // $2B — no penny-stock/micro-cap YOLO plays
+
 const SYMBOLS = {
   // US — NASDAQ / NYSE
-  AAPL: { name: "Apple Inc.", exchange: "NASDAQ", currency: "USD", base: 231.4 },
-  MSFT: { name: "Microsoft Corp.", exchange: "NASDAQ", currency: "USD", base: 512.9 },
-  NVDA: { name: "NVIDIA Corp.", exchange: "NASDAQ", currency: "USD", base: 220.3 },
-  TSLA: { name: "Tesla Inc.", exchange: "NASDAQ", currency: "USD", base: 332.9 },
-  AMZN: { name: "Amazon.com Inc.", exchange: "NASDAQ", currency: "USD", base: 272.5 },
-  GOOGL: { name: "Alphabet Inc.", exchange: "NASDAQ", currency: "USD", base: 345.1 },
-  HOOD: { name: "Robinhood Markets", exchange: "NASDAQ", currency: "USD", base: 61.85 },
-  COIN: { name: "Coinbase Global", exchange: "NASDAQ", currency: "USD", base: 288.55 },
-  JPM: { name: "JPMorgan Chase", exchange: "NYSE", currency: "USD", base: 362.3 },
-  WMT: { name: "Walmart Inc.", exchange: "NYSE", currency: "USD", base: 113.1 },
+  AAPL: { name: "Apple Inc.", exchange: "NASDAQ", currency: "USD", base: 231.4, marketCap: 3_600_000_000_000 },
+  MSFT: { name: "Microsoft Corp.", exchange: "NASDAQ", currency: "USD", base: 512.9, marketCap: 3_800_000_000_000 },
+  NVDA: { name: "NVIDIA Corp.", exchange: "NASDAQ", currency: "USD", base: 220.3, marketCap: 5_400_000_000_000 },
+  TSLA: { name: "Tesla Inc.", exchange: "NASDAQ", currency: "USD", base: 332.9, marketCap: 1_050_000_000_000 },
+  AMZN: { name: "Amazon.com Inc.", exchange: "NASDAQ", currency: "USD", base: 272.5, marketCap: 2_900_000_000_000 },
+  GOOGL: { name: "Alphabet Inc.", exchange: "NASDAQ", currency: "USD", base: 345.1, marketCap: 2_100_000_000_000 },
+  HOOD: { name: "Robinhood Markets", exchange: "NASDAQ", currency: "USD", base: 61.85, marketCap: 90_000_000_000 },
+  COIN: { name: "Coinbase Global", exchange: "NASDAQ", currency: "USD", base: 288.55, marketCap: 68_000_000_000 },
+  JPM: { name: "JPMorgan Chase", exchange: "NYSE", currency: "USD", base: 362.3, marketCap: 780_000_000_000 },
+  WMT: { name: "Walmart Inc.", exchange: "NYSE", currency: "USD", base: 113.1, marketCap: 780_000_000_000 },
   // Foreign markets — one representative ticker per exchange, extend as needed
-  "HSBA.L": { name: "HSBC Holdings", exchange: "LSE", currency: "GBP", base: 7.12 },
-  "SHOP.TO": { name: "Shopify Inc.", exchange: "TSX", currency: "CAD", base: 118.4 },
-  "BHP.AX": { name: "BHP Group", exchange: "ASX", currency: "AUD", base: 43.2 },
-  "7203.T": { name: "Toyota Motor Corp.", exchange: "TSE", currency: "JPY", base: 2890 },
-  "SAP.DE": { name: "SAP SE", exchange: "XETRA", currency: "EUR", base: 231.8 },
+  "HSBA.L": { name: "HSBC Holdings", exchange: "LSE", currency: "GBP", base: 7.12, marketCap: 175_000_000_000 },
+  "SHOP.TO": { name: "Shopify Inc.", exchange: "TSX", currency: "CAD", base: 118.4, marketCap: 150_000_000_000 },
+  "BHP.AX": { name: "BHP Group", exchange: "ASX", currency: "AUD", base: 43.2, marketCap: 135_000_000_000 },
+  "7203.T": { name: "Toyota Motor Corp.", exchange: "TSE", currency: "JPY", base: 2890, marketCap: 250_000_000_000 },
+  "SAP.DE": { name: "SAP SE", exchange: "XETRA", currency: "EUR", base: 231.8, marketCap: 260_000_000_000 },
 };
 
 const state = {};
@@ -66,6 +68,7 @@ function getQuotes(symbols) {
         currency: s.currency,
         price: Number(s.price.toFixed(2)),
         changePct: Number(changePct.toFixed(2)),
+        marketCap: s.marketCap,
       };
     })
     .filter(Boolean);
@@ -99,4 +102,4 @@ function getQuote(symbol) {
  * a lot by exchange.
  */
 
-module.exports = { listSymbols, getQuotes, getQuote, SYMBOLS };
+module.exports = { listSymbols, getQuotes, getQuote, SYMBOLS, MIN_MARKET_CAP };

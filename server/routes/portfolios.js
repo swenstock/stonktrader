@@ -2,7 +2,10 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 const requireAuth = require("../middleware/requireAuth");
-const { getQuote, getQuotes } = require("../dataProvider");
+const { getQuote, getQuotes, MIN_MARKET_CAP } = require("../dataProvider");
+const { totalValueForPortfolio } = require("../portfolioValue");
+
+const MAX_INITIAL_POSITION_PCT = 0.05; // 5% of portfolio value, checked at time of BUY only
 
 // Finds which contest or satellite a portfolio belongs to, for display
 // context ("Morning Session — Aug 12", still open vs resolved, etc).
@@ -128,6 +131,30 @@ router.post("/:id/trades", requireAuth, (req, res) => {
 
   const portfolioId = portfolio.id;
   const cost = quote.price * quantity;
+
+  // Trading rules — sensible position sizing, not gambling. Only apply to
+  // BUY orders; selling to reduce risk is never restricted.
+  if (side === "buy") {
+    if (quote.marketCap != null && quote.marketCap < MIN_MARKET_CAP) {
+      return res.status(400).json({
+        error: `${symbol} is below the minimum market cap for this platform ($${(MIN_MARKET_CAP / 1e9).toFixed(0)}B) — no micro-cap plays.`,
+      });
+    }
+
+    const existingPosition = db
+      .prepare("SELECT * FROM positions WHERE portfolio_id = ? AND symbol = ?")
+      .get(portfolioId, symbol);
+    const existingCostBasis = existingPosition ? existingPosition.avg_cost * existingPosition.quantity : 0;
+    const portfolioValue = totalValueForPortfolio(portfolioId);
+    const maxAllowed = portfolioValue * MAX_INITIAL_POSITION_PCT;
+
+    if (existingCostBasis + cost > maxAllowed) {
+      const room = Math.max(0, maxAllowed - existingCostBasis);
+      return res.status(400).json({
+        error: `This would put more than 5% of your portfolio into ${symbol} at entry. Max additional buy right now: ~$${room.toFixed(2)}. (A position CAN grow past 5% from price gains — this limit only applies to new buys.)`,
+      });
+    }
+  }
 
   try {
     db.exec("BEGIN");

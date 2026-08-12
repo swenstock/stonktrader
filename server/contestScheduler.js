@@ -46,6 +46,19 @@ function resolveContest(contest) {
   const entries = db.prepare("SELECT * FROM contest_entries WHERE contest_id = ?").all(contest.id);
 
   if (entries.length < CONFIG.minEntrants) {
+    // Below the entrant floor — refund everyone, but their trading
+    // performance still gets permanently recorded (prize_type='none'),
+    // same as any other contest. A voided contest still counts toward
+    // lifetime stats; only the prize money is what didn't happen.
+    const portfolioIds = entries.map((e) => e.portfolio_id);
+    const valueMap = totalValueForPortfolios(portfolioIds);
+    const ranked = entries
+      .map((e) => ({
+        accountId: e.account_id,
+        pl: (valueMap[e.portfolio_id] ?? 100000) - 100000,
+      }))
+      .sort((a, b) => b.pl - a.pl);
+
     db.exec("BEGIN");
     for (const e of entries) {
       if (!e.paid_with_ticket_id) {
@@ -60,6 +73,11 @@ function resolveContest(contest) {
       }
       db.prepare("UPDATE contest_entries SET escrow_status = 'refunded' WHERE id = ?").run(e.id);
     }
+    ranked.forEach((r, i) => {
+      db.prepare(
+        "INSERT INTO contest_results (contest_id, account_id, rank, pl, prize_type, prize_amount) VALUES (?, ?, ?, ?, 'none', NULL)"
+      ).run(contest.id, r.accountId, i + 1, r.pl);
+    });
     db.prepare(
       "UPDATE contests SET status = 'resolved', resolved_at = ?, pool_gross = 0 WHERE id = ?"
     ).run(new Date().toISOString(), contest.id);

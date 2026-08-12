@@ -309,6 +309,24 @@ async function joinSatellite(satelliteId) {
   }
 }
 
+let lastKnownBrokersLocked = null;
+
+function triggerBrokerUnlock(newCount) {
+  const overlay = document.createElement("div");
+  overlay.className = "unlock-overlay";
+  overlay.innerHTML = `
+    <div class="unlock-flash"></div>
+    <div class="unlock-banner">
+      <div class="unlock-siren">🚨</div>
+      <div class="unlock-title">BROKER #${newCount} UNLOCKED</div>
+      <div class="unlock-sub">This week's Main Event now awards ${newCount} Activated Stonk Broker${newCount === 1 ? "" : "s"}</div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.classList.add("unlock-out"), 2400);
+  setTimeout(() => overlay.remove(), 3000);
+}
+
 function renderWeeklyRoom() {
   const el = document.getElementById("weeklyRoomCard");
   const c = contestsCache.current;
@@ -323,6 +341,11 @@ function renderWeeklyRoom() {
     </div>`;
     return;
   }
+
+  if (lastKnownBrokersLocked !== null && c.brokersProjected > lastKnownBrokersLocked) {
+    triggerBrokerUnlock(c.brokersProjected);
+  }
+  lastKnownBrokersLocked = c.brokersProjected;
 
   const hasTicket = ticketsCache.unredeemedCount > 0;
   const lockedBadge =
