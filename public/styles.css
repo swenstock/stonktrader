@@ -420,3 +420,49 @@ nav{position:sticky;top:0;z-index:60;}
   width:100%;background:var(--surface-2);border:1px solid var(--border);color:var(--text);
   border-radius:7px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:13px;margin-top:6px;
 }
+
+/* ---------- Percentage-based trade rows ---------- */
+.pct-trade-row{margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);}
+.pct-trade-row label{display:block;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px;}
+.pct-btns{display:flex;gap:6px;align-items:center;}
+.pct-btns .btn-sm{flex:0 0 auto;}
+.pct-btns input{
+  width:52px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+  border-radius:6px;padding:7px 8px;font-family:'IBM Plex Mono',monospace;font-size:12px;
+}
+
+/* ---------- Ticket market ---------- */
+.list-price-input{
+  background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+  border-radius:6px;padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:12px;margin-right:8px;
+}
+
+/* ---------- Brokerage-style trade view additions ---------- */
+.day-range{font-size:11.5px;color:var(--text-dim);margin:-8px 0 10px;}
+.price-flash{transition:background-color .3s ease, color .3s ease;border-radius:4px;padding:2px 6px;}
+.price-flash.flash-up{background:rgba(58,220,132,.25);color:var(--green);}
+.price-flash.flash-down{background:rgba(255,92,108,.25);color:var(--red);}
+.price-cell{transition:background-color .3s ease, color .3s ease;border-radius:4px;}
+.price-cell.flash-up{background:rgba(58,220,132,.25);color:var(--green);}
+.price-cell.flash-down{background:rgba(255,92,108,.25);color:var(--red);}
+
+.allocation-donut-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+.allocation-legend{display:flex;flex-direction:column;gap:6px;font-size:12.5px;}
+.allocation-legend-item{display:flex;align-items:center;gap:8px;}
+.allocation-legend-swatch{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+
+/* Order review */
+.order-review-card{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:16px;}
+.order-review-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed var(--border);font-size:13.5px;}
+.order-review-row span{color:var(--text-dim);}
+.order-review-row:last-child{border-bottom:none;}
+.order-review-total{font-size:16px;padding-top:12px;}
+.order-review-total b{color:var(--gold);}
+
+/* Order filled */
+.order-filled-check{
+  width:56px;height:56px;border-radius:50%;background:var(--green-dim);color:var(--green);
+  display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;
+  margin:6px auto 14px;animation:filledPop .4s cubic-bezier(.2,1.4,.4,1);
+}
+@keyframes filledPop{0%{transform:scale(.3);opacity:0;}100%{transform:scale(1);opacity:1;}}

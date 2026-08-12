@@ -137,6 +137,7 @@ function switchView(view) {
   if (el) el.style.display = "block";
   if (view === "mycontests") refreshMyContests();
   if (view === "leaderboards") refreshLeaderboards();
+  if (view === "ticketmarket") refreshTicketMarket();
 }
 
 // ---------------- App state ----------------
@@ -411,6 +412,9 @@ async function refreshMyContests() {
     document.querySelectorAll(".trade-portfolio-btn").forEach((btn) => {
       btn.addEventListener("click", () => openTradeView(btn.dataset.id, btn.dataset.label));
     });
+    document.querySelectorAll(".schedule-order-btn").forEach((btn) => {
+      btn.addEventListener("click", () => openScheduledOrderModal(btn.dataset.id, btn.dataset.label));
+    });
     document.querySelectorAll(".cancel-alloc-btn").forEach((btn) => {
       btn.addEventListener("click", () => cancelAllocation(btn.dataset.id));
     });
@@ -459,6 +463,7 @@ function portfolioRowHtml(p) {
       <div class="portfolio-row-sub mono">${p.positionCount} position${p.positionCount === 1 ? "" : "s"} · $${p.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
     </div>
     <div class="portfolio-row-pl ${plCls} mono">${p.pl >= 0 ? "+" : "-"}$${Math.abs(p.pl).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+    ${isActive ? `<button class="btn btn-outline btn-sm schedule-order-btn" data-id="${p.id}" data-label="${p.label}">Schedule open order</button>` : ""}
     ${isActive ? `<button class="btn btn-gold btn-sm trade-portfolio-btn" data-id="${p.id}" data-label="${p.label}">Trade</button>` : `<span class="table-badge">Resolved</span>`}
   </div>`;
 }
@@ -479,12 +484,29 @@ function openTradeModal(sym) {
   selectedSymbol = sym;
   document.getElementById("chartSymbolLabel").textContent = sym;
   document.getElementById("tradeModal").style.display = "flex";
+  showTradeModalState("main");
   initChart(); // fresh chart each open — avoids sizing issues on a container that was hidden
   chartHistory[sym] = chartHistory[sym] || [];
   series.setData(chartHistory[sym]);
   const q = latestQuotes[sym];
-  if (q) document.getElementById("chartPriceLabel").textContent = `${q.currency} ${q.price.toFixed(2)}`;
+  if (q) {
+    document.getElementById("chartPriceLabel").textContent = `${q.currency} ${q.price.toFixed(2)}`;
+    updateDayRange(q);
+  }
   document.getElementById("tradeMsg").textContent = "";
+  updatePctHints();
+}
+
+function updateDayRange(q) {
+  const el = document.getElementById("dayRangeLabel");
+  if (!el || q.sessionLow == null || q.sessionHigh == null) return;
+  el.textContent = `Day range: ${q.currency} ${q.sessionLow.toFixed(2)} – ${q.sessionHigh.toFixed(2)}`;
+}
+
+function showTradeModalState(state) {
+  document.getElementById("tradeModalMain").style.display = state === "main" ? "block" : "none";
+  document.getElementById("tradeModalReview").style.display = state === "review" ? "block" : "none";
+  document.getElementById("tradeModalFilled").style.display = state === "filled" ? "block" : "none";
 }
 
 function closeTradeModal() {
@@ -510,6 +532,8 @@ function renderMarketFilter(symbols) {
   });
 }
 
+let lastKnownPrices = {};
+
 function renderWatchlist() {
   const symbols = (window.__symbols || []).filter(
     (s) => selectedExchangeFilter === "ALL" || s.exchange === selectedExchangeFilter
@@ -522,10 +546,22 @@ function renderWatchlist() {
       const chg = q ? q.changePct : 0;
       const cls = chg >= 0 ? "up" : "down";
       return `<tr class="watch-row" data-symbol="${s.symbol}">
-        <td class="mono">${s.symbol}</td><td>${s.exchange}</td><td>${q ? q.currency : ""} ${price}</td>
+        <td class="mono">${s.symbol}</td><td>${s.exchange}</td><td class="mono price-cell" data-symbol="${s.symbol}">${q ? q.currency : ""} ${price}</td>
         <td class="${cls}">${chg >= 0 ? "+" : ""}${chg}%</td></tr>`;
     })
     .join("");
+
+  tbody.querySelectorAll(".price-cell").forEach((cell) => {
+    const sym = cell.dataset.symbol;
+    const q = latestQuotes[sym];
+    if (q && lastKnownPrices[sym] != null && q.price !== lastKnownPrices[sym]) {
+      const dir = q.price > lastKnownPrices[sym] ? "flash-up" : "flash-down";
+      cell.classList.add(dir);
+      setTimeout(() => cell.classList.remove(dir), 500);
+    }
+    if (q) lastKnownPrices[sym] = q.price;
+  });
+
   tbody.querySelectorAll("tr").forEach((row) => row.addEventListener("click", () => openTradeModal(row.dataset.symbol)));
 }
 
@@ -550,35 +586,171 @@ function pushChartPoint(q) {
   chartHistory[q.symbol].push({ time: now, value: q.price });
   if (chartHistory[q.symbol].length > 300) chartHistory[q.symbol].shift();
   const label = document.getElementById("chartPriceLabel");
-  if (label) label.textContent = `${q.currency} ${q.price.toFixed(2)}`;
+  if (label && q.symbol === selectedSymbol) {
+    const prevText = label.textContent;
+    const prevPrice = parseFloat(prevText.replace(/[^0-9.-]/g, ""));
+    label.textContent = `${q.currency} ${q.price.toFixed(2)}`;
+    if (!isNaN(prevPrice) && prevPrice !== q.price) {
+      const dir = q.price > prevPrice ? "flash-up" : "flash-down";
+      label.classList.add(dir);
+      setTimeout(() => label.classList.remove(dir), 500);
+    }
+    updateDayRange(q);
+  }
   if (q.symbol === selectedSymbol && series) series.update({ time: now, value: q.price });
 }
 
-document.getElementById("buyBtn").addEventListener("click", () => executeTrade("buy"));
-document.getElementById("sellBtn").addEventListener("click", () => executeTrade("sell"));
+document.getElementById("buyBtn").addEventListener("click", () => initiateTrade("buy"));
+document.getElementById("sellBtn").addEventListener("click", () => initiateTrade("sell"));
 
-async function executeTrade(side) {
+const CLIENT_MAX_POSITION_PCT = 0.10; // must match server's MAX_INITIAL_POSITION_PCT in routes/portfolios.js
+let latestPortfolioData = null;
+let pendingTrade = null;
+
+function initiateTrade(side, explicitQuantity) {
   if (!currentPortfolioId) return;
   const msg = document.getElementById("tradeMsg");
-  const quantity = parseInt(document.getElementById("tradeShares").value, 10);
+  const quantity = explicitQuantity != null ? explicitQuantity : parseInt(document.getElementById("tradeShares").value, 10);
+  if (!quantity || quantity <= 0) {
+    msg.textContent = "Enter a valid quantity or percentage first.";
+    msg.style.color = "var(--red)";
+    return;
+  }
+  const q = latestQuotes[selectedSymbol];
+  const estPrice = q ? q.price : 0;
+  pendingTrade = { side, quantity, symbol: selectedSymbol, estPrice };
+
+  document.getElementById("reviewAction").textContent = side === "buy" ? "Buy" : "Sell";
+  document.getElementById("reviewAction").style.color = side === "buy" ? "var(--green)" : "var(--red)";
+  document.getElementById("reviewSymbol").textContent = selectedSymbol;
+  document.getElementById("reviewShares").textContent = quantity.toFixed(4).replace(/\.?0+$/, "");
+  document.getElementById("reviewPrice").textContent = q ? `${q.currency} ${estPrice.toFixed(2)}` : "—";
+  document.getElementById("reviewTotal").textContent = `$${(quantity * estPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  showTradeModalState("review");
+}
+
+document.getElementById("reviewCancelBtn").addEventListener("click", () => {
+  pendingTrade = null;
+  showTradeModalState("main");
+});
+
+document.getElementById("reviewConfirmBtn").addEventListener("click", async () => {
+  if (!pendingTrade) return;
+  const msg = document.getElementById("tradeMsg");
   try {
     const result = await api(`/portfolios/${currentPortfolioId}/trades`, {
       method: "POST",
-      body: JSON.stringify({ symbol: selectedSymbol, side, quantity }),
+      body: JSON.stringify({ symbol: pendingTrade.symbol, side: pendingTrade.side, quantity: pendingTrade.quantity }),
     });
-    msg.textContent = `${side === "buy" ? "Bought" : "Sold"} ${result.quantity} ${result.symbol} @ $${result.price.toFixed(2)}`;
-    msg.style.color = side === "buy" ? "var(--green)" : "var(--red)";
+    const qtyDisplay = (result.quantity.toFixed ? result.quantity.toFixed(4) : result.quantity).toString().replace(/\.?0+$/, "");
+    document.getElementById("filledSummary").textContent =
+      `${result.side === "buy" ? "Bought" : "Sold"} ${qtyDisplay} ${result.symbol} @ $${result.price.toFixed(2)}`;
+    showTradeModalState("filled");
+    pendingTrade = null;
     refreshCurrentPortfolio();
   } catch (err) {
+    showTradeModalState("main");
     msg.textContent = err.message;
     msg.style.color = "var(--red)";
   }
+});
+
+document.getElementById("filledDoneBtn").addEventListener("click", () => {
+  document.getElementById("tradeMsg").textContent = "";
+  showTradeModalState("main");
+});
+
+function currentAllotmentInfo() {
+  if (!latestPortfolioData) return { availableAllotment: 0, existingQty: 0 };
+  const maxAllowed = latestPortfolioData.totalValue * CLIENT_MAX_POSITION_PCT;
+  const existingPos = latestPortfolioData.positions.find((p) => p.symbol === selectedSymbol);
+  const existingCostBasis = existingPos ? existingPos.avgCost * existingPos.quantity : 0;
+  const availableAllotment = Math.max(0, maxAllowed - existingCostBasis);
+  return { availableAllotment, existingQty: existingPos ? existingPos.quantity : 0 };
+}
+
+function updatePctHints() {
+  const { availableAllotment, existingQty } = currentAllotmentInfo();
+  const buyHint = document.getElementById("buyAllotmentHint");
+  const sellHint = document.getElementById("sellPositionHint");
+  if (buyHint) buyHint.textContent = `(~$${availableAllotment.toFixed(2)} left)`;
+  if (sellHint) sellHint.textContent = `(${existingQty.toFixed(4)} shares held)`;
+}
+
+function buyPercentOfAllotment(pct) {
+  const q = latestQuotes[selectedSymbol];
+  if (!q) return;
+  const { availableAllotment } = currentAllotmentInfo();
+  const cost = availableAllotment * (pct / 100);
+  const quantity = cost / q.price;
+  initiateTrade("buy", quantity);
+}
+
+function sellPercentOfPosition(pct) {
+  const { existingQty } = currentAllotmentInfo();
+  const quantity = existingQty * (pct / 100);
+  if (quantity <= 0) {
+    const msg = document.getElementById("tradeMsg");
+    msg.textContent = "You don't hold any shares of this symbol to sell.";
+    msg.style.color = "var(--red)";
+    return;
+  }
+  initiateTrade("sell", quantity);
+}
+
+document.querySelectorAll(".pct-buy-btn").forEach((btn) => {
+  btn.addEventListener("click", () => buyPercentOfAllotment(parseFloat(btn.dataset.pct)));
+});
+document.querySelectorAll(".pct-sell-btn").forEach((btn) => {
+  btn.addEventListener("click", () => sellPercentOfPosition(parseFloat(btn.dataset.pct)));
+});
+document.getElementById("customBuyPctBtn").addEventListener("click", () => {
+  const pct = parseFloat(document.getElementById("customBuyPct").value);
+  if (pct > 0 && pct <= 100) buyPercentOfAllotment(pct);
+});
+document.getElementById("customSellPctBtn").addEventListener("click", () => {
+  const pct = parseFloat(document.getElementById("customSellPct").value);
+  if (pct > 0 && pct <= 100) sellPercentOfPosition(pct);
+});
+
+function renderAllocationDonut(p) {
+  const svg = document.getElementById("allocationDonut");
+  const legend = document.getElementById("allocationLegend");
+  if (!svg || !legend) return;
+
+  const total = p.totalValue || 1;
+  const palette = ["#8CFF00", "#4FA8FF", "#FF5C6C", "#FFB627", "#3ADC84", "#B685FF", "#FF8FB3", "#5EEAD4"];
+
+  const slices = p.positions.map((pos, i) => ({ label: pos.symbol, value: pos.value, color: palette[i % palette.length] }));
+  slices.push({ label: "Cash", value: p.cash, color: "#3A4A3A" });
+
+  const r = 50, cx = 60, cy = 60, circumference = 2 * Math.PI * r;
+  let offset = 0;
+  let paths = "";
+  slices.forEach((s) => {
+    const frac = Math.max(0, s.value) / total;
+    const dash = frac * circumference;
+    if (dash > 0) {
+      paths += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${s.color}" stroke-width="16" stroke-dasharray="${dash} ${circumference - dash}" stroke-dashoffset="${-offset}" transform="rotate(-90 ${cx} ${cy})"/>`;
+    }
+    offset += dash;
+  });
+  svg.innerHTML = paths;
+
+  legend.innerHTML = slices
+    .filter((s) => s.value > 0.01)
+    .map(
+      (s) =>
+        `<div class="allocation-legend-item"><span class="allocation-legend-swatch" style="background:${s.color}"></span>${s.label}: ${((s.value / total) * 100).toFixed(1)}%</div>`
+    )
+    .join("");
 }
 
 async function refreshCurrentPortfolio() {
   if (!currentPortfolioId) return;
   try {
     const p = await api(`/portfolios/${currentPortfolioId}`);
+    latestPortfolioData = p;
     document.getElementById("totalValue").textContent = `$${p.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     document.getElementById("cashValue").textContent = `$${p.cash.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
     const pnlEl = document.getElementById("pnlValue");
@@ -590,11 +762,26 @@ async function refreshCurrentPortfolio() {
       p.positions
         .map((pos) => {
           const cls = pos.unrealizedPL >= 0 ? "up" : "down";
-          return `<tr><td class="mono">${pos.symbol}</td><td>${pos.quantity}</td><td>$${pos.avgCost.toFixed(2)}</td><td>$${pos.price.toFixed(2)}</td><td class="${cls}">${pos.unrealizedPL >= 0 ? "+" : ""}$${pos.unrealizedPL.toFixed(2)}</td></tr>`;
+          const pctOfPortfolio = p.totalValue > 0 ? (pos.value / p.totalValue) * 100 : 0;
+          return `<tr><td class="mono">${pos.symbol}</td><td>${pos.quantity}</td><td>$${pos.avgCost.toFixed(2)}</td><td>$${pos.price.toFixed(2)}</td><td class="mono">${pctOfPortfolio.toFixed(1)}%</td><td class="${cls}">${pos.unrealizedPL >= 0 ? "+" : ""}$${pos.unrealizedPL.toFixed(2)}</td></tr>`;
         })
-        .join("") || `<tr><td colspan="5" style="color:var(--text-dim);">No positions yet — buy something!</td></tr>`;
+        .join("") || `<tr><td colspan="6" style="color:var(--text-dim);">No positions yet — buy something!</td></tr>`;
 
+    renderAllocationDonut(p);
     renderWatchlist();
+    updatePctHints();
+
+    // Order history
+    const trades = await api(`/portfolios/${currentPortfolioId}/trades`);
+    const historyBody = document.getElementById("orderHistoryTable");
+    historyBody.innerHTML =
+      trades
+        .slice(0, 20)
+        .map(
+          (t) =>
+            `<tr><td class="mono" style="font-size:11px;">${new Date(t.timestamp).toLocaleString()}</td><td class="${t.side === "buy" ? "up" : "down"}">${t.side.toUpperCase()}</td><td class="mono">${t.symbol}</td><td>${t.quantity}</td><td>$${t.price.toFixed(2)}</td></tr>`
+        )
+        .join("") || `<tr><td colspan="5" style="color:var(--text-dim);">No orders yet.</td></tr>`;
 
     // Context-specific leaderboard
     if (p.context.sourceId) {
@@ -622,6 +809,70 @@ function leaderboardRowsHtml(rows) {
 }
 
 // ---------------- Leaderboards tab ----------------
+function renderLiveContestsList() {
+  const el = document.getElementById("liveContestsList");
+  const rows = [];
+
+  if (contestsCache.current) {
+    const c = contestsCache.current;
+    const payout =
+      c.brokersProjected > 0
+        ? `${c.brokersProjected} Broker${c.brokersProjected === 1 ? "" : "s"} funded + ${c.remainderProjected.toLocaleString()} STONK to next`
+        : `${c.remainderProjected.toLocaleString()} STONK pooled toward first Broker`;
+    rows.push({ type: "contest", id: c.id, name: "Main Event", entrants: c.entrantCount, pool: c.poolGross, payout });
+  }
+
+  (satellitesCache.categories || []).forEach((cat) => {
+    cat.levels.forEach((lvl) => {
+      if (lvl.status !== "open") return;
+      const payout =
+        lvl.ticketsProjected > 0
+          ? `${lvl.ticketsProjected} ticket${lvl.ticketsProjected === 1 ? "" : "s"} funded + ${lvl.remainderProjected.toLocaleString()} STONK to next`
+          : `${lvl.remainderProjected.toLocaleString()} STONK pooled toward first ticket`;
+      rows.push({
+        type: "satellite",
+        id: lvl.id,
+        name: `${cat.name} — ${lvl.entryFee.toLocaleString()} STONK`,
+        entrants: lvl.entrantCount,
+        pool: lvl.poolGross,
+        payout,
+      });
+    });
+  });
+
+  el.innerHTML =
+    rows
+      .map(
+        (r) => `<div class="portfolio-row">
+      <div class="portfolio-row-main">
+        <div class="portfolio-row-label">${r.name}</div>
+        <div class="portfolio-row-sub mono">${r.entrants} entries · ${r.pool.toLocaleString()} STONK pooled · ${r.payout}</div>
+      </div>
+      <button class="btn btn-outline btn-sm view-live-lb-btn" data-type="${r.type}" data-id="${r.id}">View leaderboard</button>
+    </div>`
+      )
+      .join("") || `<div class="history-empty">Nothing live right now — check back Monday–Friday during market hours.</div>`;
+
+  el.querySelectorAll(".view-live-lb-btn").forEach((btn) => {
+    btn.addEventListener("click", () => showLiveLeaderboard(btn.dataset.type, btn.dataset.id));
+  });
+}
+
+async function showLiveLeaderboard(type, id) {
+  try {
+    const lb = await api(`/leaderboard/${type}/${id}`);
+    document.getElementById("liveLeaderboardTitle").textContent = type === "contest" ? "Main Event Leaderboard" : "Satellite Leaderboard";
+    document.getElementById("liveLeaderboardBody").innerHTML = leaderboardRowsHtml(lb);
+    document.getElementById("liveLeaderboardPanel").style.display = "block";
+    document.getElementById("liveLeaderboardPanel").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } catch (err) {
+    console.error(err);
+  }
+}
+document.getElementById("closeLiveLeaderboard").addEventListener("click", () => {
+  document.getElementById("liveLeaderboardPanel").style.display = "none";
+});
+
 async function refreshLeaderboards() {
   try {
     const [myStats, lifetime] = await Promise.all([
@@ -655,6 +906,8 @@ async function refreshLeaderboards() {
     } else {
       document.getElementById("mainEventLeaderboard").innerHTML = `<div class="history-empty">No Main Event open right now.</div>`;
     }
+
+    renderLiveContestsList();
   } catch (err) {
     console.error(err);
   }
@@ -711,9 +964,9 @@ function populateAllocTargetSelect() {
   sel.innerHTML = options.join("");
 }
 
-function addAllocRow(symbol = "", percent = "") {
+function addAllocRow(symbol = "", percent = "", containerId = "allocationRows", totalId = "allocTotalPct", idPrefix = "allocRow") {
   allocRowCount++;
-  const id = `allocRow${allocRowCount}`;
+  const id = `${idPrefix}${allocRowCount}`;
   const symbolOptions = (window.__symbols || [])
     .map((s) => `<option value="${s.symbol}" ${s.symbol === symbol ? "selected" : ""}>${s.symbol}</option>`)
     .join("");
@@ -722,20 +975,20 @@ function addAllocRow(symbol = "", percent = "") {
   row.id = id;
   row.innerHTML = `
     <select class="alloc-symbol">${symbolOptions}</select>
-    <input type="number" class="alloc-percent" min="0.1" max="5" step="0.1" value="${percent || 5}">
+    <input type="number" class="alloc-percent" min="0.1" max="10" step="0.1" value="${percent || 5}">
     <span style="font-size:12px;color:var(--text-dim);">%</span>
-    <button class="trade-modal-close" type="button" onclick="document.getElementById('${id}').remove(); updateAllocTotal();">✕</button>
+    <button class="trade-modal-close" type="button" onclick="document.getElementById('${id}').remove(); updateAllocTotal('${containerId}','${totalId}');">✕</button>
   `;
-  document.getElementById("allocationRows").appendChild(row);
-  row.querySelector(".alloc-percent").addEventListener("input", updateAllocTotal);
-  updateAllocTotal();
+  document.getElementById(containerId).appendChild(row);
+  row.querySelector(".alloc-percent").addEventListener("input", () => updateAllocTotal(containerId, totalId));
+  updateAllocTotal(containerId, totalId);
 }
 
-function updateAllocTotal() {
-  const rows = document.querySelectorAll(".alloc-row .alloc-percent");
+function updateAllocTotal(containerId = "allocationRows", totalId = "allocTotalPct") {
+  const rows = document.querySelectorAll(`#${containerId} .alloc-percent`);
   let total = 0;
   rows.forEach((r) => (total += parseFloat(r.value) || 0));
-  document.getElementById("allocTotalPct").textContent = total.toFixed(1);
+  document.getElementById(totalId).textContent = total.toFixed(1);
 }
 
 document.getElementById("openAllocationModalBtn").addEventListener("click", () => {
@@ -775,6 +1028,146 @@ document.getElementById("submitAllocationBtn").addEventListener("click", async (
     msg.textContent = err.message;
   }
 });
+
+// ---------------- Scheduled order modal (existing portfolio, next market open) ----------------
+let scheduledOrderPortfolioId = null;
+
+function openScheduledOrderModal(portfolioId, label) {
+  scheduledOrderPortfolioId = portfolioId;
+  document.getElementById("scheduledOrderContextLabel").textContent =
+    `${label} — fires at the next real market open (9:30am ET). Free to trade normally after.`;
+  document.getElementById("scheduledOrderRows").innerHTML = "";
+  addAllocRow("", "", "scheduledOrderRows", "scheduledTotalPct", "schedRow");
+  document.getElementById("scheduledOrderMsg").textContent = "";
+  document.getElementById("scheduledOrderModal").style.display = "flex";
+}
+function closeScheduledOrderModal() {
+  document.getElementById("scheduledOrderModal").style.display = "none";
+}
+document.getElementById("scheduledOrderModalClose").addEventListener("click", closeScheduledOrderModal);
+document.getElementById("scheduledOrderModalBackdrop").addEventListener("click", closeScheduledOrderModal);
+document.getElementById("addScheduledRowBtn").addEventListener("click", () =>
+  addAllocRow("", "", "scheduledOrderRows", "scheduledTotalPct", "schedRow")
+);
+
+document.getElementById("submitScheduledOrderBtn").addEventListener("click", async () => {
+  const msg = document.getElementById("scheduledOrderMsg");
+  msg.textContent = "";
+  const allocations = [...document.querySelectorAll("#scheduledOrderRows .alloc-row")].map((row) => ({
+    symbol: row.querySelector(".alloc-symbol").value,
+    percent: parseFloat(row.querySelector(".alloc-percent").value) || 0,
+  }));
+  try {
+    const result = await api("/scheduled-orders", {
+      method: "POST",
+      body: JSON.stringify({ portfolioId: scheduledOrderPortfolioId, allocations }),
+    });
+    msg.style.color = "var(--green)";
+    msg.textContent = `Queued — fires at ${new Date(result.targetOpenAt).toLocaleString()}.`;
+    setTimeout(closeScheduledOrderModal, 1600);
+  } catch (err) {
+    msg.style.color = "var(--red)";
+    msg.textContent = err.message;
+  }
+});
+
+// ---------------- Ticket Market ----------------
+async function refreshTicketMarket() {
+  try {
+    const [myTickets, active, mine] = await Promise.all([
+      api("/tickets"),
+      api("/ticket-market"),
+      api("/ticket-market/mine"),
+    ]);
+
+    const forSale = (myTickets.tickets || []).filter((t) => t.status === "unredeemed");
+    document.getElementById("myUnredeemedTicketsForSale").innerHTML =
+      forSale
+        .map(
+          (t) => `<div class="portfolio-row">
+        <div class="portfolio-row-main">
+          <div class="portfolio-row-label">Ticket #${t.id}</div>
+          <div class="portfolio-row-sub mono">${t.value_stonk.toLocaleString()} STONK face value</div>
+        </div>
+        <input type="number" class="list-price-input" id="listPrice${t.id}" placeholder="Ask price" min="1" style="width:100px;">
+        <button class="btn btn-gold btn-sm list-ticket-btn" data-id="${t.id}">List for sale</button>
+      </div>`
+        )
+        .join("") || `<div class="history-empty">No unredeemed tickets to sell — win one from a satellite first.</div>`;
+
+    document.getElementById("myListingsList").innerHTML =
+      mine.map(listingRowHtml).join("") || `<div class="history-empty">No listings yet.</div>`;
+
+    document.getElementById("activeListingsList").innerHTML =
+      active.filter((l) => !l.isMine).map(listingRowHtml).join("") ||
+      `<div class="history-empty">No active listings from other traders right now.</div>`;
+
+    document.querySelectorAll(".list-ticket-btn").forEach((btn) => {
+      btn.addEventListener("click", () => listTicketForSale(btn.dataset.id));
+    });
+    document.querySelectorAll(".buy-listing-btn").forEach((btn) => {
+      btn.addEventListener("click", () => buyListing(btn.dataset.id));
+    });
+    document.querySelectorAll(".cancel-listing-btn").forEach((btn) => {
+      btn.addEventListener("click", () => cancelListing(btn.dataset.id));
+    });
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function listingRowHtml(l) {
+  const statusBadge =
+    l.status === "active"
+      ? l.isMine
+        ? `<button class="btn btn-outline btn-sm cancel-listing-btn" data-id="${l.id}">Cancel</button>`
+        : `<button class="btn btn-gold btn-sm buy-listing-btn" data-id="${l.id}">Buy — ${l.askPrice.toLocaleString()} STONK</button>`
+      : l.status === "sold"
+        ? `<span class="table-badge joined">Sold</span>`
+        : `<span class="table-badge" style="opacity:.6;">Cancelled</span>`;
+  return `<div class="portfolio-row">
+    <div class="portfolio-row-main">
+      <div class="portfolio-row-label">Ticket #${l.ticketId} ${l.isMine ? "" : `· sold by ${l.sellerDisplayName}`}</div>
+      <div class="portfolio-row-sub mono">Ask: ${l.askPrice.toLocaleString()} STONK</div>
+    </div>
+    ${statusBadge}
+  </div>`;
+}
+
+async function listTicketForSale(ticketId) {
+  const priceInput = document.getElementById(`listPrice${ticketId}`);
+  const price = parseFloat(priceInput.value);
+  if (!price || price <= 0) {
+    alert("Enter a valid asking price first.");
+    return;
+  }
+  try {
+    await api("/ticket-market", { method: "POST", body: JSON.stringify({ ticketId: Number(ticketId), askPrice: price }) });
+    refreshTicketMarket();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function buyListing(id) {
+  if (!confirm("Buy this ticket now? STONK will be deducted immediately.")) return;
+  try {
+    await api(`/ticket-market/${id}/buy`, { method: "POST" });
+    refreshTicketMarket();
+    refreshPortfoliosBalance();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+async function cancelListing(id) {
+  try {
+    await api(`/ticket-market/${id}`, { method: "DELETE" });
+    refreshTicketMarket();
+  } catch (err) {
+    alert(err.message);
+  }
+}
 
 // ---------------- Boot ----------------
 if (token) showApp();

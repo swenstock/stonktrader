@@ -237,6 +237,43 @@ CREATE TABLE IF NOT EXISTS pending_allocations (
 );
 CREATE INDEX IF NOT EXISTS idx_pending_allocations_lookup ON pending_allocations(target_type, target_tier_id, target_price_level, status);
 CREATE INDEX IF NOT EXISTS idx_pending_allocations_account ON pending_allocations(account_id);
+
+-- Distinct from pending_allocations above: this is for a portfolio that
+-- ALREADY EXISTS (you've already joined the contest) but you want an
+-- allocation to fire at the next real market open (9:30am ET) rather than
+-- right now — e.g. you joined the Main Event on a Wednesday afternoon and
+-- want to queue Thursday's opening trades in advance.
+CREATE TABLE IF NOT EXISTS scheduled_orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  portfolio_id INTEGER NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
+  allocations_json TEXT NOT NULL,
+  target_open_at TEXT NOT NULL, -- the specific next-market-open instant this targets
+  status TEXT NOT NULL DEFAULT 'pending', -- pending | applied | cancelled | failed
+  fail_reason TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  applied_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_scheduled_orders_lookup ON scheduled_orders(status, target_open_at);
+CREATE INDEX IF NOT EXISTS idx_scheduled_orders_portfolio ON scheduled_orders(portfolio_id);
+
+-- Secondary market: a ticket holder lists one of their UNREDEEMED tickets
+-- for a fixed STONK asking price. While listed, the ticket is locked (can't
+-- be redeemed for a Main Event entry or listed again) until sold or
+-- cancelled. A 5% platform fee is taken from the seller's proceeds on sale
+-- — buyer pays exactly the asking price, seller receives askPrice*0.95.
+CREATE TABLE IF NOT EXISTS ticket_listings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ticket_id INTEGER NOT NULL REFERENCES tickets(id) ON DELETE CASCADE,
+  seller_account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  ask_price INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active', -- active | sold | cancelled
+  buyer_account_id INTEGER REFERENCES accounts(id),
+  platform_fee_stonk INTEGER,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  sold_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_ticket_listings_status ON ticket_listings(status);
+CREATE INDEX IF NOT EXISTS idx_ticket_listings_seller ON ticket_listings(seller_account_id);
 `);
 
 module.exports = db;

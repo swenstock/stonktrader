@@ -12,6 +12,7 @@ function serializeContest(c, myAccountId) {
   const grossPool = c.status === "open" ? entrantCount * c.entry_fee : c.pool_gross;
   const playerPool = grossPool * 0.85;
   const brokersProjected = Math.floor(playerPool / c.broker_unit_cost);
+  const remainderProjected = c.status === "open" ? playerPool - brokersProjected * c.broker_unit_cost : c.remainder_stonk;
 
   const myEntry = myAccountId
     ? db.prepare("SELECT * FROM contest_entries WHERE contest_id = ? AND account_id = ?").get(c.id, myAccountId)
@@ -31,6 +32,7 @@ function serializeContest(c, myAccountId) {
     poolGross: grossPool,
     brokersProjected: c.status === "open" ? brokersProjected : c.brokers_funded,
     brokersFunded: c.brokers_funded,
+    remainderProjected: Math.round(remainderProjected || 0),
     remainderStonk: c.remainder_stonk,
     remainderDisplayName: c.remainder_display_name,
     joined: !!myEntry,

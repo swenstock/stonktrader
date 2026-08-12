@@ -14,9 +14,12 @@ const satelliteRoutes = require("./routes/satellites");
 const ticketRoutes = require("./routes/tickets");
 const referralRoutes = require("./routes/referrals");
 const allocationRoutes = require("./routes/allocations");
+const scheduledOrderRoutes = require("./routes/scheduledOrders");
+const ticketMarketRoutes = require("./routes/ticketMarket");
 const adminRoutes = require("./routes/admin");
 const contestScheduler = require("./contestScheduler");
 const satelliteScheduler = require("./satelliteScheduler");
+const marketOpenScheduler = require("./marketOpenScheduler");
 const { attachWebSocket } = require("./ws");
 
 const app = express();
@@ -33,10 +36,13 @@ app.use("/api/satellites", satelliteRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/referrals", referralRoutes);
 app.use("/api/allocations", allocationRoutes);
+app.use("/api/scheduled-orders", scheduledOrderRoutes);
+app.use("/api/ticket-market", ticketMarketRoutes);
 app.use("/api/admin", adminRoutes);
 
 contestScheduler.start();
 satelliteScheduler.start();
+marketOpenScheduler.start();
 
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 

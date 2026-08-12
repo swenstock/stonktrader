@@ -264,6 +264,95 @@ existed correctly auto-entered the account and filled the exact percentage
 split (verified to the cent) the instant the scheduler opened a matching
 satellite — same confirmed for the Main Event, including ticket-based entry.
 
+## Scheduled orders for already-joined portfolios
+
+Distinct from the tier-triggered auto-fill above: once you've **already
+joined** a contest, you can queue a percentage allocation to fire at the
+**next real market open** (9:30am ET) instead of trading manually right
+away — useful if you joined mid-day and want tomorrow's opening trades
+queued in advance.
+
+- `scheduled_orders` table, keyed to a specific existing `portfolio_id`
+- `server/marketOpenScheduler.js`: ticks every 15s, fires any order whose
+  `target_open_at` has passed
+- **Critical correctness point**: sizing uses the portfolio's *live* value
+  at execution time, not a hardcoded 100000 — a portfolio that's already
+  traded and grown (or shrunk) since joining gets sized off what it's
+  actually worth right now. Caught and fixed this exact bug during testing.
+- Re-validates against the 10% max-position rule and available cash at
+  fire-time, not just at scheduling time, since real trades may have
+  happened in the meantime. Verified with a case where existing holdings
+  plus the queued order would exceed 10% — correctly rejected.
+
+## Live Contests panel
+
+The Leaderboards tab now shows every currently **open** contest (Main
+Event + any open satellite) with live entry count, STONK pooled, and the
+**payout schedule at current funding** (e.g. "1 Broker funded + 31,668
+STONK to next" or "8 tickets funded + 1,500 STONK to next") — computed the
+same way resolution does, just live instead of final. Click through to see
+that specific contest's live leaderboard.
+
+## Ticket marketplace ⚠️
+
+Built as explicitly requested — **but flagged again clearly, since this is
+the one piece of the original spec that explicitly said to hold off until
+legal review**. A live secondary market for something with real redeemable
+value is meaningfully closer to a financial instrument than anything else
+in this app. Get a lawyer's eyes on this specifically before it touches
+real STONK.
+
+How it works:
+- List any unredeemed ticket for a STONK asking price (`ticket_listings`
+  table). The ticket locks (`status = 'listed'`) the moment it's listed —
+  can't be redeemed for a Main Event entry or double-listed while active.
+- Buyer pays exactly the asking price. Seller receives asking price minus a
+  **5% platform fee**. Ticket ownership transfers outright to the buyer,
+  status flips back to `unredeemed` so they can use it immediately.
+- Cancelling an active listing unlocks the ticket back to the seller.
+
+Tested rigorously since this moves real economic value: full buy/sell flow
+with exact fee math verified, ownership transfer confirmed, self-purchase
+blocked, insufficient-funds purchases blocked, and confirmed a listed
+ticket is correctly excluded from the Main Event redemption query (same
+query `contests.js` already used — no changes needed there, it was already
+correct by construction).
+
+**Not yet built**: the fee revenue isn't wired into the admin STONK/USD
+revenue dashboard — a reasonable follow-up once this is live.
+
+## Brokerage-style trade UI refresh
+
+An original interface, deliberately **not** copying Robinhood's specific
+trademarked look — since the app isn't officially affiliated with them,
+that would be a real legal exposure and could actively hurt a future
+partnership conversation. Instead this uses the generic patterns shared
+across virtually every modern trading app (clean price-forward layout,
+minimal one-tap actions):
+
+- **"Buying Power"** instead of "Cash" — standard brokerage terminology
+- **Price flash animation** — brief green/red flash on every tick, both in
+  the watchlist and the open trade modal
+- **Day's high/low** shown under the chart (tracked since server start —
+  a real trading day's open/close reset isn't modeled yet, noted as a
+  simplification)
+- **Order review → confirm → filled** flow — every trade (manual quantity
+  or the % quick-buttons) now shows a review screen with estimated price
+  and total before executing, then a clean "Order filled" confirmation
+  after. No more instant-fire trades from a single tap.
+- **Recent Activity** — full order history now visible in the trade view
+  (the API already existed, it just wasn't surfaced anywhere before)
+- **Allocation donut chart** — dependency-free SVG chart showing cash vs.
+  each position as a % of the portfolio, doubles as a visual reminder of
+  the 10% position-size rule in action
+- **% of portfolio** column added to the positions table alongside dollar P&L
+
+The actual "seamless paper-to-real" promise lives in the backend
+separation, not the UI: `dataProvider.js` is the one place quotes come
+from, cleanly isolated from the trading logic. If Robinhood (or anyone)
+ever provides real backend access, that's a data-layer swap behind this
+same interface, not a rewrite.
+
 ## Suggested next steps
 
 1. `npm install && npm start` locally, create a couple of test accounts, confirm

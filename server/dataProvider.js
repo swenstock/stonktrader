@@ -34,13 +34,16 @@ const SYMBOLS = {
 
 const state = {};
 for (const [sym, meta] of Object.entries(SYMBOLS)) {
-  state[sym] = { ...meta, symbol: sym, price: meta.base, prevClose: meta.base };
+  state[sym] = { ...meta, symbol: sym, price: meta.base, prevClose: meta.base, sessionHigh: meta.base, sessionLow: meta.base };
 }
 
 function tick() {
   for (const sym of Object.keys(state)) {
     const pct = (Math.random() - 0.5) * 0.01; // +/-0.5% per tick
-    state[sym].price = Math.max(0.01, state[sym].price * (1 + pct));
+    const s = state[sym];
+    s.price = Math.max(0.01, s.price * (1 + pct));
+    s.sessionHigh = Math.max(s.sessionHigh, s.price);
+    s.sessionLow = Math.min(s.sessionLow, s.price);
   }
 }
 const tickInterval = setInterval(tick, 2000);
@@ -69,6 +72,8 @@ function getQuotes(symbols) {
         price: Number(s.price.toFixed(2)),
         changePct: Number(changePct.toFixed(2)),
         marketCap: s.marketCap,
+        sessionHigh: Number(s.sessionHigh.toFixed(2)),
+        sessionLow: Number(s.sessionLow.toFixed(2)),
       };
     })
     .filter(Boolean);

@@ -2,7 +2,7 @@ const db = require("./db");
 const { getQuote } = require("./dataProvider");
 const { createPortfolio } = require("./portfolioValue");
 
-const MAX_ALLOCATION_PCT = 5; // matches the 5% max-initial-position trading rule, expressed 0-100
+const MAX_ALLOCATION_PCT = 10; // matches the 10% max-initial-position trading rule, expressed 0-100
 
 function validateAllocations(allocations) {
   if (!Array.isArray(allocations) || allocations.length === 0) {
@@ -17,7 +17,7 @@ function validateAllocations(allocations) {
     if (seen.has(a.symbol)) return `${a.symbol} appears more than once`;
     seen.add(a.symbol);
     if (a.percent > MAX_ALLOCATION_PCT) {
-      return `${a.symbol}: ${a.percent}% exceeds the 5% max position size rule`;
+      return `${a.symbol}: ${a.percent}% exceeds the 10% max position size rule`;
     }
     if (!getQuote(a.symbol)) return `Unknown symbol: ${a.symbol}`;
     total += a.percent;
@@ -26,15 +26,17 @@ function validateAllocations(allocations) {
   return null;
 }
 
-// Executes the allocation as a set of opening BUY trades against a freshly
-// created ($100,000) portfolio. Uses whatever the live quote is at the
-// moment the contest/satellite actually opens — this IS the "filled on
-// open" behavior.
-function applyAllocationToPortfolio(portfolioId, allocations) {
+// Executes the allocation as a set of BUY trades against a portfolio, sized
+// as percentages of `baseValue`. For a freshly-created portfolio (tier
+// auto-entry), baseValue is always exactly 100000. For an ALREADY-EXISTING
+// portfolio (the market-open scheduled-order case), baseValue must be that
+// portfolio's live current value — never hardcode 100000 for that path, or
+// the sizing will be wrong for anyone who's already traded.
+function applyAllocationToPortfolio(portfolioId, allocations, baseValue = 100000) {
   for (const a of allocations) {
     const quote = getQuote(a.symbol);
     if (!quote) continue; // shouldn't happen, validated at creation time
-    const cost = 100000 * (a.percent / 100);
+    const cost = baseValue * (a.percent / 100);
     const quantity = cost / quote.price;
     db.prepare("UPDATE portfolios SET cash_balance = cash_balance - ? WHERE id = ?").run(cost, portfolioId);
     db.prepare(
@@ -153,6 +155,7 @@ function applyPendingContestAllocations(contest) {
 
 module.exports = {
   validateAllocations,
+  applyAllocationToPortfolio,
   applyPendingSatelliteAllocations,
   applyPendingContestAllocations,
   MAX_ALLOCATION_PCT,

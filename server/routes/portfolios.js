@@ -5,7 +5,7 @@ const requireAuth = require("../middleware/requireAuth");
 const { getQuote, getQuotes, MIN_MARKET_CAP } = require("../dataProvider");
 const { totalValueForPortfolio } = require("../portfolioValue");
 
-const MAX_INITIAL_POSITION_PCT = 0.05; // 5% of portfolio value, checked at time of BUY only
+const MAX_INITIAL_POSITION_PCT = 0.10; // 10% of portfolio value, checked at time of BUY only — raised from 5%, since a 15-symbol universe at 5% caps total possible deployment at 75%
 
 // Finds which contest or satellite a portfolio belongs to, for display
 // context ("Morning Session — Aug 12", still open vs resolved, etc).
@@ -151,7 +151,7 @@ router.post("/:id/trades", requireAuth, (req, res) => {
     if (existingCostBasis + cost > maxAllowed) {
       const room = Math.max(0, maxAllowed - existingCostBasis);
       return res.status(400).json({
-        error: `This would put more than 5% of your portfolio into ${symbol} at entry. Max additional buy right now: ~$${room.toFixed(2)}. (A position CAN grow past 5% from price gains — this limit only applies to new buys.)`,
+        error: `This would put more than 10% of your portfolio into ${symbol} at entry. Max additional buy right now: ~$${room.toFixed(2)}. (A position CAN grow past 10% from price gains — this limit only applies to new buys.)`,
       });
     }
   }

@@ -29,7 +29,7 @@ const CATEGORIES = [
 
 const PRICE_LEVELS = {
   daily: { low: 100, mid: 300, high: 750 },
-  weekly: { low: 500, mid: 1000, high: 2500 },
+  weekly: { low: 100, mid: 300, high: 750 }, // same as daily — cheap access to a 3,000 STONK Main Event ticket is the whole point
 };
 
 // Flatten into 12 concrete tiers.

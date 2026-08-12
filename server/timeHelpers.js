@@ -49,4 +49,19 @@ function currentWeekWindow(now = new Date()) {
   return { weekStart: monday, weekEnd: friday };
 }
 
-module.exports = { TZ, easternParts, isWeekday, etDateTime, etCalendarDate, currentWeekWindow };
+// The next real market open (9:30am ET) at or after `now` — used for
+// scheduled orders queued against an already-joined portfolio.
+function nextMarketOpen(now = new Date()) {
+  let probe = new Date(now);
+  for (let i = 0; i < 8; i++) {
+    if (isWeekday(probe)) {
+      const { year, month, day } = etCalendarDate(probe);
+      const opensAt = etDateTime(year, month, day, 9, 30, 0);
+      if (now.getTime() < opensAt.getTime()) return opensAt;
+    }
+    probe = new Date(probe.getTime() + 24 * 60 * 60 * 1000);
+  }
+  return now;
+}
+
+module.exports = { TZ, easternParts, isWeekday, etDateTime, etCalendarDate, currentWeekWindow, nextMarketOpen };

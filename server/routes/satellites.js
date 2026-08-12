@@ -58,6 +58,7 @@ function serializeSatellite(s, myAccountId) {
   const grossPool = s.status === "open" ? entrantCount * s.entry_fee : s.pool_gross;
   const playerPool = grossPool * 0.85;
   const ticketsProjected = Math.floor(playerPool / s.ticket_cost);
+  const remainderProjected = s.status === "open" ? playerPool - ticketsProjected * s.ticket_cost : s.remainder_stonk;
 
   const myEntry = myAccountId
     ? db.prepare("SELECT * FROM satellite_entries WHERE satellite_id = ? AND account_id = ?").get(s.id, myAccountId)
@@ -81,6 +82,7 @@ function serializeSatellite(s, myAccountId) {
     poolGross: grossPool,
     ticketsProjected: s.status === "open" ? ticketsProjected : s.tickets_funded,
     ticketsFunded: s.tickets_funded,
+    remainderProjected: Math.round(remainderProjected || 0),
     remainderStonk: s.remainder_stonk,
     remainderDisplayName: s.remainder_display_name,
     joined: !!myEntry,
