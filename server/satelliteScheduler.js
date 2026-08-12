@@ -1,25 +1,17 @@
-// Satellite scheduler — Phase 2: the real session matrix.
+// Satellite scheduler — the full session x price-level matrix.
 //
-// Four concurrent, independently-scheduled tiers, all using the exact same
-// rake + ladder algorithm as the Main Event (server/prizeLadder.js), just
-// funding 3,000 STONK Main Event tickets instead of 733,332 STONK Brokers:
+// Four categories (Full Day / Morning / Afternoon / Weekly Qualifier), each
+// running at three price levels (Low/Mid/High) — 12 concurrent satellites
+// total. Every one uses the exact same rake + ladder algorithm as the Main
+// Event, just funding 3,000 STONK Main Event tickets instead of Brokers.
 //
-//   - Full Day   : opens 9:30 AM ET, locks 4:00 PM ET, every trading day
-//   - Morning    : opens 9:30 AM ET, locks 1:00 PM ET, every trading day
-//   - Afternoon  : opens 1:00 PM ET, locks 4:00 PM ET, every trading day
-//   - Weekly Qualifier : opens Monday 00:00 ET, locks Friday 23:59:59 ET —
-//     same cadence as the Main Event itself, higher entry fee, feeds tickets
-//     all week long instead of resolving in a single day
+// Trading eligibility ends at 4:00 PM ET (real NYSE/NASDAQ close) — no
+// extended-hours pricing implied.
 //
-// Trading eligibility ends at 4:00 PM ET (real NYSE/NASDAQ close) per the
-// earlier decision — no extended-hours pricing implied.
-//
-// KNOWN GAP (same as noted in contestScheduler.js): trades aren't actually
-// frozen outside these windows yet. That enforcement still needs to be
-// built before these session boundaries are more than a display label.
+// KNOWN GAP: trades aren't actually frozen outside these windows yet.
 
 const db = require("./db");
-const { totalValueForAccounts } = require("./portfolioValue");
+const { totalValueForPortfolios } = require("./portfolioValue");
 const { computeLadder } = require("./prizeLadder");
 const { etDateTime, etCalendarDate, isWeekday, currentWeekWindow } = require("./timeHelpers");
 const mainEvent = require("./contestScheduler");
@@ -27,12 +19,33 @@ const mainEvent = require("./contestScheduler");
 const RAKE = { total: 0.15, platform: 0.10, affiliate: 0.05 };
 const TICKET_COST = 3000;
 
-const TIERS = [
-  { id: "full_day", name: "Full Day Session", icon: "🔔", entryFee: 300, cadence: "daily", openHour: 9.5, lockHour: 16 },
-  { id: "morning", name: "Morning Session", icon: "☀️", entryFee: 300, cadence: "daily", openHour: 9.5, lockHour: 13 },
-  { id: "afternoon", name: "Afternoon Session", icon: "🔥", entryFee: 300, cadence: "daily", openHour: 13, lockHour: 16 },
-  { id: "weekly_qualifier", name: "Weekly Qualifier", icon: "🎟️", entryFee: 1000, cadence: "weekly" },
+const CATEGORIES = [
+  { id: "full_day", name: "Full Day", icon: "🔔", cadence: "daily", openHour: 9.5, lockHour: 16 },
+  { id: "morning", name: "Morning", icon: "☀️", cadence: "daily", openHour: 9.5, lockHour: 13 },
+  { id: "afternoon", name: "Afternoon", icon: "🔥", cadence: "daily", openHour: 13, lockHour: 16 },
+  { id: "weekly_qualifier", name: "Weekly Qualifier", icon: "🎟️", cadence: "weekly" },
 ];
+
+const PRICE_LEVELS = {
+  daily: { low: 100, mid: 300, high: 750 },
+  weekly: { low: 500, mid: 1000, high: 2500 },
+};
+
+// Flatten into 12 concrete tiers.
+const TIERS = CATEGORIES.flatMap((cat) =>
+  ["low", "mid", "high"].map((level) => ({
+    id: `${cat.id}_${level}`,
+    categoryId: cat.id,
+    categoryName: cat.name,
+    icon: cat.icon,
+    priceLevel: level,
+    name: `${cat.name} — ${level[0].toUpperCase()}${level.slice(1)}`,
+    entryFee: PRICE_LEVELS[cat.cadence][level],
+    cadence: cat.cadence,
+    openHour: cat.openHour,
+    lockHour: cat.lockHour,
+  }))
+);
 
 function hourToParts(hourFloat) {
   const hour = Math.floor(hourFloat);
@@ -44,9 +57,10 @@ function dailyWindow(tier, now) {
   const { year, month, day } = etCalendarDate(now);
   const o = hourToParts(tier.openHour);
   const l = hourToParts(tier.lockHour);
-  const opensAt = etDateTime(year, month, day, o.hour, o.minute, 0);
-  const locksAt = etDateTime(year, month, day, l.hour, l.minute, 0);
-  return { opensAt, locksAt };
+  return {
+    opensAt: etDateTime(year, month, day, o.hour, o.minute, 0),
+    locksAt: etDateTime(year, month, day, l.hour, l.minute, 0),
+  };
 }
 
 function windowFor(tier, now) {
@@ -60,9 +74,17 @@ function windowFor(tier, now) {
 function openNewSatellite(tier, now) {
   const { opensAt, locksAt } = windowFor(tier, now);
   db.prepare(
-    `INSERT INTO satellites (tier_id, name, entry_fee, ticket_cost, opens_at, locks_at, status)
-     VALUES (?, ?, ?, ?, ?, ?, 'open')`
-  ).run(tier.id, tier.name, tier.entryFee, TICKET_COST, opensAt.toISOString(), locksAt.toISOString());
+    `INSERT INTO satellites (tier_id, price_level, name, entry_fee, ticket_cost, opens_at, locks_at, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'open')`
+  ).run(
+    tier.categoryId,
+    tier.priceLevel,
+    tier.name,
+    tier.entryFee,
+    TICKET_COST,
+    opensAt.toISOString(),
+    locksAt.toISOString()
+  );
 }
 
 function ensureOpenSatellites(now = new Date()) {
@@ -70,11 +92,11 @@ function ensureOpenSatellites(now = new Date()) {
     if (tier.cadence === "daily" && !isWeekday(now)) continue;
 
     const { opensAt } = windowFor(tier, now);
-    if (now.getTime() < opensAt.getTime()) continue; // not open yet today
+    if (now.getTime() < opensAt.getTime()) continue;
 
     const existing = db
-      .prepare("SELECT id FROM satellites WHERE tier_id = ? AND opens_at = ?")
-      .get(tier.id, opensAt.toISOString());
+      .prepare("SELECT id FROM satellites WHERE tier_id = ? AND price_level = ? AND opens_at = ?")
+      .get(tier.categoryId, tier.priceLevel, opensAt.toISOString());
     if (!existing) openNewSatellite(tier, now);
   }
 }
@@ -104,14 +126,14 @@ function resolveSatellite(satellite) {
     satellite.ticket_cost
   );
 
-  const accountIds = entries.map((e) => e.account_id);
-  const valueMap = totalValueForAccounts(accountIds);
+  const portfolioIds = entries.map((e) => e.portfolio_id);
+  const valueMap = totalValueForPortfolios(portfolioIds);
   const ranked = entries
     .map((e) => ({
       accountId: e.account_id,
       entryId: e.id,
       entryFeePaid: e.entry_fee_paid,
-      pl: (valueMap[e.account_id] ?? e.starting_value) - e.starting_value,
+      pl: (valueMap[e.portfolio_id] ?? 100000) - 100000,
     }))
     .sort((a, b) => b.pl - a.pl);
 
@@ -131,16 +153,24 @@ function resolveSatellite(satellite) {
 
   ranked.forEach((r, i) => {
     const rank = i + 1;
+    let prizeType = "none",
+      prizeAmount = null;
     if (rank <= ticketsFunded) {
+      prizeType = "ticket";
       db.prepare(
         "INSERT INTO tickets (account_id, source_satellite_id, value_stonk, status) VALUES (?, ?, ?, 'unredeemed')"
       ).run(r.accountId, satellite.id, satellite.ticket_cost);
     } else if (rank === ticketsFunded + 1 && remainder > 0) {
+      prizeType = "stonk";
+      prizeAmount = remainder;
       db.prepare("UPDATE accounts SET stonk_balance = stonk_balance + ? WHERE id = ?").run(
         remainder,
         r.accountId
       );
     }
+    db.prepare(
+      "INSERT INTO satellite_results (satellite_id, account_id, rank, pl, prize_type, prize_amount) VALUES (?, ?, ?, ?, ?, ?)"
+    ).run(satellite.id, r.accountId, rank, r.pl, prizeType, prizeAmount);
   });
 
   db.prepare(
@@ -178,4 +208,4 @@ function start() {
   interval.unref?.();
 }
 
-module.exports = { start, tick, TIERS, windowFor };
+module.exports = { start, tick, TIERS, CATEGORIES };

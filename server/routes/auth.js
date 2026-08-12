@@ -4,10 +4,9 @@ const db = require("../db");
 const crypto = require("crypto");
 const { hashPassword, verifyPassword, sign } = require("../auth");
 
-const STARTING_CASH = Number(process.env.STARTING_CASH || 100000);
+const STARTING_STONK = Number(process.env.STARTING_STONK || 100000);
 
 function generateReferralCode() {
-  // 6 chars, uppercase alphanumeric, human-typeable — collision retried by caller if needed
   return crypto.randomBytes(4).toString("hex").slice(0, 6).toUpperCase();
 }
 
@@ -29,13 +28,11 @@ router.post("/signup", (req, res) => {
       .prepare("SELECT id FROM users WHERE referral_code = ?")
       .get(referralCode.trim().toUpperCase());
     if (referrer) referredByUserId = referrer.id;
-    // An unrecognized code is silently ignored rather than blocking signup —
-    // a bad/typo'd referral link shouldn't stop someone from joining.
   }
 
   let code = generateReferralCode();
   while (db.prepare("SELECT id FROM users WHERE referral_code = ?").get(code)) {
-    code = generateReferralCode(); // extremely rare collision, just retry
+    code = generateReferralCode();
   }
 
   const password_hash = hashPassword(password);
@@ -44,12 +41,13 @@ router.post("/signup", (req, res) => {
   );
   const info = insertUser.run(email.toLowerCase(), password_hash, displayName, code, referredByUserId);
 
-  db.prepare(
-    "INSERT INTO accounts (user_id, cash_balance, starting_balance) VALUES (?, ?, ?)"
-  ).run(info.lastInsertRowid, STARTING_CASH, STARTING_CASH);
+  db.prepare("INSERT INTO accounts (user_id, stonk_balance) VALUES (?, ?)").run(
+    info.lastInsertRowid,
+    STARTING_STONK
+  );
 
   const token = sign({ userId: info.lastInsertRowid, email: email.toLowerCase() });
-  res.json({ token, displayName, startingCash: STARTING_CASH, referralCode: code });
+  res.json({ token, displayName, startingStonk: STARTING_STONK, referralCode: code });
 });
 
 router.post("/login", (req, res) => {

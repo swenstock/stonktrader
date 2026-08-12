@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require("../db");
 const requireAuth = require("../middleware/requireAuth");
 const { CONFIG, currentWeekWindow, isWeekday } = require("../contestScheduler");
-const { totalValueForAccount } = require("../portfolioValue");
+const { createPortfolio } = require("../portfolioValue");
 
 function serializeContest(c, myAccountId) {
   const entrantCount = db
@@ -34,6 +34,7 @@ function serializeContest(c, myAccountId) {
     remainderStonk: c.remainder_stonk,
     remainderDisplayName: c.remainder_display_name,
     joined: !!myEntry,
+    myPortfolioId: myEntry ? myEntry.portfolio_id : null,
     myUnredeemedTickets: myTickets,
   };
 }
@@ -70,7 +71,6 @@ router.get("/", (req, res) => {
   });
 });
 
-// GET /api/contests/:id/results — ranked finishers of a resolved Main Event
 router.get("/:id/results", (req, res) => {
   const results = db
     .prepare(
@@ -85,7 +85,6 @@ router.get("/:id/results", (req, res) => {
   res.json(results);
 });
 
-// POST /api/contests/:id/enter — pay with STONK, or with an unredeemed ticket if requested
 router.post("/:id/enter", requireAuth, (req, res) => {
   const contest = db.prepare("SELECT * FROM contests WHERE id = ?").get(req.params.id);
   if (!contest) return res.status(404).json({ error: "Main Event not found" });
@@ -98,7 +97,7 @@ router.post("/:id/enter", requireAuth, (req, res) => {
 
   const useTicket = !!req.body?.useTicket;
   const account = db.prepare("SELECT * FROM accounts WHERE id = ?").get(req.account.id);
-  const startingValue = totalValueForAccount(account.id);
+  const label = `Main Event · Week of ${new Date(contest.week_start).toLocaleDateString()}`;
 
   if (useTicket) {
     const ticket = db
@@ -106,32 +105,34 @@ router.post("/:id/enter", requireAuth, (req, res) => {
       .get(account.id);
     if (!ticket) return res.status(400).json({ error: "You don't have an unredeemed ticket" });
 
+    const portfolioId = createPortfolio(account.id, label);
     db.exec("BEGIN");
     db.prepare(
-      "INSERT INTO contest_entries (contest_id, account_id, entry_fee_paid, paid_with_ticket_id, starting_value) VALUES (?, ?, ?, ?, ?)"
-    ).run(contest.id, account.id, contest.entry_fee, ticket.id, startingValue);
+      "INSERT INTO contest_entries (contest_id, account_id, portfolio_id, entry_fee_paid, paid_with_ticket_id) VALUES (?, ?, ?, ?, ?)"
+    ).run(contest.id, account.id, portfolioId, contest.entry_fee, ticket.id);
     db.prepare(
       "UPDATE tickets SET status = 'applied', applied_to_contest_id = ?, applied_at = ? WHERE id = ?"
     ).run(contest.id, new Date().toISOString(), ticket.id);
     db.exec("COMMIT");
-    return res.json({ ok: true, contestId: contest.id, paidWithTicket: true });
+    return res.json({ ok: true, contestId: contest.id, portfolioId, paidWithTicket: true });
   }
 
   if (account.stonk_balance < contest.entry_fee) {
     return res.status(400).json({ error: "Not enough STONK to enter" });
   }
 
+  const portfolioId = createPortfolio(account.id, label);
   db.exec("BEGIN");
   db.prepare("UPDATE accounts SET stonk_balance = stonk_balance - ? WHERE id = ?").run(
     contest.entry_fee,
     account.id
   );
   db.prepare(
-    "INSERT INTO contest_entries (contest_id, account_id, entry_fee_paid, starting_value) VALUES (?, ?, ?, ?)"
-  ).run(contest.id, account.id, contest.entry_fee, startingValue);
+    "INSERT INTO contest_entries (contest_id, account_id, portfolio_id, entry_fee_paid) VALUES (?, ?, ?, ?)"
+  ).run(contest.id, account.id, portfolioId, contest.entry_fee);
   db.exec("COMMIT");
 
-  res.json({ ok: true, contestId: contest.id, entryFeePaid: contest.entry_fee, paidWithTicket: false });
+  res.json({ ok: true, contestId: contest.id, portfolioId, entryFeePaid: contest.entry_fee, paidWithTicket: false });
 });
 
 module.exports = router;

@@ -1,44 +1,145 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
-const { getQuotes } = require("../dataProvider");
+const { totalValueForPortfolios } = require("../portfolioValue");
 
-router.get("/", (req, res) => {
-  const accounts = db
+// GET /api/leaderboard/contest/:id — live ranking within one Main Event
+// (works for both open and resolved contests)
+router.get("/contest/:id", (req, res) => {
+  const contest = db.prepare("SELECT * FROM contests WHERE id = ?").get(req.params.id);
+  if (!contest) return res.status(404).json({ error: "Contest not found" });
+
+  if (contest.status === "resolved") {
+    const results = db
+      .prepare(
+        `SELECT contest_results.rank, contest_results.pl, contest_results.prize_type, contest_results.prize_amount, users.display_name
+         FROM contest_results JOIN accounts ON accounts.id = contest_results.account_id
+         JOIN users ON users.id = accounts.user_id
+         WHERE contest_id = ? ORDER BY rank ASC LIMIT 100`
+      )
+      .all(contest.id);
+    return res.json(results);
+  }
+
+  const entries = db
     .prepare(
-      `SELECT accounts.id as account_id, accounts.cash_balance, accounts.starting_balance, users.display_name
-       FROM accounts JOIN users ON users.id = accounts.user_id`
+      `SELECT contest_entries.portfolio_id, users.display_name
+       FROM contest_entries JOIN accounts ON accounts.id = contest_entries.account_id
+       JOIN users ON users.id = accounts.user_id
+       WHERE contest_id = ?`
+    )
+    .all(contest.id);
+  const valueMap = totalValueForPortfolios(entries.map((e) => e.portfolio_id));
+  const ranked = entries
+    .map((e) => ({ displayName: e.display_name, pl: Number(((valueMap[e.portfolio_id] ?? 100000) - 100000).toFixed(2)) }))
+    .sort((a, b) => b.pl - a.pl)
+    .map((r, i) => ({ rank: i + 1, ...r }));
+  res.json(ranked.slice(0, 100));
+});
+
+// GET /api/leaderboard/satellite/:id — same idea, for a satellite
+router.get("/satellite/:id", (req, res) => {
+  const satellite = db.prepare("SELECT * FROM satellites WHERE id = ?").get(req.params.id);
+  if (!satellite) return res.status(404).json({ error: "Satellite not found" });
+
+  if (satellite.status === "resolved") {
+    const results = db
+      .prepare(
+        `SELECT satellite_results.rank, satellite_results.pl, satellite_results.prize_type, satellite_results.prize_amount, users.display_name
+         FROM satellite_results JOIN accounts ON accounts.id = satellite_results.account_id
+         JOIN users ON users.id = accounts.user_id
+         WHERE satellite_id = ? ORDER BY rank ASC LIMIT 100`
+      )
+      .all(satellite.id);
+    return res.json(results);
+  }
+
+  const entries = db
+    .prepare(
+      `SELECT satellite_entries.portfolio_id, users.display_name
+       FROM satellite_entries JOIN accounts ON accounts.id = satellite_entries.account_id
+       JOIN users ON users.id = accounts.user_id
+       WHERE satellite_id = ?`
+    )
+    .all(satellite.id);
+  const valueMap = totalValueForPortfolios(entries.map((e) => e.portfolio_id));
+  const ranked = entries
+    .map((e) => ({ displayName: e.display_name, pl: Number(((valueMap[e.portfolio_id] ?? 100000) - 100000).toFixed(2)) }))
+    .sort((a, b) => b.pl - a.pl)
+    .map((r, i) => ({ rank: i + 1, ...r }));
+  res.json(ranked.slice(0, 100));
+});
+
+// GET /api/leaderboard/lifetime — all-time trader stats, aggregated across
+// every resolved Main Event and satellite a player has ever finished.
+router.get("/lifetime", (req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT
+         users.display_name,
+         COUNT(*) as contestsPlayed,
+         SUM(CASE WHEN rank = 1 THEN 1 ELSE 0 END) as wins,
+         SUM(CASE WHEN prize_type = 'broker' THEN 1 ELSE 0 END) as brokersWon,
+         SUM(pl) as lifetimePL
+       FROM (
+         SELECT account_id, rank, prize_type, pl FROM contest_results
+         UNION ALL
+         SELECT account_id, rank, CASE WHEN prize_type='ticket' THEN 'none' ELSE prize_type END, pl FROM satellite_results
+       ) combined
+       JOIN accounts ON accounts.id = combined.account_id
+       JOIN users ON users.id = accounts.user_id
+       GROUP BY combined.account_id
+       ORDER BY lifetimePL DESC
+       LIMIT 100`
     )
     .all();
 
-  const allPositions = db.prepare("SELECT * FROM positions WHERE quantity > 0").all();
-  const symbolSet = new Set(allPositions.map((p) => p.symbol));
-  const quotes = symbolSet.size ? getQuotes([...symbolSet]) : [];
-  const priceMap = Object.fromEntries(quotes.map((q) => [q.symbol, q.price]));
+  res.json(
+    rows.map((r, i) => ({
+      rank: i + 1,
+      displayName: r.display_name,
+      contestsPlayed: r.contestsPlayed,
+      wins: r.wins,
+      brokersWon: r.brokersWon,
+      lifetimePL: Number((r.lifetimePL || 0).toFixed(2)),
+    }))
+  );
+});
 
-  const positionsByAccount = {};
-  for (const p of allPositions) {
-    (positionsByAccount[p.account_id] ||= []).push(p);
-  }
+// GET /api/leaderboard/me — the logged-in user's own lifetime stats card
+router.get("/me", (req, res) => {
+  const header = req.headers.authorization || "";
+  if (!header.startsWith("Bearer ")) return res.status(401).json({ error: "Not authenticated" });
+  const { verify } = require("../auth");
+  const payload = verify(header.slice(7));
+  if (!payload) return res.status(401).json({ error: "Not authenticated" });
+  const account = db.prepare("SELECT id FROM accounts WHERE user_id = ?").get(payload.userId);
+  if (!account) return res.status(404).json({ error: "Account not found" });
 
-  const ranked = accounts
-    .map((a) => {
-      const positions = positionsByAccount[a.account_id] || [];
-      const marketValue = positions.reduce(
-        (sum, p) => sum + (priceMap[p.symbol] ?? p.avg_cost) * p.quantity,
-        0
-      );
-      const totalValue = a.cash_balance + marketValue;
-      return {
-        displayName: a.display_name,
-        totalValue: Number(totalValue.toFixed(2)),
-        pl: Number((totalValue - a.starting_balance).toFixed(2)),
-      };
-    })
-    .sort((a, b) => b.pl - a.pl)
-    .map((row, i) => ({ rank: i + 1, ...row }));
+  const row = db
+    .prepare(
+      `SELECT
+         COUNT(*) as contestsPlayed,
+         SUM(CASE WHEN rank = 1 THEN 1 ELSE 0 END) as wins,
+         SUM(CASE WHEN prize_type = 'broker' THEN 1 ELSE 0 END) as brokersWon,
+         SUM(CASE WHEN prize_type = 'ticket' THEN 1 ELSE 0 END) as ticketsWon,
+         SUM(pl) as lifetimePL
+       FROM (
+         SELECT account_id, rank, prize_type, pl FROM contest_results
+         UNION ALL
+         SELECT account_id, rank, prize_type, pl FROM satellite_results
+       ) combined
+       WHERE account_id = ?`
+    )
+    .get(account.id);
 
-  res.json(ranked.slice(0, 100));
+  res.json({
+    contestsPlayed: row.contestsPlayed || 0,
+    wins: row.wins || 0,
+    brokersWon: row.brokersWon || 0,
+    ticketsWon: row.ticketsWon || 0,
+    lifetimePL: Number((row.lifetimePL || 0).toFixed(2)),
+  });
 });
 
 module.exports = router;

@@ -3,20 +3,18 @@
 // One room, open Monday-Friday (US Eastern Time). Flat 15% rake off every
 // entry's gross (10% platform + 5% affiliate). The remaining 85% "player
 // pool" funds as many Activated Stonk Brokers as it supports via the ladder
-// algorithm (server/prizeLadder.js) — not just zero-or-one anymore. Whatever
-// doesn't fund a full Broker goes winner-take-all to the next finishing
-// position. Every entrant gets ranked and recorded in contest_results, not
-// just the winner, so "you finished #4" is something the app can actually
-// show.
+// algorithm (server/prizeLadder.js). Whatever doesn't fund a full Broker
+// goes winner-take-all to the next finishing position.
+//
+// Ranking: each entry has its OWN dedicated $100,000 portfolio (see
+// portfolioValue.js), so P&L is simply that portfolio's current value minus
+// 100,000 — no cross-contest contamination, no starting-value bookkeeping.
 //
 // KNOWN GAP: this does not yet enforce real market-hours trading freezes —
-// trades can be placed 24/7 regardless of session windows. That's real
-// infrastructure that still needs to be built before session-based
-// satellites (Full Day / Morning / Afternoon) can be trusted to mean what
-// they say.
+// trades can be placed 24/7 regardless of session windows.
 
 const db = require("./db");
-const { totalValueForAccounts } = require("./portfolioValue");
+const { totalValueForPortfolios } = require("./portfolioValue");
 const { computeLadder } = require("./prizeLadder");
 const { isWeekday, currentWeekWindow } = require("./timeHelpers");
 
@@ -28,14 +26,6 @@ const CONFIG = {
   rakeAffiliate: 0.05,
   minEntrants: 2,
 };
-
-// ---- STONK/USD price snapshot (manual for now — see README for real-feed swap-in) ----
-function currentStonkUsdPriceMicros() {
-  const price = Number(process.env.STONK_USD_PRICE || "0.0346");
-  return Math.round(price * 1e6); // stored as integer micros to avoid float drift
-}
-
-// ---- Contest lifecycle ----
 
 function openNewContest(now = new Date()) {
   const { weekStart, weekEnd } = currentWeekWindow(now);
@@ -82,19 +72,15 @@ function resolveContest(contest) {
     grossPool * (1 - CONFIG.rakeTotal),
     CONFIG.brokerUnitCost
   );
-  const accountIds = entries.map((e) => e.account_id);
-  const valueMap = totalValueForAccounts(accountIds);
+
+  const portfolioIds = entries.map((e) => e.portfolio_id);
+  const valueMap = totalValueForPortfolios(portfolioIds);
 
   db.exec("BEGIN");
   for (const e of entries) {
     db.prepare("UPDATE contest_entries SET escrow_status = 'captured' WHERE id = ?").run(e.id);
   }
 
-  // Rake accounting, entry by entry: 10% always goes to platform. The other
-  // 5% is "affiliate share" — paid to a referrer if one exists, otherwise it
-  // rolls into platform revenue too (there's no one else to pay it to). This
-  // keeps platform_take + affiliate_paid always summing to exactly 15% of
-  // gross, with nothing silently vanishing.
   let platformTake = 0;
   let affiliatePaidTotal = 0;
   for (const e of entries) {
@@ -112,7 +98,7 @@ function resolveContest(contest) {
     .map((e) => ({
       accountId: e.account_id,
       entryId: e.id,
-      pl: (valueMap[e.account_id] ?? e.starting_value) - e.starting_value,
+      pl: (valueMap[e.portfolio_id] ?? 100000) - 100000,
     }))
     .sort((a, b) => b.pl - a.pl);
 
@@ -163,6 +149,11 @@ function displayNameFor(accountId) {
     )
     .get(accountId);
   return row?.display_name || "Unknown";
+}
+
+function currentStonkUsdPriceMicros() {
+  const price = Number(process.env.STONK_USD_PRICE || "0.0346");
+  return Math.round(price * 1e6);
 }
 
 function payAffiliateCommission(entry) {

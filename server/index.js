@@ -5,9 +5,9 @@ const path = require("path");
 const cors = require("cors");
 
 const authRoutes = require("./routes/auth");
+const accountRoutes = require("./routes/account");
 const quoteRoutes = require("./routes/quotes");
-const portfolioRoutes = require("./routes/portfolio");
-const tradeRoutes = require("./routes/trades");
+const portfolioRoutes = require("./routes/portfolios");
 const leaderboardRoutes = require("./routes/leaderboard");
 const contestRoutes = require("./routes/contests");
 const satelliteRoutes = require("./routes/satellites");
@@ -23,9 +23,9 @@ app.use(cors());
 app.use(express.json());
 
 app.use("/api/auth", authRoutes);
+app.use("/api/account", accountRoutes);
 app.use("/api/quotes", quoteRoutes);
-app.use("/api/portfolio", portfolioRoutes);
-app.use("/api/trades", tradeRoutes);
+app.use("/api/portfolios", portfolioRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/contests", contestRoutes);
 app.use("/api/satellites", satelliteRoutes);

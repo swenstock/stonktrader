@@ -182,6 +182,43 @@ revenue two ways, deliberately kept separate:
   token price movement, not player activity — which was the whole point of
   asking for this split.
 
+## One portfolio per contest entry (not one per account)
+
+This is the core architectural change in this version. Every time you enter
+a contest or satellite, you get a **fresh, dedicated $100,000 portfolio** —
+not a shared account-wide one. Enter the Weekly Qualifier, a Morning
+session, and a Full Day session all at once, and you have three completely
+isolated portfolios: trading AAPL in one never touches your position or
+cash in the others.
+
+- `portfolios` table: one row per entry, holds its own `cash_balance`
+- `positions` / `trades`: now scoped to `portfolio_id`, not `account_id`
+- P&L is simply `portfolio.totalValue - 100000` — no more cross-contest
+  "starting value" bookkeeping, since every portfolio always starts at
+  exactly the same number
+- `accounts.stonk_balance` is the only account-wide balance left — that's
+  the real STONK currency used to pay entry fees, separate from any
+  paper-trading portfolio
+
+Verified with a dedicated isolation test: a trade executed in one portfolio
+was confirmed to leave every other simultaneous portfolio for the same user
+completely untouched (`cash_balance`, positions, everything).
+
+## The satellite matrix
+
+Four categories, each running at three price levels — 12 concurrent
+satellites total:
+
+| Category | Cadence | Low | Mid | High |
+|---|---|---|---|---|
+| 🔔 Full Day | Daily, 9:30 AM–4:00 PM ET | 100 STONK | 300 STONK | 750 STONK |
+| ☀️ Morning | Daily, 9:30 AM–1:00 PM ET | 100 STONK | 300 STONK | 750 STONK |
+| 🔥 Afternoon | Daily, 1:00 PM–4:00 PM ET | 100 STONK | 300 STONK | 750 STONK |
+| 🎟️ Weekly Qualifier | Mon–Fri, same week as Main Event | 500 STONK | 1,000 STONK | 2,500 STONK |
+
+All twelve use the identical rake + ladder algorithm as the Main Event —
+see `server/satelliteScheduler.js`.
+
 ## Suggested next steps
 
 1. `npm install && npm start` locally, create a couple of test accounts, confirm

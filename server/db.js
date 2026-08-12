@@ -40,33 +40,45 @@ CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code);
 CREATE TABLE IF NOT EXISTS accounts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  cash_balance REAL NOT NULL DEFAULT 100000,
-  starting_balance REAL NOT NULL DEFAULT 100000,
   stonk_balance REAL NOT NULL DEFAULT 100000,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_accounts_user ON accounts(user_id);
 
-CREATE TABLE IF NOT EXISTS positions (
+-- One portfolio per contest/satellite ENTRY, not one per account. This is
+-- the core change: entering the Morning session and the Weekly Qualifier
+-- and the Main Event all at once gives you three completely separate
+-- $100,000 paper portfolios, each tracked and ranked independently — a
+-- trade in one never touches the others.
+CREATE TABLE IF NOT EXISTS portfolios (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  label TEXT NOT NULL, -- e.g. "Main Event · Week of Aug 10" or "Morning Session · Aug 12"
+  cash_balance REAL NOT NULL DEFAULT 100000,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_portfolios_account ON portfolios(account_id);
+
+CREATE TABLE IF NOT EXISTS positions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  portfolio_id INTEGER NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
   symbol TEXT NOT NULL,
   quantity REAL NOT NULL DEFAULT 0,
   avg_cost REAL NOT NULL DEFAULT 0,
-  UNIQUE(account_id, symbol)
+  UNIQUE(portfolio_id, symbol)
 );
-CREATE INDEX IF NOT EXISTS idx_positions_account ON positions(account_id);
+CREATE INDEX IF NOT EXISTS idx_positions_portfolio ON positions(portfolio_id);
 
 CREATE TABLE IF NOT EXISTS trades (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  portfolio_id INTEGER NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
   symbol TEXT NOT NULL,
   side TEXT NOT NULL CHECK(side IN ('buy','sell')),
   quantity REAL NOT NULL,
   price REAL NOT NULL,
   timestamp TEXT DEFAULT CURRENT_TIMESTAMP
 );
-CREATE INDEX IF NOT EXISTS idx_trades_account ON trades(account_id);
+CREATE INDEX IF NOT EXISTS idx_trades_portfolio ON trades(portfolio_id);
 
 -- One Main Event per calendar week (Mon-Fri, US Eastern Time). Flat 15%
 -- rake off the top (10% platform + 5% affiliate), remaining 85% funds as
@@ -112,9 +124,9 @@ CREATE TABLE IF NOT EXISTS contest_entries (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   contest_id INTEGER NOT NULL REFERENCES contests(id) ON DELETE CASCADE,
   account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-  entry_fee_paid INTEGER NOT NULL, -- always 3,000 face value, whether paid in STONK or via ticket
+  portfolio_id INTEGER NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
+  entry_fee_paid INTEGER NOT NULL, -- face value, whether paid in STONK or via ticket
   paid_with_ticket_id INTEGER REFERENCES tickets(id),
-  starting_value REAL NOT NULL,
   escrow_status TEXT NOT NULL DEFAULT 'held', -- held | captured | refunded
   joined_at TEXT DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(contest_id, account_id)
@@ -136,13 +148,13 @@ CREATE TABLE IF NOT EXISTS referral_earnings (
 );
 CREATE INDEX IF NOT EXISTS idx_referral_earnings_referrer ON referral_earnings(referrer_user_id);
 
--- One satellite tier for now (Phase 1) — same ladder algorithm as the Main
--- Event, but the unit is a 3,000 STONK Main Event ticket instead of a
--- 733,332 STONK Broker. Runs on a recurring schedule (see
--- satelliteScheduler.js).
+-- Satellite sessions: each category (Full Day / Morning / Afternoon / Weekly
+-- Qualifier) runs at three price levels (Low/Mid/High), same ladder
+-- algorithm as the Main Event throughout — see satelliteScheduler.js.
 CREATE TABLE IF NOT EXISTS satellites (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  tier_id TEXT NOT NULL,
+  tier_id TEXT NOT NULL,       -- e.g. 'full_day', 'morning', 'afternoon', 'weekly_qualifier'
+  price_level TEXT NOT NULL,   -- 'low' | 'mid' | 'high'
   name TEXT NOT NULL,
   entry_fee INTEGER NOT NULL,
   ticket_cost INTEGER NOT NULL DEFAULT 3000,
@@ -161,18 +173,31 @@ CREATE TABLE IF NOT EXISTS satellites (
   remainder_display_name TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_satellites_status ON satellites(status);
-CREATE INDEX IF NOT EXISTS idx_satellites_tier ON satellites(tier_id, status);
+CREATE INDEX IF NOT EXISTS idx_satellites_tier ON satellites(tier_id, price_level, status);
 
 CREATE TABLE IF NOT EXISTS satellite_entries (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   satellite_id INTEGER NOT NULL REFERENCES satellites(id) ON DELETE CASCADE,
   account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  portfolio_id INTEGER NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
   entry_fee_paid INTEGER NOT NULL,
-  starting_value REAL NOT NULL,
   joined_at TEXT DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(satellite_id, account_id)
 );
 CREATE INDEX IF NOT EXISTS idx_satellite_entries_satellite ON satellite_entries(satellite_id);
+
+-- Ranked finishers of a resolved satellite — mirrors contest_results, so
+-- lifetime leaderboards/stats can aggregate across both uniformly.
+CREATE TABLE IF NOT EXISTS satellite_results (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  satellite_id INTEGER NOT NULL REFERENCES satellites(id) ON DELETE CASCADE,
+  account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  rank INTEGER NOT NULL,
+  pl REAL NOT NULL,
+  prize_type TEXT NOT NULL, -- ticket | stonk | none
+  prize_amount INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_satellite_results_satellite ON satellite_results(satellite_id);
 
 -- A funded Main Event seat won from a satellite. "Funded" means the 3,000
 -- STONK backing it has already been collected during the satellite — using

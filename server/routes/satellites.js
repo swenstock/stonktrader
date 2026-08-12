@@ -2,11 +2,9 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 const requireAuth = require("../middleware/requireAuth");
-const { totalValueForAccount } = require("../portfolioValue");
-const { TIERS } = require("../satelliteScheduler");
+const { createPortfolio } = require("../portfolioValue");
+const { TIERS, CATEGORIES } = require("../satelliteScheduler");
 const { isWeekday, etCalendarDate, etDateTime, currentWeekWindow } = require("../timeHelpers");
-
-const TIER_META = Object.fromEntries(TIERS.map((t) => [t.id, t]));
 
 function hourToParts(hourFloat) {
   const hour = Math.floor(hourFloat);
@@ -14,16 +12,11 @@ function hourToParts(hourFloat) {
   return { hour, minute };
 }
 
-// Computes when this tier's session will next actually be open — used only
-// when no satellite row exists yet for "today" (e.g. it's before 9:30am ET,
-// or a weekend), so the lobby can show "Opens Tue 9:30 AM ET" instead of
-// the box just vanishing.
 function nextOccurrence(tier, now) {
   if (tier.cadence === "weekly") {
     const { weekStart } = currentWeekWindow(now);
     return weekStart;
   }
-
   let probe = new Date(now);
   for (let i = 0; i < 8; i++) {
     if (isWeekday(probe)) {
@@ -32,32 +25,28 @@ function nextOccurrence(tier, now) {
       const l = hourToParts(tier.lockHour);
       const opensAt = etDateTime(year, month, day, o.hour, o.minute, 0);
       const locksAt = etDateTime(year, month, day, l.hour, l.minute, 0);
-      if (now.getTime() < locksAt.getTime()) return opensAt; // today's window hasn't locked yet
+      if (now.getTime() < locksAt.getTime()) return opensAt;
     }
-    probe = new Date(probe.getTime() + 24 * 60 * 60 * 1000); // try the next calendar day
+    probe = new Date(probe.getTime() + 24 * 60 * 60 * 1000);
   }
-  return now; // fallback, should never realistically hit
+  return now;
 }
 
 function serializePendingTier(tier, now) {
-  const opensAt = nextOccurrence(tier, now);
   return {
     id: null,
-    tierId: tier.id,
+    tierId: tier.categoryId,
+    priceLevel: tier.priceLevel,
     icon: tier.icon,
     name: tier.name,
     cadence: tier.cadence,
     entryFee: tier.entryFee,
-    ticketCost: 3000,
     status: "pending",
-    opensAt: opensAt.toISOString(),
+    opensAt: nextOccurrence(tier, now).toISOString(),
     locksAt: null,
     entrantCount: 0,
     poolGross: 0,
     ticketsProjected: 0,
-    ticketsFunded: null,
-    remainderStonk: null,
-    remainderDisplayName: null,
     joined: false,
   };
 }
@@ -71,15 +60,18 @@ function serializeSatellite(s, myAccountId) {
   const ticketsProjected = Math.floor(playerPool / s.ticket_cost);
 
   const myEntry = myAccountId
-    ? db.prepare("SELECT id FROM satellite_entries WHERE satellite_id = ? AND account_id = ?").get(s.id, myAccountId)
+    ? db.prepare("SELECT * FROM satellite_entries WHERE satellite_id = ? AND account_id = ?").get(s.id, myAccountId)
     : null;
+
+  const tierMeta = TIERS.find((t) => t.categoryId === s.tier_id && t.priceLevel === s.price_level);
 
   return {
     id: s.id,
     tierId: s.tier_id,
-    icon: TIER_META[s.tier_id]?.icon || "🎯",
+    priceLevel: s.price_level,
+    icon: tierMeta?.icon || "🎯",
     name: s.name,
-    cadence: TIER_META[s.tier_id]?.cadence || "daily",
+    cadence: tierMeta?.cadence || "daily",
     entryFee: s.entry_fee,
     ticketCost: s.ticket_cost,
     status: s.status,
@@ -92,6 +84,7 @@ function serializeSatellite(s, myAccountId) {
     remainderStonk: s.remainder_stonk,
     remainderDisplayName: s.remainder_display_name,
     joined: !!myEntry,
+    myPortfolioId: myEntry ? myEntry.portfolio_id : null,
   };
 }
 
@@ -109,20 +102,15 @@ router.get("/", (req, res) => {
 
   const now = new Date();
 
-  // Every tier always shows a card — open, most-recently-resolved, or (if
-  // neither exists yet today, e.g. it's before 9:30am ET) a synthesized
-  // "pending" state showing when it next opens for real.
-  const current = TIERS.map((tier) => {
-    const open = db.prepare("SELECT * FROM satellites WHERE tier_id = ? AND status = 'open'").get(tier.id);
+  const currentByTier = TIERS.map((tier) => {
+    const open = db
+      .prepare("SELECT * FROM satellites WHERE tier_id = ? AND price_level = ? AND status = 'open'")
+      .get(tier.categoryId, tier.priceLevel);
     if (open) return serializeSatellite(open, myAccountId);
 
     const lastResolved = db
-      .prepare("SELECT * FROM satellites WHERE tier_id = ? ORDER BY id DESC LIMIT 1")
-      .get(tier.id);
-    // Only reuse a resolved row if it's from TODAY's (or this week's, for
-    // the qualifier) window — otherwise it's stale and we want "pending" for
-    // the next real occurrence instead of showing yesterday's result as if
-    // it were current.
+      .prepare("SELECT * FROM satellites WHERE tier_id = ? AND price_level = ? ORDER BY id DESC LIMIT 1")
+      .get(tier.categoryId, tier.priceLevel);
     if (lastResolved) {
       const opensAtDate = new Date(lastResolved.opens_at);
       const isSameOccurrence =
@@ -131,16 +119,25 @@ router.get("/", (req, res) => {
           : opensAtDate.toDateString() === now.toDateString();
       if (isSameOccurrence) return serializeSatellite(lastResolved, myAccountId);
     }
-
     return serializePendingTier(tier, now);
   });
 
+  // Group into categories for compact display — each category shows its
+  // three price levels together, matching a DraftKings-style contest list.
+  const categories = CATEGORIES.map((cat) => ({
+    id: cat.id,
+    name: cat.name,
+    icon: cat.icon,
+    cadence: cat.cadence,
+    levels: currentByTier.filter((t) => t.tierId === cat.id),
+  }));
+
   const history = db
-    .prepare("SELECT * FROM satellites WHERE status = 'resolved' ORDER BY resolved_at DESC LIMIT 30")
+    .prepare("SELECT * FROM satellites WHERE status = 'resolved' ORDER BY resolved_at DESC LIMIT 40")
     .all()
     .map((s) => serializeSatellite(s, myAccountId));
 
-  res.json({ tiers: current, history });
+  res.json({ categories, history });
 });
 
 router.post("/:id/enter", requireAuth, (req, res) => {
@@ -158,7 +155,7 @@ router.post("/:id/enter", requireAuth, (req, res) => {
     return res.status(400).json({ error: "Not enough STONK to enter" });
   }
 
-  const startingValue = totalValueForAccount(account.id);
+  const portfolioId = createPortfolio(account.id, `${satellite.name} · ${new Date().toLocaleDateString()}`);
 
   db.exec("BEGIN");
   db.prepare("UPDATE accounts SET stonk_balance = stonk_balance - ? WHERE id = ?").run(
@@ -166,11 +163,11 @@ router.post("/:id/enter", requireAuth, (req, res) => {
     account.id
   );
   db.prepare(
-    "INSERT INTO satellite_entries (satellite_id, account_id, entry_fee_paid, starting_value) VALUES (?, ?, ?, ?)"
-  ).run(satellite.id, account.id, satellite.entry_fee, startingValue);
+    "INSERT INTO satellite_entries (satellite_id, account_id, portfolio_id, entry_fee_paid) VALUES (?, ?, ?, ?)"
+  ).run(satellite.id, account.id, portfolioId, satellite.entry_fee);
   db.exec("COMMIT");
 
-  res.json({ ok: true, satelliteId: satellite.id, entryFeePaid: satellite.entry_fee });
+  res.json({ ok: true, satelliteId: satellite.id, portfolioId, entryFeePaid: satellite.entry_fee });
 });
 
 module.exports = router;

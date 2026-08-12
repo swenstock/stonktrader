@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stonk Broker Challenge — Paper Trading</title>
+<title>Stonk Broker Challenge</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
@@ -14,7 +14,7 @@
 <!-- ===== Auth screen ===== -->
 <div id="authScreen" class="auth-screen">
   <div class="auth-card">
-    <div class="logo"><span class="dot"></span>STONK BROKER CHALLENGE</div>
+    <div class="logo">STONK <span class="accent">BROKER</span></div>
     <div class="auth-tabs">
       <button class="tab-btn active" data-tab="login">Log in</button>
       <button class="tab-btn" data-tab="signup">Sign up</button>
@@ -47,17 +47,16 @@
 <!-- ===== Main app ===== -->
 <div id="appScreen" class="app-screen" style="display:none;">
   <nav>
-    <div class="logo">STONK <span class="accent">BROKER</span><br><span style="font-size:10px;letter-spacing:.25em;color:var(--text-dim);">CHALLENGE</span></div>
+    <div class="logo">STONK <span class="accent">BROKER</span></div>
     <div class="nav-tabs">
-      <button class="nav-tab active" data-view="lobby">Home</button>
-      <button class="nav-tab" data-view="trade">Trading Floor</button>
-      <button class="nav-tab" data-view="history">Contests</button>
+      <button class="nav-tab active" data-view="lobby">Lobby</button>
+      <button class="nav-tab" data-view="mycontests">My Contests</button>
+      <button class="nav-tab" data-view="leaderboards">Leaderboards</button>
+      <button class="nav-tab" data-view="howitworks">How It Works</button>
       <button class="nav-tab" data-view="referrals">Referrals</button>
     </div>
     <div class="nav-right">
-      <div class="price-box">
-        STB PRICE<br><b id="navStbPrice">$0.0346</b>
-      </div>
+      <button class="btn btn-outline" id="connectWalletBtn">Connect Wallet</button>
       <div class="chip-balance">
         <svg class="chip-icon" viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#8CFF00"/><circle cx="12" cy="12" r="10" fill="none" stroke="#0A1400" stroke-width="1.5" stroke-dasharray="3 3"/><circle cx="12" cy="12" r="5.5" fill="#0A1400"/></svg>
         <span class="mono" id="navStonkBalance">0</span>
@@ -74,10 +73,6 @@
         <div class="eyebrow">STONK BROKER TERMINAL</div>
         <h1 class="pixel-headline">CAN'T BUY<br>THE BROKER?<br><span class="accent">EARN THE<br>BROKER.</span></h1>
         <p>$100,000 in paper money. Real stocks. Real prices. Real competition. Your wallet doesn't decide if you become a Broker. Your picks do.</p>
-        <div class="hero-cta-row">
-          <div class="satellite-price-note">SATELLITES START AROUND<br><b>≈ $5</b></div>
-          <button class="btn btn-gold" id="heroEnterFloorBtn">ENTER THE FLOOR ›</button>
-        </div>
         <div class="live-stats-bar" id="liveStatsBar"></div>
       </div>
       <div class="broker-lineup">
@@ -140,23 +135,11 @@
       </div>
     </div>
 
-    <div class="howitworks-strip">
-      <div class="hiw-step"><span class="hiw-n">01</span><div><b>Start small</b><p>A cheap daily satellite gets you $100,000 in paper cash. No hardcore NFT budget required.</p></div></div>
-      <div class="hiw-step"><span class="hiw-n">02</span><div><b>Trade the floor</b><p>Real US &amp; global tickers, live prices. Prove you can pick stocks better than the room.</p></div></div>
-      <div class="hiw-step"><span class="hiw-n">03</span><div><b>Win your way in</b><p>Finish high enough in a satellite and you earn a funded ticket into the weekly Stonk Broker Challenge — free.</p></div></div>
-    </div>
-
     <div class="section-head">
-      <h2>🔔 Today's satellites</h2>
-      <p>Win a funded Main Event ticket — free entry, no extra charge to use it.</p>
+      <h2>🔔 Daily &amp; Weekly Satellites</h2>
+      <p>Win a funded Main Event ticket. Every category runs at three price points.</p>
     </div>
-    <div class="daily-grid" id="dailySessionsGrid"></div>
-
-    <div class="section-head">
-      <h2>🎟️ Weekly Qualifier</h2>
-      <p>Runs all week, feeds tickets into this week's Main Event.</p>
-    </div>
-    <div id="weeklyQualifierCard"></div>
+    <div id="satelliteCategories"></div>
 
     <div class="main-event-section">
       <div class="main-event-glow"></div>
@@ -168,9 +151,25 @@
     </div>
   </div>
 
+  <!-- ===== MY CONTESTS ===== -->
+  <div id="mycontestsView" class="view" style="display:none;">
+    <div class="section-head">
+      <h2>My Contests</h2>
+      <p>Each contest you've entered has its own dedicated $100,000 portfolio.</p>
+    </div>
+    <div class="section-head" style="margin-top:8px;"><h2 style="font-size:15px;">Active</h2></div>
+    <div id="activePortfoliosList" class="portfolio-list"></div>
+    <div class="section-head"><h2 style="font-size:15px;">Past</h2></div>
+    <div id="pastPortfoliosList" class="portfolio-list"></div>
+  </div>
 
-  <!-- ===== TRADE ===== -->
+  <!-- ===== TRADE (contextual, opened from My Contests) ===== -->
   <div id="tradeView" class="view" style="display:none;">
+    <button class="btn btn-outline" id="backToMyContestsBtn" style="margin:20px 28px 0;">← Back to My Contests</button>
+    <div class="section-head">
+      <h2 id="tradeContextLabel">Trading</h2>
+      <p id="tradeContextSub"></p>
+    </div>
     <div class="portfolio-summary">
       <div class="ps-box"><span>Total Value</span><b class="mono" id="totalValue">$0.00</b></div>
       <div class="ps-box"><span>Cash</span><b class="mono" id="cashValue">$0.00</b></div>
@@ -210,25 +209,82 @@
       </div>
 
       <div class="panel">
-        <h3>Global Leaderboard <span class="tag">top 100</span></h3>
-        <div id="leaderboard"></div>
+        <h3>This Contest's Leaderboard</h3>
+        <div id="contextLeaderboard"></div>
       </div>
     </div>
   </div>
 
-  <!-- ===== HISTORY ===== -->
-  <div id="historyView" class="view" style="display:none;">
+  <!-- ===== LEADERBOARDS ===== -->
+  <div id="leaderboardsView" class="view" style="display:none;">
     <div class="section-head">
-      <h2>Closed trading rooms</h2>
-      <p>Every finished contest and who took the broker home.</p>
+      <h2>Leaderboards</h2>
+      <p>This week's Main Event, and all-time trader stats.</p>
     </div>
-    <div id="historyList"></div>
+    <div class="main-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="panel">
+        <h3>My Career <span class="tag">lifetime</span></h3>
+        <div id="myStatsCard"></div>
+      </div>
+      <div class="panel">
+        <h3>This Week's Main Event</h3>
+        <div id="mainEventLeaderboard"></div>
+      </div>
+    </div>
+    <div class="section-head" style="margin-top:24px;"><h2 style="font-size:18px;">🏆 All-Time Trader Leaderboard</h2></div>
+    <div class="panel" style="max-width:1200px;margin:0 auto 40px;">
+      <table>
+        <thead><tr><th>Rank</th><th>Trader</th><th>Contests</th><th>Wins</th><th>Brokers Won</th><th>Lifetime P&amp;L</th></tr></thead>
+        <tbody id="lifetimeLeaderboardTable"></tbody>
+      </table>
+    </div>
   </div>
+
+  <!-- ===== HOW IT WORKS ===== -->
+  <div id="howitworksView" class="view" style="display:none;">
+    <div class="section-head">
+      <h2>How It Works</h2>
+      <p>Start small. Win your way up. Become a Broker.</p>
+    </div>
+    <div class="howitworks-page">
+      <div class="hiw-block">
+        <div class="hiw-n">01</div>
+        <h3>Enter a satellite</h3>
+        <p>Pick any of the daily sessions (Full Day, Morning, Afternoon) or the Weekly Qualifier — each runs at three price points, from a few dollars up. Entering gives you a dedicated $100,000 paper portfolio, just for that contest.</p>
+      </div>
+      <div class="hiw-block">
+        <div class="hiw-n">02</div>
+        <h3>Trade real markets</h3>
+        <p>US and global tickers, live prices. Your picks in this portfolio determine your rank in this contest only — trading in one contest never affects any other portfolio you're in.</p>
+      </div>
+      <div class="hiw-block">
+        <div class="hiw-n">03</div>
+        <h3>Finish high enough, win a ticket</h3>
+        <p>Every satellite's prize pool funds as many 3,000 STONK Main Event tickets as it can support. Finish inside that cutoff and you get a ticket — a fully funded, free entry into the Main Event.</p>
+      </div>
+      <div class="hiw-block">
+        <div class="hiw-n">04</div>
+        <h3>Play your ticket in the Main Event</h3>
+        <p>Redeem your ticket for a free seat in this week's Main Event — no extra charge. You're now playing for a shot at a real Activated Stonk Broker.</p>
+      </div>
+      <div class="hiw-block">
+        <div class="hiw-n">05</div>
+        <h3>The Main Event pays out in Brokers</h3>
+        <p>The Main Event's prize pool funds as many Activated Stonk Brokers as it can support — could be one, could be several. Whatever's left over goes winner-take-all in STONK to the next finisher.</p>
+      </div>
+      <div class="hiw-block">
+        <div class="hiw-n">06</div>
+        <h3>You can stack contests</h3>
+        <p>Nothing stops you from being in the Weekly Qualifier, a Morning session, and a Full Day session all at once — each has its own portfolio and its own shot at a ticket.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== REFERRALS ===== -->
   <div id="referralsView" class="view" style="display:none;">
     <div class="section-head">
       <h2>Refer traders, earn STONK</h2>
-      <p>You earn a share of the rake from every room a referred trader plays, paid automatically the moment that room resolves.</p>
+      <p>You earn a share of the rake from every contest a referred trader plays, paid automatically the moment that contest resolves.</p>
     </div>
     <div class="referral-grid">
       <div class="panel referral-code-panel">
@@ -241,7 +297,7 @@
           <div class="ps-box"><span>Traders referred</span><b class="mono" id="referredCount">0</b></div>
           <div class="ps-box"><span>Total earned</span><b class="mono" id="totalEarned">0 STONK</b></div>
         </div>
-        <p class="referral-explainer">Share your link or code (<span class="mono" id="referralCodeInline">—</span>) with new traders. In any week where the room raises enough to fund the real Stonk Broker prize, you get a share of the extra pool for everyone you referred — credited straight to your STONK balance, no cap, no expiry.</p>
+        <p class="referral-explainer">Share your link or code (<span class="mono" id="referralCodeInline">—</span>) with new traders. When a contest they play resolves with a real prize pool, you get a share of the surplus — credited straight to your STONK balance, no cap, no expiry.</p>
       </div>
       <div class="panel">
         <h3>Earnings history</h3>
