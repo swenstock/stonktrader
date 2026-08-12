@@ -15,6 +15,7 @@ const { totalValueForPortfolios } = require("./portfolioValue");
 const { computeLadder } = require("./prizeLadder");
 const { etDateTime, etCalendarDate, isWeekday, currentWeekWindow } = require("./timeHelpers");
 const mainEvent = require("./contestScheduler");
+const { applyPendingSatelliteAllocations } = require("./allocationEngine");
 
 const RAKE = { total: 0.15, platform: 0.10, affiliate: 0.05 };
 const TICKET_COST = 3000;
@@ -73,18 +74,23 @@ function windowFor(tier, now) {
 
 function openNewSatellite(tier, now) {
   const { opensAt, locksAt } = windowFor(tier, now);
-  db.prepare(
-    `INSERT INTO satellites (tier_id, price_level, name, entry_fee, ticket_cost, opens_at, locks_at, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'open')`
-  ).run(
-    tier.categoryId,
-    tier.priceLevel,
-    tier.name,
-    tier.entryFee,
-    TICKET_COST,
-    opensAt.toISOString(),
-    locksAt.toISOString()
-  );
+  const info = db
+    .prepare(
+      `INSERT INTO satellites (tier_id, price_level, name, entry_fee, ticket_cost, opens_at, locks_at, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'open')`
+    )
+    .run(
+      tier.categoryId,
+      tier.priceLevel,
+      tier.name,
+      tier.entryFee,
+      TICKET_COST,
+      opensAt.toISOString(),
+      locksAt.toISOString()
+    );
+
+  const newSatellite = db.prepare("SELECT * FROM satellites WHERE id = ?").get(info.lastInsertRowid);
+  applyPendingSatelliteAllocations(newSatellite);
 }
 
 function ensureOpenSatellites(now = new Date()) {
@@ -115,7 +121,9 @@ function resolveSatellite(satellite) {
 
   if (entries.length === 0) {
     db.prepare(
-      "UPDATE satellites SET status = 'resolved', resolved_at = ?, pool_gross = 0 WHERE id = ?"
+      `UPDATE satellites SET status = 'resolved', resolved_at = ?, pool_gross = 0, player_pool = 0,
+       platform_take_stonk = 0, affiliate_paid_stonk = 0, tickets_funded = 0, remainder_stonk = 0
+       WHERE id = ?`
     ).run(new Date().toISOString(), satellite.id);
     return;
   }

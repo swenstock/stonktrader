@@ -47,7 +47,7 @@
 <!-- ===== Main app ===== -->
 <div id="appScreen" class="app-screen" style="display:none;">
   <nav>
-    <div class="logo">STONK <span class="accent">BROKER</span> CHALLENGE</div>
+    <div class="logo" id="navLogoHome">STONK <span class="accent">BROKER</span> CHALLENGE</div>
     <div class="nav-tabs">
       <button class="nav-tab active" data-view="lobby">Lobby</button>
       <button class="nav-tab" data-view="mycontests">My Contests</button>
@@ -140,6 +140,7 @@
       <h2>🔔 Daily &amp; Weekly Satellites</h2>
       <p>Win a funded Main Event ticket. Every category runs at three price points.</p>
     </div>
+    <button class="btn btn-outline" id="openAllocationModalBtn" style="margin:0 28px 16px;">⚙️ Set up an auto-fill allocation</button>
     <div id="satelliteCategories"></div>
 
     <div class="main-event-section">
@@ -160,16 +161,17 @@
     </div>
     <div class="section-head" style="margin-top:8px;"><h2 style="font-size:15px;">Active</h2></div>
     <div id="activePortfoliosList" class="portfolio-list"></div>
+    <div class="section-head"><h2 style="font-size:15px;">Pending Auto-fill Allocations</h2></div>
+    <div id="pendingAllocationsList" class="portfolio-list"></div>
     <div class="section-head"><h2 style="font-size:15px;">Past</h2></div>
     <div id="pastPortfoliosList" class="portfolio-list"></div>
   </div>
 
   <!-- ===== TRADE (contextual, opened from My Contests) ===== -->
   <div id="tradeView" class="view" style="display:none;">
-    <button class="btn btn-outline" id="backToMyContestsBtn" style="margin:20px 28px 0;">← Back to My Contests</button>
-    <div class="section-head">
-      <h2 id="tradeContextLabel">Trading</h2>
-      <p id="tradeContextSub"></p>
+    <div class="trade-sticky-bar">
+      <button class="btn btn-outline" id="backToMyContestsBtn">← My Contests</button>
+      <span id="tradeContextLabel" class="trade-sticky-label">Trading</span>
     </div>
     <div class="portfolio-summary">
       <div class="ps-box"><span>Total Value</span><b class="mono" id="totalValue">$0.00</b></div>
@@ -177,28 +179,14 @@
       <div class="ps-box"><span>P&amp;L</span><b class="mono" id="pnlValue">$0.00</b></div>
     </div>
 
-    <div class="main-grid">
+    <div class="main-grid" style="grid-template-columns:1fr;">
       <div class="panel">
-        <h3>Markets <span class="tag">US &amp; global · live</span></h3>
+        <h3>Markets <span class="tag">tap a symbol to trade</span></h3>
         <div class="market-filter" id="marketFilter"></div>
         <table>
           <thead><tr><th>Symbol</th><th>Exchange</th><th>Price</th><th>Chg</th></tr></thead>
           <tbody id="watchlistTable"></tbody>
         </table>
-      </div>
-
-      <div class="panel">
-        <h3><span id="chartSymbolLabel">AAPL</span> <span class="tag" id="chartPriceLabel"></span></h3>
-        <div id="chartContainer" style="height:260px;"></div>
-        <div class="trade-form">
-          <label>Shares</label>
-          <input type="number" id="tradeShares" min="1" value="10">
-          <div class="trade-btns">
-            <button class="btn btn-green" id="buyBtn">Buy</button>
-            <button class="btn btn-red" id="sellBtn">Sell</button>
-          </div>
-          <div class="trade-msg" id="tradeMsg"></div>
-        </div>
       </div>
 
       <div class="panel">
@@ -213,6 +201,42 @@
         <h3>This Contest's Leaderboard</h3>
         <div id="contextLeaderboard"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- ===== Trade popup modal (opens on tapping a symbol) ===== -->
+  <div id="tradeModal" class="trade-modal" style="display:none;">
+    <div class="trade-modal-backdrop" id="tradeModalBackdrop"></div>
+    <div class="trade-modal-card">
+      <button class="trade-modal-close" id="tradeModalClose">✕</button>
+      <h3><span id="chartSymbolLabel">AAPL</span> <span class="tag" id="chartPriceLabel"></span></h3>
+      <div id="chartContainer" style="height:220px;"></div>
+      <div class="trade-form">
+        <label>Shares</label>
+        <input type="number" id="tradeShares" min="1" value="10">
+        <div class="trade-btns">
+          <button class="btn btn-green" id="buyBtn">Buy</button>
+          <button class="btn btn-red" id="sellBtn">Sell</button>
+        </div>
+        <div class="trade-msg" id="tradeMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Auto-fill allocation modal ===== -->
+  <div id="allocationModal" class="trade-modal" style="display:none;">
+    <div class="trade-modal-backdrop" id="allocationModalBackdrop"></div>
+    <div class="trade-modal-card">
+      <button class="trade-modal-close" id="allocationModalClose">✕</button>
+      <h3>Auto-fill allocation</h3>
+      <p style="color:var(--text-dim);font-size:12.5px;margin:-4px 0 14px;">Set this up before a contest opens. The moment it does, you're entered and this allocation fires at the opening price — free to trade normally after.</p>
+      <label>Which contest</label>
+      <select id="allocTargetSelect"></select>
+      <div id="allocationRows" style="margin-top:10px;"></div>
+      <button class="btn btn-outline btn-sm" id="addAllocRowBtn" style="margin-top:6px;">+ Add symbol</button>
+      <div style="margin-top:12px;font-size:12px;color:var(--text-dim);">Total allocated: <b id="allocTotalPct" class="mono">0</b>% <span style="opacity:.7;">(max 5% per symbol, 100% total, rest stays cash)</span></div>
+      <button class="btn btn-gold" id="submitAllocationBtn" style="margin-top:14px;width:100%;">Save allocation</button>
+      <div class="trade-msg" id="allocationMsg"></div>
     </div>
   </div>
 

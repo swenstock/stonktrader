@@ -238,6 +238,32 @@ Verified with a dedicated test: buying exactly at the 5% boundary succeeds,
 one share over it is rejected, and appreciation-driven growth past 5% is
 confirmed untouched by the rule.
 
+## Pre-set portfolio allocations ("auto-fill")
+
+Set up a percentage split (e.g. 5% AAPL, 3% MSFT, 2% NVDA) for a contest that
+**doesn't exist yet** — the next Full Day Low session, or next week's Main
+Event. The moment a matching contest/satellite actually opens, you're
+auto-entered and the allocation fires immediately at the opening quote —
+no need to be watching the clock. Free to trade normally after; this is
+strictly the opening move, not a lock.
+
+- `pending_allocations` table: keyed by **tier**, not a specific contest
+  instance (which doesn't exist until the scheduler creates it)
+- `server/allocationEngine.js`: validation (same 5%-per-symbol rule as
+  manual trades, 100% total cap) and the actual fill logic
+- Hooked into both schedulers' `openNewContest()`/`openNewSatellite()` —
+  the instant a new instance is created, any matching pending allocations
+  are checked and applied automatically
+- One-time use: applies once, then moves to `applied` or `failed` (e.g. not
+  enough STONK at open) — never silently retries
+- If the entrant already has an unredeemed ticket, the Main Event auto-fill
+  uses it instead of charging STONK, same as a manual entry would
+
+Tested end-to-end: a pending allocation created before any satellite
+existed correctly auto-entered the account and filled the exact percentage
+split (verified to the cent) the instant the scheduler opened a matching
+satellite — same confirmed for the Main Event, including ticket-based entry.
+
 ## Suggested next steps
 
 1. `npm install && npm start` locally, create a couple of test accounts, confirm

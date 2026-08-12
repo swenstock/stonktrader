@@ -17,6 +17,7 @@ const db = require("./db");
 const { totalValueForPortfolios } = require("./portfolioValue");
 const { computeLadder } = require("./prizeLadder");
 const { isWeekday, currentWeekWindow } = require("./timeHelpers");
+const { applyPendingContestAllocations } = require("./allocationEngine");
 
 const CONFIG = {
   entryFee: 3000, // STONK — the Main Event ticket price
@@ -29,10 +30,15 @@ const CONFIG = {
 
 function openNewContest(now = new Date()) {
   const { weekStart, weekEnd } = currentWeekWindow(now);
-  db.prepare(
-    `INSERT INTO contests (week_start, week_end, entry_fee, broker_unit_cost, status)
-     VALUES (?, ?, ?, ?, 'open')`
-  ).run(weekStart.toISOString(), weekEnd.toISOString(), CONFIG.entryFee, CONFIG.brokerUnitCost);
+  const info = db
+    .prepare(
+      `INSERT INTO contests (week_start, week_end, entry_fee, broker_unit_cost, status)
+       VALUES (?, ?, ?, ?, 'open')`
+    )
+    .run(weekStart.toISOString(), weekEnd.toISOString(), CONFIG.entryFee, CONFIG.brokerUnitCost);
+
+  const newContest = db.prepare("SELECT * FROM contests WHERE id = ?").get(info.lastInsertRowid);
+  applyPendingContestAllocations(newContest);
 }
 
 function ensureOpenContest(now = new Date()) {

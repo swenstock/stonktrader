@@ -215,6 +215,28 @@ CREATE TABLE IF NOT EXISTS tickets (
   applied_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_tickets_account ON tickets(account_id, status);
+
+-- A pre-set allocation ("30% AAPL, 25% TSLA...") for a contest/satellite that
+-- doesn't exist yet. Keyed by TIER (not a specific instance, which won't
+-- exist until the scheduler opens it) — applied automatically the moment a
+-- matching contest/satellite opens, executing the allocation as the opening
+-- trades. One-time use: applies once, then its status moves to applied/failed.
+CREATE TABLE IF NOT EXISTS pending_allocations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  target_type TEXT NOT NULL, -- 'contest' | 'satellite'
+  target_tier_id TEXT NOT NULL, -- 'main_event', or 'full_day'/'morning'/'afternoon'/'weekly_qualifier'
+  target_price_level TEXT, -- NULL for contest, 'low'|'mid'|'high' for satellite
+  allocations_json TEXT NOT NULL, -- [{symbol, percent}, ...]
+  status TEXT NOT NULL DEFAULT 'pending', -- pending | applied | cancelled | failed
+  fail_reason TEXT,
+  applied_to_contest_id INTEGER REFERENCES contests(id),
+  applied_to_satellite_id INTEGER REFERENCES satellites(id),
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  applied_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_pending_allocations_lookup ON pending_allocations(target_type, target_tier_id, target_price_level, status);
+CREATE INDEX IF NOT EXISTS idx_pending_allocations_account ON pending_allocations(account_id);
 `);
 
 module.exports = db;

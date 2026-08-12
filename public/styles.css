@@ -5,7 +5,8 @@
   --gold-dim:#1E3305; --green-dim:#1F5C3C;
 }
 *{box-sizing:border-box;}
-body{margin:0;background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Sora',sans-serif;overflow-x:hidden;}
+html{overflow-x:hidden;}
 .mono{font-family:'IBM Plex Mono',monospace;}
 .pixel{font-family:'Press Start 2P',monospace;}
 
@@ -88,7 +89,8 @@ tr.watch-row:hover{background:var(--surface-2);}
 
 /* ---------- Nav tabs & chip balance ---------- */
 nav{flex-wrap:wrap;gap:14px;}
-.nav-tabs{display:flex;gap:6px;}
+.nav-tabs{display:flex;gap:6px;flex-wrap:wrap;}
+.nav-right{flex-wrap:wrap;justify-content:flex-end;}
 .nav-tab{
   background:transparent;border:1px solid transparent;color:var(--text-dim);
   padding:8px 16px;border-radius:999px;font-family:'Sora',sans-serif;font-weight:600;
@@ -246,6 +248,18 @@ nav{flex-wrap:wrap;gap:14px;}
   .broker-lineup{margin-top:24px;}
 }
 
+@media(max-width:480px){
+  nav{padding:12px 16px;gap:10px;}
+  .nav-right{gap:8px;width:100%;}
+  .welcome{display:none;} /* redundant with the balance chip on a phone-width screen */
+  .price-box{display:none;}
+  .btn-outline#connectWalletBtn{padding:9px 12px;font-size:11px;}
+  .chip-balance{padding:6px 10px;font-size:12px;}
+  .logo{font-size:15px;}
+  .sat-table{font-size:11.5px;}
+  .sat-table th, .sat-table td{padding:8px 6px;}
+}
+
 /* ---------- Daily session grid ---------- */
 .daily-grid{max-width:1200px;margin:0 auto;padding:0 28px 8px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
 .daily-grid .table-card{padding:20px;}
@@ -295,15 +309,23 @@ nav{flex-wrap:wrap;gap:14px;}
 .btn-sm{padding:6px 12px;font-size:11.5px;border-radius:5px;}
 
 /* ---------- Compact satellite matrix (DraftKings-style) ---------- */
-.sat-category{max-width:1200px;margin:0 auto 18px;padding:0 28px;}
+.sat-category-v2{max-width:1200px;margin:0 auto 14px;padding:0 28px;}
 .sat-category-head{
-  font-size:14px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;
+  font-size:13px;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:8px;
   color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em;
 }
-.sat-table{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;font-size:13px;}
-.sat-table th{padding:10px 14px;background:var(--surface-2);}
-.sat-table td{padding:10px 14px;border-bottom:1px solid var(--border);}
-.sat-table tr:last-child td{border-bottom:none;}
+.stake-chips{display:flex;gap:8px;flex-wrap:wrap;}
+.stake-chip{
+  flex:1;min-width:110px;background:var(--surface);border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:3px;
+  transition:border-color .15s ease, background .15s ease;
+}
+.stake-chip:hover:not([disabled]){border-color:var(--gold);}
+.stake-chip:disabled{cursor:default;opacity:.55;}
+.stake-chip.in{border-color:var(--green);background:rgba(58,220,132,.06);opacity:1;}
+.stake-fee{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:14px;color:var(--gold);}
+.stake-chip.in .stake-fee{color:var(--green);}
+.stake-sub{font-size:11px;color:var(--text-dim);}
 
 /* ---------- My Contests ---------- */
 .portfolio-list{max-width:1200px;margin:0 auto 24px;padding:0 28px;}
@@ -357,3 +379,44 @@ nav{flex-wrap:wrap;gap:14px;}
 .rules-philosophy p{margin:0;color:var(--text);font-size:14.5px;line-height:1.7;}
 .rule-block{border-left:3px solid var(--gold);}
 .rule-block .hiw-n{color:var(--gold);}
+
+/* ---------- Trade popup modal ---------- */
+.trade-modal{position:fixed;inset:0;z-index:900;display:flex;align-items:flex-end;justify-content:center;}
+@media(min-width:640px){.trade-modal{align-items:center;}}
+.trade-modal-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(2px);}
+.trade-modal-card{
+  position:relative;background:var(--surface);border:1px solid var(--border);
+  border-radius:16px 16px 0 0;padding:22px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;
+  box-shadow:0 -10px 40px rgba(0,0,0,.5);
+}
+@media(min-width:640px){.trade-modal-card{border-radius:16px;}}
+.trade-modal-close{
+  position:absolute;top:14px;right:14px;background:var(--surface-2);border:1px solid var(--border);
+  color:var(--text-dim);width:30px;height:30px;border-radius:50%;font-size:14px;cursor:pointer;
+}
+
+/* ---------- Sticky trade navigation ---------- */
+.trade-sticky-bar{
+  position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--border);
+  padding:14px 20px;display:flex;align-items:center;gap:14px;
+}
+.trade-sticky-label{font-weight:700;font-size:14px;color:var(--text-dim);}
+
+/* ---------- Sticky main nav (always reachable, no scroll-up needed) ---------- */
+nav{position:sticky;top:0;z-index:60;}
+.logo{cursor:pointer;}
+
+/* ---------- Allocation modal rows ---------- */
+.alloc-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.alloc-row select.alloc-symbol{
+  flex:1;background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+  border-radius:7px;padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;
+}
+.alloc-row input.alloc-percent{
+  width:60px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+  border-radius:7px;padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;
+}
+#allocTargetSelect{
+  width:100%;background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+  border-radius:7px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:13px;margin-top:6px;
+}

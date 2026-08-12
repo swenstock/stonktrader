@@ -128,6 +128,8 @@ document.querySelectorAll(".nav-tab").forEach((btn) => {
   btn.addEventListener("click", () => switchView(btn.dataset.view));
 });
 
+document.getElementById("navLogoHome").addEventListener("click", () => switchView("lobby"));
+
 function switchView(view) {
   document.querySelectorAll(".nav-tab").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
   document.querySelectorAll(".view").forEach((v) => (v.style.display = "none"));
@@ -258,43 +260,33 @@ function renderSatelliteCategories() {
   const el = document.getElementById("satelliteCategories");
   el.innerHTML = satellitesCache.categories
     .map((cat) => {
-      const rows = cat.levels
+      const chips = cat.levels
         .map((lvl) => {
           const isPending = lvl.status === "pending";
           const isLocked = lvl.status === "resolved";
-          const statusLabel = lvl.joined
+          const disabled = lvl.joined || isPending || isLocked;
+          const chipState = lvl.joined ? "in" : isPending ? "pending" : isLocked ? "locked" : "";
+          const sub = lvl.joined
             ? "You're in"
             : isPending
               ? `Opens ${new Date(lvl.opensAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
               : isLocked
                 ? "Locked"
-                : fmtCountdown(lvl.locksAt);
-          const btn = lvl.joined
-            ? `<button class="btn btn-outline btn-sm" disabled>In</button>`
-            : isPending || isLocked
-              ? `<button class="btn btn-outline btn-sm" disabled>—</button>`
-              : `<button class="btn btn-gold btn-sm join-sat-row-btn" data-id="${lvl.id}">Enter</button>`;
-          return `<tr>
-            <td>${lvl.name.split("—")[1]?.trim() || lvl.priceLevel}</td>
-            <td class="mono">${lvl.entryFee.toLocaleString()} STONK</td>
-            <td class="mono">${lvl.entrantCount}</td>
-            <td class="mono">🎟️ ${lvl.ticketsProjected}</td>
-            <td class="mono" style="color:var(--text-dim);font-size:11px;">${statusLabel}</td>
-            <td>${btn}</td>
-          </tr>`;
+                : `${lvl.entrantCount} in`;
+          return `<button class="stake-chip ${chipState}" ${disabled ? "disabled" : ""} data-id="${lvl.id}">
+            <span class="stake-fee">${lvl.entryFee.toLocaleString()} STONK</span>
+            <span class="stake-sub">${sub}</span>
+          </button>`;
         })
         .join("");
-      return `<div class="sat-category">
+      return `<div class="sat-category-v2">
         <div class="sat-category-head"><span class="session-icon">${cat.icon}</span>${cat.name}</div>
-        <table class="sat-table">
-          <thead><tr><th>Level</th><th>Entry</th><th>Traders</th><th>Tickets</th><th>Status</th><th></th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
+        <div class="stake-chips">${chips}</div>
       </div>`;
     })
     .join("");
 
-  el.querySelectorAll(".join-sat-row-btn").forEach((btn) => {
+  el.querySelectorAll(".stake-chip:not([disabled])").forEach((btn) => {
     btn.addEventListener("click", () => joinSatellite(btn.dataset.id));
   });
 }
@@ -399,7 +391,7 @@ async function joinContest(contestId, useTicket) {
 // ---------------- My Contests ----------------
 async function refreshMyContests() {
   try {
-    const portfolios = await api("/portfolios");
+    const [portfolios, allocations] = await Promise.all([api("/portfolios"), api("/allocations")]);
     const active = portfolios.filter((p) => p.context.status === "open" || p.context.status === "pending");
     const past = portfolios.filter((p) => p.context.status === "resolved");
 
@@ -409,11 +401,52 @@ async function refreshMyContests() {
     document.getElementById("pastPortfoliosList").innerHTML =
       past.map(portfolioRowHtml).join("") || `<div class="history-empty">No resolved contests yet.</div>`;
 
+    const pending = allocations.filter((a) => a.status === "pending");
+    document.getElementById("pendingAllocationsList").innerHTML =
+      allocations
+        .filter((a) => a.status !== "cancelled")
+        .map(allocationRowHtml)
+        .join("") || `<div class="history-empty">No auto-fill allocations set.</div>`;
+
     document.querySelectorAll(".trade-portfolio-btn").forEach((btn) => {
       btn.addEventListener("click", () => openTradeView(btn.dataset.id, btn.dataset.label));
     });
+    document.querySelectorAll(".cancel-alloc-btn").forEach((btn) => {
+      btn.addEventListener("click", () => cancelAllocation(btn.dataset.id));
+    });
   } catch (err) {
     console.error(err);
+  }
+}
+
+function allocationRowHtml(a) {
+  const targetLabel =
+    a.targetType === "contest"
+      ? "Main Event"
+      : `${a.targetTierId.replace("_", " ")} — ${a.targetPriceLevel}`;
+  const items = a.allocations.map((x) => `${x.symbol} ${x.percent}%`).join(", ");
+  const statusBadge =
+    a.status === "pending"
+      ? `<span class="table-badge">Waiting for open</span>`
+      : a.status === "applied"
+        ? `<span class="table-badge joined">Filled ✓</span>`
+        : `<span class="table-badge" style="opacity:.6;">Failed: ${a.failReason || ""}</span>`;
+  return `<div class="portfolio-row">
+    <div class="portfolio-row-main">
+      <div class="portfolio-row-label" style="text-transform:capitalize;">${targetLabel}</div>
+      <div class="portfolio-row-sub mono">${items}</div>
+    </div>
+    ${statusBadge}
+    ${a.status === "pending" ? `<button class="btn btn-outline btn-sm cancel-alloc-btn" data-id="${a.id}">Cancel</button>` : ""}
+  </div>`;
+}
+
+async function cancelAllocation(id) {
+  try {
+    await api(`/allocations/${id}`, { method: "DELETE" });
+    refreshMyContests();
+  } catch (err) {
+    alert(err.message);
   }
 }
 
@@ -436,11 +469,29 @@ function openTradeView(portfolioId, label) {
   switchView("trade");
   document.querySelectorAll(".nav-tab").forEach((b) => b.classList.remove("active"));
   renderMarketFilter(window.__symbols || []);
-  initChart();
   refreshCurrentPortfolio();
 }
 
 document.getElementById("backToMyContestsBtn").addEventListener("click", () => switchView("mycontests"));
+
+// ---------------- Trade popup modal ----------------
+function openTradeModal(sym) {
+  selectedSymbol = sym;
+  document.getElementById("chartSymbolLabel").textContent = sym;
+  document.getElementById("tradeModal").style.display = "flex";
+  initChart(); // fresh chart each open — avoids sizing issues on a container that was hidden
+  chartHistory[sym] = chartHistory[sym] || [];
+  series.setData(chartHistory[sym]);
+  const q = latestQuotes[sym];
+  if (q) document.getElementById("chartPriceLabel").textContent = `${q.currency} ${q.price.toFixed(2)}`;
+  document.getElementById("tradeMsg").textContent = "";
+}
+
+function closeTradeModal() {
+  document.getElementById("tradeModal").style.display = "none";
+}
+document.getElementById("tradeModalClose").addEventListener("click", closeTradeModal);
+document.getElementById("tradeModalBackdrop").addEventListener("click", closeTradeModal);
 
 // ---------------- Trading (scoped to currentPortfolioId) ----------------
 function renderMarketFilter(symbols) {
@@ -475,14 +526,11 @@ function renderWatchlist() {
         <td class="${cls}">${chg >= 0 ? "+" : ""}${chg}%</td></tr>`;
     })
     .join("");
-  tbody.querySelectorAll("tr").forEach((row) => row.addEventListener("click", () => selectSymbol(row.dataset.symbol)));
+  tbody.querySelectorAll("tr").forEach((row) => row.addEventListener("click", () => openTradeModal(row.dataset.symbol)));
 }
 
 function selectSymbol(sym) {
-  selectedSymbol = sym;
-  document.getElementById("chartSymbolLabel").textContent = sym;
-  chartHistory[sym] = chartHistory[sym] || [];
-  series.setData(chartHistory[sym]);
+  openTradeModal(sym);
 }
 
 function initChart() {
@@ -641,6 +689,91 @@ document.getElementById("copyReferralBtn").addEventListener("click", () => {
   const original = btn.textContent;
   btn.textContent = "Copied!";
   setTimeout(() => (btn.textContent = original), 1500);
+});
+
+// ---------------- Auto-fill allocation modal ----------------
+let allocRowCount = 0;
+
+function populateAllocTargetSelect() {
+  const sel = document.getElementById("allocTargetSelect");
+  const options = [`<option value="contest::">Main Event — 3,000 STONK</option>`];
+  const seen = new Set();
+  (satellitesCache.categories || []).forEach((cat) => {
+    cat.levels.forEach((lvl) => {
+      const key = `${cat.id}:${lvl.priceLevel}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      options.push(
+        `<option value="satellite:${cat.id}:${lvl.priceLevel}">${cat.name} — ${lvl.entryFee.toLocaleString()} STONK</option>`
+      );
+    });
+  });
+  sel.innerHTML = options.join("");
+}
+
+function addAllocRow(symbol = "", percent = "") {
+  allocRowCount++;
+  const id = `allocRow${allocRowCount}`;
+  const symbolOptions = (window.__symbols || [])
+    .map((s) => `<option value="${s.symbol}" ${s.symbol === symbol ? "selected" : ""}>${s.symbol}</option>`)
+    .join("");
+  const row = document.createElement("div");
+  row.className = "alloc-row";
+  row.id = id;
+  row.innerHTML = `
+    <select class="alloc-symbol">${symbolOptions}</select>
+    <input type="number" class="alloc-percent" min="0.1" max="5" step="0.1" value="${percent || 5}">
+    <span style="font-size:12px;color:var(--text-dim);">%</span>
+    <button class="trade-modal-close" type="button" onclick="document.getElementById('${id}').remove(); updateAllocTotal();">✕</button>
+  `;
+  document.getElementById("allocationRows").appendChild(row);
+  row.querySelector(".alloc-percent").addEventListener("input", updateAllocTotal);
+  updateAllocTotal();
+}
+
+function updateAllocTotal() {
+  const rows = document.querySelectorAll(".alloc-row .alloc-percent");
+  let total = 0;
+  rows.forEach((r) => (total += parseFloat(r.value) || 0));
+  document.getElementById("allocTotalPct").textContent = total.toFixed(1);
+}
+
+document.getElementById("openAllocationModalBtn").addEventListener("click", () => {
+  populateAllocTargetSelect();
+  document.getElementById("allocationRows").innerHTML = "";
+  allocRowCount = 0;
+  addAllocRow();
+  document.getElementById("allocationMsg").textContent = "";
+  document.getElementById("allocationModal").style.display = "flex";
+});
+document.getElementById("addAllocRowBtn").addEventListener("click", () => addAllocRow());
+document.getElementById("allocationModalClose").addEventListener("click", closeAllocationModal);
+document.getElementById("allocationModalBackdrop").addEventListener("click", closeAllocationModal);
+function closeAllocationModal() {
+  document.getElementById("allocationModal").style.display = "none";
+}
+
+document.getElementById("submitAllocationBtn").addEventListener("click", async () => {
+  const msg = document.getElementById("allocationMsg");
+  msg.textContent = "";
+  const [targetType, tierId, priceLevel] = document.getElementById("allocTargetSelect").value.split(":");
+  const allocations = [...document.querySelectorAll(".alloc-row")].map((row) => ({
+    symbol: row.querySelector(".alloc-symbol").value,
+    percent: parseFloat(row.querySelector(".alloc-percent").value) || 0,
+  }));
+
+  try {
+    await api("/allocations", {
+      method: "POST",
+      body: JSON.stringify({ targetType, tierId: tierId || undefined, priceLevel: priceLevel || undefined, allocations }),
+    });
+    msg.style.color = "var(--green)";
+    msg.textContent = "Saved — this fires automatically the instant that contest opens.";
+    setTimeout(closeAllocationModal, 1400);
+  } catch (err) {
+    msg.style.color = "var(--red)";
+    msg.textContent = err.message;
+  }
 });
 
 // ---------------- Boot ----------------

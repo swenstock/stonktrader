@@ -13,6 +13,7 @@ const contestRoutes = require("./routes/contests");
 const satelliteRoutes = require("./routes/satellites");
 const ticketRoutes = require("./routes/tickets");
 const referralRoutes = require("./routes/referrals");
+const allocationRoutes = require("./routes/allocations");
 const adminRoutes = require("./routes/admin");
 const contestScheduler = require("./contestScheduler");
 const satelliteScheduler = require("./satelliteScheduler");
@@ -31,6 +32,7 @@ app.use("/api/contests", contestRoutes);
 app.use("/api/satellites", satelliteRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/referrals", referralRoutes);
+app.use("/api/allocations", allocationRoutes);
 app.use("/api/admin", adminRoutes);
 
 contestScheduler.start();
