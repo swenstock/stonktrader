@@ -1,0 +1,67 @@
+const express = require("express");
+const router = express.Router();
+const db = require("../db");
+const crypto = require("crypto");
+const { hashPassword, verifyPassword, sign } = require("../auth");
+
+const STARTING_CASH = Number(process.env.STARTING_CASH || 100000);
+
+function generateReferralCode() {
+  // 6 chars, uppercase alphanumeric, human-typeable — collision retried by caller if needed
+  return crypto.randomBytes(4).toString("hex").slice(0, 6).toUpperCase();
+}
+
+router.post("/signup", (req, res) => {
+  const { email, password, displayName, referralCode } = req.body || {};
+  if (!email || !password || !displayName) {
+    return res.status(400).json({ error: "email, password, and displayName are required" });
+  }
+  if (password.length < 8) {
+    return res.status(400).json({ error: "Password must be at least 8 characters" });
+  }
+
+  const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(email.toLowerCase());
+  if (existing) return res.status(409).json({ error: "Email already registered" });
+
+  let referredByUserId = null;
+  if (referralCode) {
+    const referrer = db
+      .prepare("SELECT id FROM users WHERE referral_code = ?")
+      .get(referralCode.trim().toUpperCase());
+    if (referrer) referredByUserId = referrer.id;
+    // An unrecognized code is silently ignored rather than blocking signup —
+    // a bad/typo'd referral link shouldn't stop someone from joining.
+  }
+
+  let code = generateReferralCode();
+  while (db.prepare("SELECT id FROM users WHERE referral_code = ?").get(code)) {
+    code = generateReferralCode(); // extremely rare collision, just retry
+  }
+
+  const password_hash = hashPassword(password);
+  const insertUser = db.prepare(
+    "INSERT INTO users (email, password_hash, display_name, referral_code, referred_by_user_id) VALUES (?, ?, ?, ?, ?)"
+  );
+  const info = insertUser.run(email.toLowerCase(), password_hash, displayName, code, referredByUserId);
+
+  db.prepare(
+    "INSERT INTO accounts (user_id, cash_balance, starting_balance) VALUES (?, ?, ?)"
+  ).run(info.lastInsertRowid, STARTING_CASH, STARTING_CASH);
+
+  const token = sign({ userId: info.lastInsertRowid, email: email.toLowerCase() });
+  res.json({ token, displayName, startingCash: STARTING_CASH, referralCode: code });
+});
+
+router.post("/login", (req, res) => {
+  const { email, password } = req.body || {};
+  if (!email || !password) return res.status(400).json({ error: "email and password required" });
+
+  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email.toLowerCase());
+  if (!user || !verifyPassword(password, user.password_hash)) {
+    return res.status(401).json({ error: "Invalid email or password" });
+  }
+  const token = sign({ userId: user.id, email: user.email });
+  res.json({ token, displayName: user.display_name });
+});
+
+module.exports = router;

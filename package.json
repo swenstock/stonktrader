@@ -1,0 +1,19 @@
+{
+  "name": "stonk-paper-trading",
+  "version": "1.0.0",
+  "description": "Multi-user paper trading contest platform — real accounts, live quotes, positions, leaderboard, and contest lifecycle. Built to scale to 10k+ accounts on SQLite; swap in Postgres for larger scale.",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "ws": "^8.18.0"
+  }
+}
