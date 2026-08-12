@@ -818,8 +818,8 @@ function leaderboardRowsHtml(rows) {
 
 // ---------------- Leaderboards tab ----------------
 function renderLiveContestsList() {
-  const el = document.getElementById("liveContestsList");
-  const rows = [];
+  const el = document.getElementById("liveCategoriesList");
+  const categories = [];
 
   if (contestsCache.current) {
     const c = contestsCache.current;
@@ -827,49 +827,87 @@ function renderLiveContestsList() {
       c.brokersProjected > 0
         ? `${c.brokersProjected} Broker${c.brokersProjected === 1 ? "" : "s"} funded + ${c.remainderProjected.toLocaleString()} STONK to next`
         : `${c.remainderProjected.toLocaleString()} STONK pooled toward first Broker`;
-    rows.push({ type: "contest", id: c.id, name: "Main Event", entrants: c.entrantCount, pool: c.poolGross, payout });
+    categories.push({
+      kind: "main",
+      name: "🏆 Main Event",
+      sub: `${c.entrantCount} entries · ${c.poolGross.toLocaleString()} STONK pooled · ${payout}`,
+      buttonLabel: "View leaderboard",
+      onClick: () => showLiveLeaderboard("contest", c.id),
+    });
+  } else {
+    categories.push({ kind: "main", name: "🏆 Main Event", sub: "Closed for the weekend", buttonLabel: "—", onClick: null });
   }
 
   (satellitesCache.categories || []).forEach((cat) => {
-    cat.levels.forEach((lvl) => {
-      if (lvl.status !== "open") return;
-      const payout =
-        lvl.ticketsProjected > 0
-          ? `${lvl.ticketsProjected} ticket${lvl.ticketsProjected === 1 ? "" : "s"} funded + ${lvl.remainderProjected.toLocaleString()} STONK to next`
-          : `${lvl.remainderProjected.toLocaleString()} STONK pooled toward first ticket`;
-      rows.push({
-        type: "satellite",
-        id: lvl.id,
-        name: `${cat.name} — ${lvl.entryFee.toLocaleString()} STONK`,
-        entrants: lvl.entrantCount,
-        pool: lvl.poolGross,
-        payout,
-      });
+    const openCount = cat.levels.filter((l) => l.status === "open").length;
+    const sub = openCount > 0 ? `${openCount} of 3 rooms open right now` : "Not open right now — check price levels for next open time";
+    categories.push({
+      kind: "satellite",
+      name: `${cat.icon} ${cat.name}`,
+      sub,
+      buttonLabel: "View rooms",
+      onClick: () => showLiveDrilldown(cat),
     });
   });
 
-  el.innerHTML =
-    rows
-      .map(
-        (r) => `<div class="portfolio-row">
+  el.innerHTML = categories
+    .map(
+      (c, i) => `<div class="portfolio-row">
       <div class="portfolio-row-main">
-        <div class="portfolio-row-label">${r.name}</div>
-        <div class="portfolio-row-sub mono">${r.entrants} entries · ${r.pool.toLocaleString()} STONK pooled · ${r.payout}</div>
+        <div class="portfolio-row-label">${c.name}</div>
+        <div class="portfolio-row-sub mono">${c.sub}</div>
       </div>
-      <button class="btn btn-outline btn-sm view-live-lb-btn" data-type="${r.type}" data-id="${r.id}">View leaderboard</button>
+      ${c.onClick ? `<button class="btn btn-outline btn-sm live-cat-btn" data-idx="${i}">${c.buttonLabel}</button>` : ""}
     </div>`
-      )
-      .join("") || `<div class="history-empty">Nothing live right now — check back Monday–Friday during market hours.</div>`;
+    )
+    .join("");
 
-  el.querySelectorAll(".view-live-lb-btn").forEach((btn) => {
-    btn.addEventListener("click", () => showLiveLeaderboard(btn.dataset.type, btn.dataset.id));
+  el.querySelectorAll(".live-cat-btn").forEach((btn) => {
+    btn.addEventListener("click", () => categories[Number(btn.dataset.idx)].onClick());
   });
 }
+
+function showLiveDrilldown(cat) {
+  document.getElementById("liveDrilldownTitle").textContent = cat.name;
+  const body = document.getElementById("liveDrilldownBody");
+  body.innerHTML = cat.levels
+    .map((lvl) => {
+      const isOpen = lvl.status === "open";
+      const isPending = lvl.status === "pending";
+      const payout = isOpen
+        ? lvl.ticketsProjected > 0
+          ? `${lvl.ticketsProjected} ticket${lvl.ticketsProjected === 1 ? "" : "s"} funded + ${lvl.remainderProjected.toLocaleString()} STONK to next`
+          : `${lvl.remainderProjected.toLocaleString()} STONK pooled toward first ticket`
+        : isPending
+          ? `<span class="countdown-text" data-ends="${lvl.opensAt}">${fmtCountdown(lvl.opensAt)}</span> until it opens`
+          : "Locked";
+      const sub = isOpen ? `${lvl.entrantCount} entries · ${lvl.poolGross.toLocaleString()} STONK pooled · ${payout}` : payout;
+      return `<div class="portfolio-row">
+        <div class="portfolio-row-main">
+          <div class="portfolio-row-label">${lvl.entryFee.toLocaleString()} STONK</div>
+          <div class="portfolio-row-sub mono">${sub}</div>
+        </div>
+        ${isOpen ? `<button class="btn btn-outline btn-sm view-live-lb-btn" data-id="${lvl.id}">View leaderboard</button>` : ""}
+      </div>`;
+    })
+    .join("");
+
+  body.querySelectorAll(".view-live-lb-btn").forEach((btn) => {
+    btn.addEventListener("click", () => showLiveLeaderboard("satellite", btn.dataset.id));
+  });
+
+  document.getElementById("liveDrilldownPanel").style.display = "block";
+  document.getElementById("liveLeaderboardPanel").style.display = "none";
+  document.getElementById("liveDrilldownPanel").scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+document.getElementById("closeLiveDrilldown").addEventListener("click", () => {
+  document.getElementById("liveDrilldownPanel").style.display = "none";
+});
 
 async function showLiveLeaderboard(type, id) {
   try {
     const lb = await api(`/leaderboard/${type}/${id}`);
-    document.getElementById("liveLeaderboardTitle").textContent = type === "contest" ? "Main Event Leaderboard" : "Satellite Leaderboard";
+    document.getElementById("liveLeaderboardTitle").textContent = type === "contest" ? "Main Event Leaderboard" : "Room Leaderboard";
     document.getElementById("liveLeaderboardBody").innerHTML = leaderboardRowsHtml(lb);
     document.getElementById("liveLeaderboardPanel").style.display = "block";
     document.getElementById("liveLeaderboardPanel").scrollIntoView({ behavior: "smooth", block: "nearest" });

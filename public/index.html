@@ -334,8 +334,12 @@
       <p>Everything live right now, plus all-time trader stats.</p>
     </div>
 
-    <div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">🔴 Live Right Now</h2><p>Entries, pool collected, and the payout schedule at current funding.</p></div>
-    <div id="liveContestsList" class="portfolio-list"></div>
+    <div class="section-head" style="margin-top:0;"><h2 style="font-size:18px;">🔴 Live Right Now</h2><p>Pick a category, then a room, to see its entries, pool, and leaderboard.</p></div>
+    <div id="liveCategoriesList" class="portfolio-list"></div>
+    <div class="panel" id="liveDrilldownPanel" style="max-width:1200px;margin:0 auto 20px;display:none;">
+      <h3><span id="liveDrilldownTitle">Category</span> <span class="tag" style="cursor:pointer;" id="closeLiveDrilldown">✕ back</span></h3>
+      <div id="liveDrilldownBody" class="portfolio-list" style="padding:0;"></div>
+    </div>
     <div class="panel" id="liveLeaderboardPanel" style="max-width:1200px;margin:0 auto 30px;display:none;">
       <h3><span id="liveLeaderboardTitle">Leaderboard</span> <span class="tag" style="cursor:pointer;" id="closeLiveLeaderboard">✕ close</span></h3>
       <div id="liveLeaderboardBody"></div>
