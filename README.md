@@ -461,6 +461,47 @@ already-open portfolio you can trade, or a pending reservation you can
 still configure — and clicking through drills into that specific
 portfolio's trade view, same as before.
 
+## Fixed: "too many accounts" when trying to configure an already-reserved entry
+
+**Root cause found**: My Contests had two separate, duplicate displays of
+the same pending reservations — the grouped "Active" tree, and a leftover
+flat "Pending Auto-fill Allocations" section with its own generic "Set up
+new allocation" button. That generic button always tried to *create* a new
+reservation with no awareness of which room you meant to configure — so if
+you'd already reserved a room 10 times and used that button to set up
+picks for one of them, it correctly (but confusingly) rejected an 11th
+entry instead of letting you edit one of the 10 you already had.
+
+**Fixed** by removing the duplicate section entirely, and — more
+importantly — redesigning the grouping logic itself: **unconfigured
+reservations (no picks saved yet) now always stay individually visible**,
+with a prominent gold "⚙️ Set up portfolio" button, so they can never get
+lost in a collapsed group. Only *configured* entries (real picks saved, or
+an already-open real portfolio) collapse into the click-to-expand tree when
+there's more than one — since those don't need immediate attention the way
+an unconfigured reservation does.
+
+## Enter multiple at once — with freeroll always protected
+
+The entry review modal now shows a quantity dropdown (1 up to however many
+slots you have left, capped at 10) for satellite rooms and direct-pay Main
+Event entries — no more clicking "Enter" ten separate times.
+
+**Freeroll is structurally protected from ever offering this**, not just by
+convention: the dropdown only renders when more than one entry is actually
+possible (`maxQty > 1`), and since freeroll's `maxEntriesPerAccount` is
+hard-set to 1 in `tierConfig.js`, the math can never produce a `maxQty`
+above 1 for it — the dropdown simply cannot appear. This is backed by the
+same server-side max check from the reservation-stacking fix, so even a
+malformed or bypassed request would still be rejected at the API layer,
+verified by the existing stacking test.
+
+Quantities execute **sequentially, one at a time, never in parallel** —
+firing them in parallel could let multiple requests all pass the "count <
+max" check simultaneously and race past the cap. If a batch partially
+succeeds before hitting the max, you're told exactly how many actually
+went through.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

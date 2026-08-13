@@ -347,10 +347,33 @@ tr.watch-row:hover{background:var(--surface-2);}
 .stake-tickets{font-size:10.5px;color:var(--green);}
 .stake-entry-counter{font-size:10.5px;color:var(--gold);font-weight:700;}
 .cat-tier-preview{font-size:11px;color:var(--text-dim);font-weight:400;margin-left:8px;}
+.tier-filter-bar{max-width:1200px;margin:0 auto 12px;padding:0 28px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.tier-filter-label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;margin-right:2px;}
+.tier-filter-btn{
+  background:var(--surface);border:1px solid var(--border);color:var(--text-dim);
+  padding:6px 14px;border-radius:999px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Sora',sans-serif;
+}
+.tier-filter-btn.active{background:var(--gold);color:#0A1400;border-color:var(--gold);}
+.tier-filter-all{border-style:dashed;}
+
+/* ---------- Entry review modal ---------- */
+.entry-review-badge{
+  display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:700;letter-spacing:.1em;
+  color:var(--gold);background:var(--gold-dim);border:1px solid #5A431A;border-radius:999px;padding:5px 14px;margin-bottom:10px;
+}
+.entry-confirm-btn{
+  position:relative;overflow:hidden;font-size:15px;padding:14px 20px;
+  box-shadow:0 0 24px -4px rgba(140,255,0,.7);animation:entryPulse 1.8s ease-in-out infinite;
+}
+@keyframes entryPulse{0%,100%{box-shadow:0 0 24px -4px rgba(140,255,0,.7);}50%{box-shadow:0 0 34px -2px rgba(140,255,0,.95);}}
+#entryReviewQty{
+  width:100%;background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+  border-radius:7px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;
+}
 .breakdown-btn{color:var(--text-dim);text-decoration:underline;cursor:pointer;margin-left:4px;}
 .breakdown-btn:hover{color:var(--gold);}
 .stake-sub{font-size:11px;color:var(--text-dim);}
-.stake-alloc-hint{font-size:10px;color:var(--gold);opacity:.85;margin-top:2px;}
+.stake-alloc-hint{font-size:10.5px;color:var(--gold);opacity:1;margin-top:4px;font-weight:700;letter-spacing:.02em;}
 
 /* ---------- My Contests ---------- */
 .portfolio-list{max-width:1200px;margin:0 auto 24px;padding:0 28px;}
@@ -371,6 +394,8 @@ tr.watch-row:hover{background:var(--surface-2);}
 .entry-group-item:last-child{margin-bottom:0;}
 .entry-group-item .portfolio-row{flex:1;margin-bottom:0;}
 .entry-number-tag{font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;flex-shrink:0;width:52px;}
+.unconfigured-entry{margin-bottom:8px;}
+.unconfigured-entry .portfolio-row{border-color:#5A431A;background:rgba(140,255,0,.03);}
 
 /* ---------- How It Works ---------- */
 .howitworks-page{max-width:900px;margin:0 auto;padding:0 28px 60px;display:flex;flex-direction:column;gap:22px;}

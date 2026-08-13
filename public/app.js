@@ -156,6 +156,7 @@ async function boot() {
   const symbols = await api("/quotes/symbols");
   window.__symbols = symbols;
   connectWebSocket();
+  renderTierFilterBar();
   refreshPortfoliosBalance();
   refreshContests();
   refreshReferrals();
@@ -280,6 +281,48 @@ function tickCountdowns() {
 // ---------------- Compact DraftKings-style satellite matrix ----------------
 let currentDrilldownCatId = null;
 
+// Tier filter — which price tiers to show, trader's choice (default: all)
+const ALL_TIER_LEVELS = ["free", "low", "mid", "high"];
+let tierFilter = new Set(ALL_TIER_LEVELS);
+
+function renderTierFilterBar() {
+  const el = document.getElementById("tierFilterBar");
+  const labels = { free: "Freeroll", low: "Clerk", mid: "Trader", high: "Jr. Stonkbroker" };
+  el.innerHTML =
+    `<span class="tier-filter-label">Show:</span>` +
+    ALL_TIER_LEVELS.map(
+      (level) =>
+        `<button class="tier-filter-btn ${tierFilter.has(level) ? "active" : ""}" data-level="${level}">${labels[level]}</button>`
+    ).join("") +
+    `<button class="tier-filter-btn tier-filter-all" id="tierFilterAllBtn">All</button>`;
+
+  el.querySelectorAll(".tier-filter-btn[data-level]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const level = btn.dataset.level;
+      if (tierFilter.has(level)) {
+        if (tierFilter.size > 1) tierFilter.delete(level); // always keep at least one selected
+      } else {
+        tierFilter.add(level);
+      }
+      renderTierFilterBar();
+      renderSatelliteCategoryTree();
+      if (currentDrilldownCatId) {
+        const cat = satellitesCache.categories.find((c) => c.id === currentDrilldownCatId);
+        if (cat) showSatelliteDrilldown(cat, false);
+      }
+    });
+  });
+  document.getElementById("tierFilterAllBtn").addEventListener("click", () => {
+    tierFilter = new Set(ALL_TIER_LEVELS);
+    renderTierFilterBar();
+    renderSatelliteCategoryTree();
+    if (currentDrilldownCatId) {
+      const cat = satellitesCache.categories.find((c) => c.id === currentDrilldownCatId);
+      if (cat) showSatelliteDrilldown(cat, false);
+    }
+  });
+}
+
 const CATEGORY_DESCRIPTIONS = {
   weekly_qualifier: "Runs Monday 12:00am ET through Friday close — the SAME window as the Main Event. Win a room here and you're straight into the Main Event for free.",
   full_day: "Runs the full trading session, 9:30 AM \u2013 4:00 PM ET, every weekday. New room opens each trading day.",
@@ -291,15 +334,17 @@ function renderSatelliteCategoryTree() {
   const el = document.getElementById("satelliteCategoriesTree");
   el.innerHTML = satellitesCache.categories
     .map((cat, i) => {
-      const openCount = cat.levels.filter((l) => l.status === "open").length;
-      const hasFree = cat.levels.some((l) => l.priceLevel === "free");
-      const tierPreview = cat.levels
+      const visibleLevels = cat.levels.filter((l) => tierFilter.has(l.priceLevel));
+      const openCount = visibleLevels.filter((l) => l.status === "open").length;
+      const hasFree = visibleLevels.some((l) => l.priceLevel === "free");
+      const tierPreview = visibleLevels
         .map((l) => `${l.priceLevelName || l.priceLevel} ${l.entryFee === 0 ? "FREE" : l.entryFee.toLocaleString()}`)
         .join(" · ");
+      if (visibleLevels.length === 0) return "";
       return `<div class="portfolio-row" title="${CATEGORY_DESCRIPTIONS[cat.id] || ""}">
         <div class="portfolio-row-main">
           <div class="portfolio-row-label">${cat.icon} ${cat.name} <span class="cat-tier-preview mono">${tierPreview}</span> ${hasFree ? '<span class="table-badge" style="margin-left:6px;">Free tier available</span>' : ""}</div>
-          <div class="portfolio-row-sub mono">${openCount} of ${cat.levels.length} rooms open now</div>
+          <div class="portfolio-row-sub mono">${openCount} of ${visibleLevels.length} rooms open now</div>
         </div>
         <button class="btn btn-outline btn-sm lobby-cat-btn" data-idx="${i}">Browse rooms</button>
       </div>`;
@@ -335,6 +380,7 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
   document.getElementById("lobbyDrilldownTitle").textContent = `${cat.icon} ${cat.name}`;
   const el = document.getElementById("satelliteCategories");
   const chips = cat.levels
+    .filter((lvl) => tierFilter.has(lvl.priceLevel))
     .map((lvl) => {
       const isPending = lvl.status === "pending";
       const isLocked = lvl.status === "resolved";
@@ -369,7 +415,7 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
         <span class="stake-sub">${statusLine}</span>
         ${lvl.myEntryCount > 0 ? `<span class="stake-entry-counter">You've entered ${lvl.myEntryCount}/${lvl.maxEntriesPerAccount} time${lvl.myEntryCount === 1 ? "" : "s"}</span>` : ""}
         ${ticketLine}
-        ${isPending ? `<span class="stake-alloc-hint">Enter this room ›</span>` : ""}
+        ${!disabled ? `<span class="stake-alloc-hint">${isPending ? "Enter this room" : "🔥 ENTER NOW"} ›</span>` : ""}
       </button>`;
     })
     .join("");
@@ -382,10 +428,44 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
     });
   });
   el.querySelectorAll(".join-sat-row-btn").forEach((btn) => {
-    btn.addEventListener("click", () => joinSatellite(btn.dataset.id));
+    btn.addEventListener("click", () => {
+      const lvl = cat.levels.find((l) => l.id == btn.dataset.id);
+      if (!lvl) return;
+      const remaining = lvl.maxEntriesPerAccount - lvl.myEntryCount;
+      showEntryReview({
+        badge: "ENTER SATELLITE",
+        title: lvl.name,
+        category: cat.name,
+        tier: lvl.priceLevelName || lvl.priceLevel,
+        entryNumber: `${lvl.myEntryCount + 1} of ${lvl.maxEntriesPerAccount}`,
+        feeLabel: "Entry fee",
+        feeText: lvl.entryFee === 0 ? "FREE — no wallet needed" : `${lvl.entryFee.toLocaleString()} STONK (~$${lvl.entryFeeUsd?.toFixed(2) ?? "0.00"})`,
+        feeEach: lvl.entryFee,
+        maxQty: remaining,
+        note: `${lvl.entrantCount} traders already in this room. ${lvl.ticketsProjected || 0} ticket(s) currently funded.`,
+        onConfirm: (qty) => joinSatellite(lvl.id, qty),
+      });
+    });
   });
   el.querySelectorAll(".reserve-room-btn").forEach((btn) => {
-    btn.addEventListener("click", () => reserveRoom(btn.dataset.tier, btn.dataset.level));
+    btn.addEventListener("click", () => {
+      const lvl = cat.levels.find((l) => l.tierId === btn.dataset.tier && l.priceLevel === btn.dataset.level);
+      if (!lvl) return;
+      const remaining = lvl.maxEntriesPerAccount - lvl.myEntryCount;
+      showEntryReview({
+        badge: "RESERVE YOUR SPOT",
+        title: lvl.name,
+        category: cat.name,
+        tier: lvl.priceLevelName || lvl.priceLevel,
+        entryNumber: `${lvl.myEntryCount + 1} of ${lvl.maxEntriesPerAccount}`,
+        feeLabel: "Entry fee (charged on open)",
+        feeText: lvl.entryFee === 0 ? "FREE — no wallet needed" : `${lvl.entryFee.toLocaleString()} STONK (~$${lvl.entryFeeUsd?.toFixed(2) ?? "0.00"})`,
+        feeEach: lvl.entryFee,
+        maxQty: remaining,
+        note: "This room hasn't opened yet — reserving locks your spot now. Set up your picks anytime before it opens, from My Contests.",
+        onConfirm: (qty) => reserveRoom(btn.dataset.tier, btn.dataset.level, qty),
+      });
+    });
   });
 
   document.getElementById("lobbyDrilldownPanel").style.display = "block";
@@ -394,6 +474,57 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
 document.getElementById("closeLobbyDrilldown").addEventListener("click", () => {
   currentDrilldownCatId = null;
   document.getElementById("lobbyDrilldownPanel").style.display = "none";
+});
+
+let pendingEntryConfirm = null;
+
+function showEntryReview({ badge, title, category, tier, entryNumber, feeLabel, feeText, feeEach, note, maxQty, onConfirm }) {
+  document.getElementById("entryReviewBadge").textContent = badge;
+  document.getElementById("entryReviewTitle").textContent = title;
+  document.getElementById("entryReviewCategory").textContent = category;
+  document.getElementById("entryReviewTier").textContent = tier;
+  document.getElementById("entryReviewNumber").textContent = entryNumber;
+  document.getElementById("entryReviewFeeLabel").textContent = feeLabel;
+  document.getElementById("entryReviewFee").textContent = feeText;
+  document.getElementById("entryReviewNote").textContent = note || "";
+
+  const qtyRow = document.getElementById("entryReviewQtyRow");
+  const qtySelect = document.getElementById("entryReviewQty");
+  const qtyTotal = document.getElementById("entryReviewQtyTotal");
+  // Quantity picker only shows when more than one entry is actually
+  // possible right now — never for freeroll (maxQty will be 1 there,
+  // since freeroll is hard-capped to a single entry per account).
+  if (maxQty > 1) {
+    qtySelect.innerHTML = Array.from({ length: maxQty }, (_, i) => i + 1)
+      .map((n) => `<option value="${n}">${n}</option>`)
+      .join("");
+    qtySelect.value = "1";
+    qtyRow.style.display = "block";
+    const updateTotal = () => {
+      const n = Number(qtySelect.value);
+      qtyTotal.textContent = feeEach > 0 ? `Total: ${(feeEach * n).toLocaleString()} STONK` : "";
+    };
+    qtySelect.oninput = updateTotal;
+    updateTotal();
+  } else {
+    qtyRow.style.display = "none";
+  }
+
+  pendingEntryConfirm = onConfirm;
+  document.getElementById("entryReviewModal").style.display = "flex";
+}
+function closeEntryReview() {
+  pendingEntryConfirm = null;
+  document.getElementById("entryReviewModal").style.display = "none";
+}
+document.getElementById("entryReviewClose").addEventListener("click", closeEntryReview);
+document.getElementById("entryReviewBackdrop").addEventListener("click", closeEntryReview);
+document.getElementById("entryReviewCancelBtn").addEventListener("click", closeEntryReview);
+document.getElementById("entryReviewConfirmBtn").addEventListener("click", () => {
+  const fn = pendingEntryConfirm;
+  const qty = document.getElementById("entryReviewQtyRow").style.display !== "none" ? Number(document.getElementById("entryReviewQty").value) : 1;
+  closeEntryReview();
+  if (fn) fn(qty);
 });
 
 function showYoureIn(title, message) {
@@ -407,31 +538,53 @@ function closeYoureIn() {
 document.getElementById("youreInDoneBtn").addEventListener("click", closeYoureIn);
 document.getElementById("youreInModalBackdrop").addEventListener("click", closeYoureIn);
 
-async function joinSatellite(satelliteId) {
+// Runs entries ONE AT A TIME (never in parallel) — parallel requests could
+// all pass the server's "count < max" check simultaneously and race past
+// the cap. Sequential + awaited keeps the max-10 (or max-1 for freeroll)
+// limit airtight no matter how many are requested at once.
+async function joinSatellite(satelliteId, qty = 1) {
+  let succeeded = 0;
   try {
-    await api(`/satellites/${satelliteId}/enter`, { method: "POST" });
+    for (let i = 0; i < qty; i++) {
+      await api(`/satellites/${satelliteId}/enter`, { method: "POST" });
+      succeeded++;
+    }
     await refreshContests();
     refreshPortfoliosBalance();
-    showYoureIn("You're in!", "Head to My Contests to trade — the room's own $100,000 portfolio is ready for you.");
+    showYoureIn(
+      succeeded === 1 ? "You're in!" : `You're in — ${succeeded} entries!`,
+      "Head to My Contests to trade — each entry's own $100,000 portfolio is ready for you."
+    );
   } catch (err) {
-    alert(err.message);
+    await refreshContests();
+    refreshPortfoliosBalance();
+    alert(succeeded > 0 ? `Got ${succeeded} in before hitting: ${err.message}` : err.message);
   }
 }
 
 // Reserving a room that hasn't opened yet — creates an empty (100% cash)
 // pending allocation. No picks required now; set up the actual portfolio
 // anytime before the room opens, from My Contests.
-async function reserveRoom(tierId, priceLevel) {
+async function reserveRoom(tierId, priceLevel, qty = 1) {
+  let succeeded = 0;
   try {
-    await api("/allocations", {
-      method: "POST",
-      body: JSON.stringify({ targetType: "satellite", tierId, priceLevel, allocations: [] }),
-    });
+    for (let i = 0; i < qty; i++) {
+      await api("/allocations", {
+        method: "POST",
+        body: JSON.stringify({ targetType: "satellite", tierId, priceLevel, allocations: [] }),
+      });
+      succeeded++;
+    }
     await refreshContests();
     await refreshMyContests();
-    showYoureIn("You're in!", "Your spot is reserved. Set up your portfolio anytime before this room opens — it'll auto-fill with your picks the instant it does.");
+    showYoureIn(
+      succeeded === 1 ? "You're in!" : `You're in — ${succeeded} spots reserved!`,
+      "Set up each portfolio anytime before this room opens — it'll auto-fill with your picks the instant it does."
+    );
   } catch (err) {
-    alert(err.message);
+    await refreshContests();
+    await refreshMyContests();
+    alert(succeeded > 0 ? `Reserved ${succeeded} before hitting: ${err.message}` : err.message);
   }
 }
 
@@ -503,23 +656,49 @@ function renderWeeklyRoom() {
   </div>`;
 
   el.querySelectorAll(".join-btn").forEach((btn) => {
-    btn.addEventListener("click", () => joinContest(btn.dataset.id, btn.dataset.useTicket === "1"));
+    btn.addEventListener("click", () => {
+      const useTicket = btn.dataset.useTicket === "1";
+      const remaining = c.maxEntriesPerAccount - c.myEntryCount;
+      showEntryReview({
+        badge: "ENTER THE MAIN EVENT",
+        title: "Weekly Stonk Broker Challenge",
+        category: "Main Event",
+        tier: useTicket ? "Ticket redemption" : "Direct entry",
+        entryNumber: `${c.myEntryCount + 1} of ${c.maxEntriesPerAccount}`,
+        feeLabel: useTicket ? "Cost" : "Entry fee",
+        feeText: useTicket ? "FREE — funded ticket" : `${c.entryFee.toLocaleString()} STONK (~$${c.entryFeeUsd?.toFixed(2) ?? "0.00"})`,
+        feeEach: useTicket ? 0 : c.entryFee,
+        maxQty: useTicket ? 1 : remaining, // multi-entry only applies to paying directly, not ticket redemption
+        note: `${c.entrantCount.toLocaleString()} entries funded so far. Closes Friday.`,
+        onConfirm: (qty) => joinContest(btn.dataset.id, useTicket, qty),
+      });
+    });
   });
 }
 
-async function joinContest(contestId, useTicket) {
+async function joinContest(contestId, useTicket, qty = 1) {
   const msgEl = document.querySelector(`[data-msg-for="${contestId}"]`);
   msgEl.textContent = "";
+  let succeeded = 0;
+  const total = useTicket ? 1 : qty; // ticket redemption never multiplies, regardless of qty passed in
   try {
-    await api(`/contests/${contestId}/enter`, { method: "POST", body: JSON.stringify({ useTicket: !!useTicket }) });
+    for (let i = 0; i < total; i++) {
+      await api(`/contests/${contestId}/enter`, { method: "POST", body: JSON.stringify({ useTicket: !!useTicket }) });
+      succeeded++;
+    }
     msgEl.style.color = "var(--green)";
-    msgEl.textContent = useTicket ? "Ticket redeemed — you're in!" : "You're in! Check My Contests.";
+    msgEl.textContent = useTicket ? "Ticket redeemed — you're in!" : `You're in! (${succeeded} ${succeeded === 1 ? "entry" : "entries"})`;
     await refreshContests();
     refreshPortfoliosBalance();
-    showYoureIn("You're in!", useTicket ? "Your ticket got you a free seat in this week's Main Event." : "You're entered in this week's Main Event — good luck out there.");
+    showYoureIn(
+      succeeded === 1 ? "You're in!" : `You're in — ${succeeded} entries!`,
+      useTicket ? "Your ticket got you a free seat in this week's Main Event." : "You're entered in this week's Main Event — good luck out there."
+    );
   } catch (err) {
     msgEl.style.color = "var(--red)";
-    msgEl.textContent = err.message;
+    msgEl.textContent = succeeded > 0 ? `Got ${succeeded} in before hitting: ${err.message}` : err.message;
+    await refreshContests();
+    refreshPortfoliosBalance();
   }
 }
 
@@ -550,29 +729,48 @@ function groupEntriesByRoom(portfolios, allocations) {
 }
 
 function renderEntryGroup(group) {
-  if (group.items.length === 1) {
-    const item = group.items[0];
-    return item.kind === "portfolio" ? portfolioRowHtml(item.data) : allocationRowHtml(item.data);
-  }
-  return `<div class="entry-group">
-    <div class="portfolio-row entry-group-summary" data-group-key="${group.key}">
-      <div class="portfolio-row-main">
-        <div class="portfolio-row-label" style="text-transform:capitalize;">${group.label}</div>
-        <div class="portfolio-row-sub mono">${group.items.length} entries — click to view each</div>
+  // Unconfigured = a pending reservation with zero picks saved yet — these
+  // stay individually visible always, so they can never get buried and
+  // forgotten. Configured = has real picks, or is an already-open real
+  // portfolio — these collapse into a tree if there's more than one.
+  const isUnconfigured = (item) => item.kind === "pending" && item.data.allocations.length === 0;
+  const unconfigured = group.items.filter(isUnconfigured);
+  const configured = group.items.filter((item) => !isUnconfigured(item));
+
+  const unconfiguredHtml = unconfigured
+    .map((item, i) => {
+      const label = group.items.length > 1 ? `<div class="entry-number-tag">New entry</div>` : "";
+      return `<div class="entry-group-item unconfigured-entry">${label}${allocationRowHtml(item.data)}</div>`;
+    })
+    .join("");
+
+  let configuredHtml = "";
+  if (configured.length === 1) {
+    const item = configured[0];
+    configuredHtml = item.kind === "portfolio" ? portfolioRowHtml(item.data) : allocationRowHtml(item.data);
+  } else if (configured.length > 1) {
+    configuredHtml = `<div class="entry-group">
+      <div class="portfolio-row entry-group-summary" data-group-key="${group.key}">
+        <div class="portfolio-row-main">
+          <div class="portfolio-row-label" style="text-transform:capitalize;">${group.label}</div>
+          <div class="portfolio-row-sub mono">${configured.length} configured entries — click to view each</div>
+        </div>
+        <span class="table-badge expand-caret">▾ expand</span>
       </div>
-      <span class="table-badge expand-caret">▾ expand</span>
-    </div>
-    <div class="entry-group-items" data-group-items="${group.key}" style="display:none;">
-      ${group.items
-        .map(
-          (item, i) =>
-            `<div class="entry-group-item"><div class="entry-number-tag">Entry ${i + 1}</div>${
-              item.kind === "portfolio" ? portfolioRowHtml(item.data) : allocationRowHtml(item.data)
-            }</div>`
-        )
-        .join("")}
-    </div>
-  </div>`;
+      <div class="entry-group-items" data-group-items="${group.key}" style="display:none;">
+        ${configured
+          .map(
+            (item, i) =>
+              `<div class="entry-group-item"><div class="entry-number-tag">Entry ${i + 1}</div>${
+                item.kind === "portfolio" ? portfolioRowHtml(item.data) : allocationRowHtml(item.data)
+              }</div>`
+          )
+          .join("")}
+      </div>
+    </div>`;
+  }
+
+  return unconfiguredHtml + configuredHtml;
 }
 
 async function refreshMyContests() {
@@ -589,11 +787,6 @@ async function refreshMyContests() {
       `<div class="history-empty">Nothing active — head to the Lobby to enter a contest.</div>`;
     document.getElementById("pastPortfoliosList").innerHTML =
       past.map(portfolioRowHtml).join("") || `<div class="history-empty">No resolved contests yet.</div>`;
-
-    // Pending Auto-fill Allocations section stays a flat list (its own
-    // dedicated section further down) — unaffected by the grouping above.
-    document.getElementById("pendingAllocationsList").innerHTML =
-      pendingAllocs.map(allocationRowHtml).join("") || `<div class="history-empty">No auto-fill allocations set.</div>`;
 
     document.querySelectorAll(".entry-group-summary").forEach((row) => {
       row.style.cursor = "pointer";
@@ -665,7 +858,7 @@ function allocationRowHtml(a) {
     ${statusBadge}
     ${
       isPending
-        ? `<button class="btn btn-outline btn-sm adjust-alloc-btn" data-id="${a.id}">${hasPicks ? "Adjust" : "Set up portfolio"}</button>
+        ? `<button class="btn ${hasPicks ? "btn-outline" : "btn-gold"} btn-sm adjust-alloc-btn" data-id="${a.id}">${hasPicks ? "Adjust" : "⚙️ Set up portfolio"}</button>
            <button class="btn btn-outline btn-sm cancel-alloc-btn" data-id="${a.id}">Cancel</button>`
         : ""
     }
@@ -1380,12 +1573,7 @@ function openAllocationModal(presetValue) {
   document.getElementById("allocationModal").style.display = "flex";
 }
 
-function openAllocationModalForTier(targetType, tierId, priceLevel) {
-  const value = targetType === "contest" ? "contest::" : `satellite:${tierId}:${priceLevel}`;
-  openAllocationModal(value);
-}
 
-document.getElementById("openAllocationModalBtn").addEventListener("click", () => openAllocationModal());
 document.getElementById("addAllocRowBtn").addEventListener("click", () => addAllocRow());
 document.getElementById("allocationModalClose").addEventListener("click", closeAllocationModal);
 document.getElementById("allocationModalBackdrop").addEventListener("click", closeAllocationModal);
