@@ -1166,7 +1166,7 @@ const CLIENT_MAX_POSITION_PCT = 0.10; // must match server's MAX_INITIAL_POSITIO
 let latestPortfolioData = null;
 let pendingTrade = null;
 
-function initiateTrade(side, explicitQuantity) {
+function initiateTrade(side, explicitQuantity, maxAllotment) {
   if (!currentPortfolioId) return;
   const msg = document.getElementById("tradeMsg");
   const quantity = explicitQuantity != null ? explicitQuantity : parseInt(document.getElementById("tradeShares").value, 10);
@@ -1177,14 +1177,16 @@ function initiateTrade(side, explicitQuantity) {
   }
   const q = latestQuotes[selectedSymbol];
   const estPrice = q ? q.price : 0;
-  pendingTrade = { side, quantity, symbol: selectedSymbol, estPrice };
+  pendingTrade = { side, quantity, symbol: selectedSymbol, estPrice, maxAllotment: !!maxAllotment };
 
   document.getElementById("reviewAction").textContent = side === "buy" ? "Buy" : "Sell";
   document.getElementById("reviewAction").style.color = side === "buy" ? "var(--green)" : "var(--red)";
   document.getElementById("reviewSymbol").textContent = selectedSymbol;
-  document.getElementById("reviewShares").textContent = quantity.toFixed(4).replace(/\.?0+$/, "");
+  document.getElementById("reviewShares").textContent = maxAllotment ? "~" + quantity.toFixed(4).replace(/\.?0+$/, "") : quantity.toFixed(4).replace(/\.?0+$/, "");
   document.getElementById("reviewPrice").textContent = q ? `${q.currency} ${estPrice.toFixed(2)}` : "—";
-  document.getElementById("reviewTotal").textContent = `$${(quantity * estPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+  document.getElementById("reviewTotal").textContent = maxAllotment
+    ? `~$${(quantity * estPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })} (exact amount confirmed at execution)`
+    : `$${(quantity * estPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
   showTradeModalState("review");
 }
 
@@ -1199,7 +1201,12 @@ document.getElementById("reviewConfirmBtn").addEventListener("click", async () =
   try {
     const result = await api(`/portfolios/${currentPortfolioId}/trades`, {
       method: "POST",
-      body: JSON.stringify({ symbol: pendingTrade.symbol, side: pendingTrade.side, quantity: pendingTrade.quantity }),
+      body: JSON.stringify({
+        symbol: pendingTrade.symbol,
+        side: pendingTrade.side,
+        quantity: pendingTrade.quantity,
+        maxAllotment: pendingTrade.maxAllotment,
+      }),
     });
     const qtyDisplay = (result.quantity.toFixed ? result.quantity.toFixed(4) : result.quantity).toString().replace(/\.?0+$/, "");
     document.getElementById("filledSummary").textContent =
@@ -1242,7 +1249,12 @@ function buyPercentOfAllotment(pct) {
   const { availableAllotment } = currentAllotmentInfo();
   const cost = availableAllotment * (pct / 100);
   const quantity = cost / q.price;
-  initiateTrade("buy", quantity);
+  // 100% specifically asks for the true maximum, right at the boundary —
+  // the quantity computed here is only an ESTIMATE for the review screen.
+  // Price ticks continuously and the review step introduces a real pause,
+  // so the actual execution recomputes this fresh, server-side, against
+  // the live price at that exact moment — see initiateTrade/maxAllotment.
+  initiateTrade("buy", quantity, pct === 100);
 }
 
 function sellPercentOfPosition(pct) {

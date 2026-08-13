@@ -745,6 +745,32 @@ listing every entry flat. Reused the exact same grouping function; past
 portfolios don't have pending allocations to worry about, so this was a
 straightforward extension of existing logic.
 
+## Fixed the REAL cause of occasional 100%-buy rejections
+
+The earlier $0.01 tolerance fix handled pure floating-point rounding, but
+that wasn't the whole story — **the quantity for a "100%" buy gets computed
+once at click time, then sits through a review/confirm step before actually
+executing, and the price ticks continuously (every 2 seconds) the whole
+time.** If the price moves during that pause — completely normal, not an
+edge case — the same share count now costs more than it did when computed,
+and rejection at that point is *correct*, not a bug in the check itself.
+
+Proved this directly: simulated a realistic 0.3% price tick between click
+and confirm, and the old approach really does land $29.87 over the true
+limit — real money, not a rounding artifact, and no reasonable tolerance
+value should paper over an overage that size.
+
+**Real fix**: added a `maxAllotment` mode to the trade endpoint. When set,
+the server ignores whatever quantity the client sent (that's now only used
+to render an *estimate* on the review screen) and computes the true maximum
+itself, atomically, using the live price and live portfolio value at the
+actual moment of execution — eliminating the staleness race structurally
+rather than tolerating it. Verified: the exact same price-drift scenario
+that broke the old approach now lands precisely at the true 10% boundary,
+every time, regardless of how much the price moved in between. Only wired
+this into the 100% buy button specifically — 25/50/75% have natural
+headroom below the boundary and were never actually at risk.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

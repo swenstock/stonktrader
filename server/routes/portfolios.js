@@ -119,17 +119,42 @@ router.post("/:id/trades", requireAuth, (req, res) => {
     return res.status(404).json({ error: "Portfolio not found" });
   }
 
-  const { symbol, side, quantity } = req.body || {};
-  if (!symbol || !["buy", "sell"].includes(side) || !quantity || quantity <= 0) {
-    return res
-      .status(400)
-      .json({ error: "symbol, side ('buy'|'sell'), and a positive quantity are required" });
+  const { symbol, side, maxAllotment } = req.body || {};
+  let { quantity } = req.body || {};
+
+  if (!symbol || !["buy", "sell"].includes(side)) {
+    return res.status(400).json({ error: "symbol and side ('buy'|'sell') are required" });
   }
 
   const quote = getQuote(symbol);
   if (!quote) return res.status(404).json({ error: "Unknown symbol" });
 
   const portfolioId = portfolio.id;
+
+  // "Buy the max allowed" is inherently racing against a moving price —
+  // the quantity gets computed once, then sits through a review/confirm
+  // step before actually executing, and prices tick continuously. A fixed
+  // tolerance only covers floating-point rounding, not real price drift
+  // during that pause. Structural fix: when maxAllotment is set, IGNORE
+  // whatever quantity the client sent (it's only ever an estimate for
+  // display) and compute the true maximum here, atomically, against the
+  // live price and live portfolio value at the actual moment of execution.
+  if (side === "buy" && maxAllotment) {
+    const existingPosition = db.prepare("SELECT * FROM positions WHERE portfolio_id = ? AND symbol = ?").get(portfolioId, symbol);
+    const existingCostBasis = existingPosition ? existingPosition.avg_cost * existingPosition.quantity : 0;
+    const portfolioValue = totalValueForPortfolio(portfolioId);
+    const maxAllowed = portfolioValue * MAX_INITIAL_POSITION_PCT;
+    const room = Math.max(0, maxAllowed - existingCostBasis);
+    quantity = room / quote.price;
+    if (quantity <= 0) {
+      return res.status(400).json({ error: `No room left to buy more ${symbol} — already at the 10% max for this position.` });
+    }
+  }
+
+  if (!quantity || quantity <= 0) {
+    return res.status(400).json({ error: "A positive quantity is required" });
+  }
+
   const cost = quote.price * quantity;
 
   // Trading rules — sensible position sizing, not gambling. Only apply to
@@ -148,6 +173,10 @@ router.post("/:id/trades", requireAuth, (req, res) => {
     const portfolioValue = totalValueForPortfolio(portfolioId);
     const maxAllowed = portfolioValue * MAX_INITIAL_POSITION_PCT;
 
+    // maxAllotment orders are computed from these exact same numbers a
+    // few lines up, in the exact same request — this check is a formality
+    // for that path (can't meaningfully fail) but stays fully authoritative
+    // for ordinary quantity-specified buys.
     if (existingCostBasis + cost > maxAllowed + 0.01) {
       const room = Math.max(0, maxAllowed - existingCostBasis);
       return res.status(400).json({
