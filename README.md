@@ -518,6 +518,40 @@ reserved 10 already-empty ones.
 *after* calling `openAllocationModal()`, not before. One-line-order bug,
 confirmed via direct code inspection of the corrected sequence.
 
+## Fixed: modal close-button collision, missing scheduled-orders list, and copy cleanup
+
+**Real CSS bug found**: the per-row "remove symbol" button in allocation
+modals reused the exact same class as the modal's own corner close button
+— which is `position:absolute` to one specific corner. Every row-remove
+button was stacking directly on top of the real close button in that same
+spot, so clicking "the X" to close a modal often removed a row instead,
+requiring several clicks before finally hitting the real close underneath.
+Fixed by giving row-remove buttons their own class with proper inline
+positioning next to their row.
+
+**Scheduled orders had no visible list** — the backend
+(`/api/scheduled-orders`) always existed, but nothing in the UI ever
+surfaced it, so queued orders were genuinely un-cancelable and un-viewable
+after creation. Added a "Scheduled Orders" section to My Contests.
+
+**Scheduled order modal now defaults to 10 rows**, matching the main
+allocation modal, instead of starting with just one.
+
+**Entry buttons standardized to "Enter Contest," always showing STONK and
+USD together** (was a scattered mix of "Enter for," "Pay X instead," "Use
+my funded ticket").
+
+**Signup CTA clarified** — was "starts with $100,000," which reads as USD
+and is easy to confuse with the *separate* $100,000 paper-trading portfolio
+cash. Now shows "100,000 STONK (~$3,460)" with a live USD conversion, even
+before logging in.
+
+**Cleaned up stale mobile nav CSS** — `.welcome` and `.chip-balance` were
+still being styled for mobile despite having moved out of the nav entirely
+several rounds ago, and the STONK price ticker was being hidden outright on
+phones even though it's now the nav's primary element. Now shrinks instead
+of disappearing.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

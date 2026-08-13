@@ -38,7 +38,7 @@
       <input type="password" id="signupPassword" required minlength="8" autocomplete="new-password">
       <label>Referral code <span style="color:var(--text-dim);text-transform:none;">(optional)</span></label>
       <input type="text" id="signupReferral" placeholder="e.g. 4F2C9A">
-      <button type="submit" class="btn btn-gold">Create account — starts with $100,000</button>
+      <button type="submit" class="btn btn-gold">Create account — get 100,000 STONK <span id="signupUsdHint"></span></button>
       <div class="auth-msg" id="signupMsg"></div>
     </form>
   </div>
@@ -186,6 +186,11 @@
       <p>Entries not yet configured stay visible below. Once a portfolio's set up, multiple entries in the same room collapse into a tree — click to expand.</p>
     </div>
     <div id="activePortfoliosList" class="portfolio-list"></div>
+    <div class="section-head">
+      <h2 style="font-size:15px;">Scheduled Orders</h2>
+      <p>Orders queued to fire at the next real market open, on portfolios you've already joined.</p>
+    </div>
+    <div id="scheduledOrdersList" class="portfolio-list"></div>
     <div class="section-head"><h2 style="font-size:15px;">Past</h2></div>
     <div id="pastPortfoliosList" class="portfolio-list"></div>
   </div>

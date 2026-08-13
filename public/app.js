@@ -2,6 +2,17 @@
 let token = localStorage.getItem("token");
 let displayName = localStorage.getItem("displayName");
 
+(async function showSignupUsdHint() {
+  try {
+    const res = await fetch("/api/account/price");
+    const data = await res.json();
+    const el = document.getElementById("signupUsdHint");
+    if (el) el.textContent = `(~$${(100000 * data.usdPrice).toLocaleString(undefined, { maximumFractionDigits: 0 })})`;
+  } catch (e) {
+    console.error(e);
+  }
+})();
+
 (function prefillReferralFromURL() {
   const params = new URLSearchParams(location.search);
   const ref = params.get("ref");
@@ -415,7 +426,7 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
         <span class="stake-sub">${statusLine}</span>
         ${lvl.myEntryCount > 0 ? `<span class="stake-entry-counter">You've entered ${lvl.myEntryCount}/${lvl.maxEntriesPerAccount} time${lvl.myEntryCount === 1 ? "" : "s"}</span>` : ""}
         ${ticketLine}
-        ${!disabled ? `<span class="stake-alloc-hint">${isPending ? "Enter this room" : "🔥 ENTER NOW"} ›</span>` : ""}
+        ${!disabled ? `<span class="stake-alloc-hint">${isPending ? "Enter Contest (reserve)" : "Enter Contest"} ›</span>` : ""}
       </button>`;
     })
     .join("");
@@ -648,9 +659,9 @@ function renderWeeklyRoom() {
       c.myEntryCount >= c.maxEntriesPerAccount
         ? `<button class="btn btn-outline" disabled>Max ${c.maxEntriesPerAccount} entries reached</button>`
         : hasTicket
-          ? `<button class="btn btn-gold join-btn" data-id="${c.id}" data-use-ticket="1">Use my funded ticket — free entry</button>
-             <button class="btn btn-outline join-btn" data-id="${c.id}" style="margin-top:8px;">Pay ${c.entryFee.toLocaleString()} STONK instead${c.myEntryCount > 0 ? ` (Entry ${c.myEntryCount + 1})` : ""}</button>`
-          : `<button class="btn btn-gold join-btn" data-id="${c.id}">Enter for ${c.entryFee.toLocaleString()} STONK${c.myEntryCount > 0 ? ` (Entry ${c.myEntryCount + 1})` : ""}</button>`
+          ? `<button class="btn btn-gold join-btn" data-id="${c.id}" data-use-ticket="1">Enter Contest — free (funded ticket)</button>
+             <button class="btn btn-outline join-btn" data-id="${c.id}" style="margin-top:8px;">Enter Contest — ${c.entryFee.toLocaleString()} STONK (~$${c.entryFeeUsd?.toFixed(2) ?? "0.00"}) instead</button>`
+          : `<button class="btn btn-gold join-btn" data-id="${c.id}">Enter Contest — ${c.entryFee.toLocaleString()} STONK (~$${c.entryFeeUsd?.toFixed(2) ?? "0.00"})</button>`
     }
     <div class="join-msg" data-msg-for="${c.id}"></div>
   </div>`;
@@ -773,9 +784,34 @@ function renderEntryGroup(group) {
   return unconfiguredHtml + configuredHtml;
 }
 
+function scheduledOrderRowHtml(o) {
+  const items = o.allocations.map((x) => `${x.symbol} ${x.percent}%`).join(", ") || "No picks set";
+  return `<div class="portfolio-row">
+    <div class="portfolio-row-main">
+      <div class="portfolio-row-label">Fires at ${new Date(o.targetOpenAt).toLocaleString()}</div>
+      <div class="portfolio-row-sub mono">${items}</div>
+    </div>
+    <span class="table-badge">Queued</span>
+    <button class="btn btn-outline btn-sm cancel-scheduled-btn" data-id="${o.id}">Cancel</button>
+  </div>`;
+}
+
+async function cancelScheduledOrder(id) {
+  try {
+    await api(`/scheduled-orders/${id}`, { method: "DELETE" });
+    refreshMyContests();
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
 async function refreshMyContests() {
   try {
-    const [portfolios, allocations] = await Promise.all([api("/portfolios"), api("/allocations")]);
+    const [portfolios, allocations, scheduledOrders] = await Promise.all([
+      api("/portfolios"),
+      api("/allocations"),
+      api("/scheduled-orders"),
+    ]);
     allocationsCache = allocations;
     const activePortfolios = portfolios.filter((p) => p.context.status === "open" || p.context.status === "pending");
     const past = portfolios.filter((p) => p.context.status === "resolved");
@@ -787,6 +823,14 @@ async function refreshMyContests() {
       `<div class="history-empty">Nothing active — head to the Lobby to enter a contest.</div>`;
     document.getElementById("pastPortfoliosList").innerHTML =
       past.map(portfolioRowHtml).join("") || `<div class="history-empty">No resolved contests yet.</div>`;
+
+    const activeScheduled = scheduledOrders.filter((o) => o.status === "pending");
+    document.getElementById("scheduledOrdersList").innerHTML =
+      activeScheduled.map(scheduledOrderRowHtml).join("") ||
+      `<div class="history-empty">No orders queued for the next market open.</div>`;
+    document.querySelectorAll(".cancel-scheduled-btn").forEach((btn) => {
+      btn.addEventListener("click", () => cancelScheduledOrder(btn.dataset.id));
+    });
 
     document.querySelectorAll(".entry-group-summary").forEach((row) => {
       row.style.cursor = "pointer";
@@ -1541,7 +1585,7 @@ function addAllocRow(symbol = "", percent = "", containerId = "allocationRows", 
     <select class="alloc-symbol">${symbolOptions}</select>
     <input type="number" class="alloc-percent" min="0.1" max="10" step="0.1" value="${defaultPct}">
     <span style="font-size:12px;color:var(--text-dim);">%</span>
-    <button class="trade-modal-close" type="button" onclick="document.getElementById('${id}').remove(); updateAllocTotal('${containerId}','${totalId}');">✕</button>
+    <button class="alloc-row-remove" type="button" onclick="document.getElementById('${id}').remove(); updateAllocTotal('${containerId}','${totalId}');">✕</button>
   `;
   document.getElementById(containerId).appendChild(row);
   row.querySelector(".alloc-percent").addEventListener("input", () => updateAllocTotal(containerId, totalId));
@@ -1619,7 +1663,11 @@ function openScheduledOrderModal(portfolioId, label) {
   document.getElementById("scheduledOrderContextLabel").textContent =
     `${label} — fires at the next real market open (9:30am ET). Free to trade normally after.`;
   document.getElementById("scheduledOrderRows").innerHTML = "";
-  addAllocRow("", "", "scheduledOrderRows", "scheduledTotalPct", "schedRow");
+  const symbols = window.__symbols || [];
+  const rowCount = Math.min(10, symbols.length || 10);
+  for (let i = 0; i < rowCount; i++) {
+    addAllocRow(symbols[i]?.symbol || "", 10, "scheduledOrderRows", "scheduledTotalPct", "schedRow");
+  }
   document.getElementById("scheduledOrderMsg").textContent = "";
   document.getElementById("scheduledOrderModal").style.display = "flex";
 }
