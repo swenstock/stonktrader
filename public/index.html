@@ -236,12 +236,17 @@
       </div>
 
       <div class="panel">
-        <h3>Markets <span class="tag">tap a symbol to trade</span></h3>
-        <div class="market-filter" id="marketFilter"></div>
-        <table>
-          <thead><tr><th>Symbol</th><th>Exchange</th><th>Price</th><th>Chg</th></tr></thead>
-          <tbody id="watchlistTable"></tbody>
-        </table>
+        <div class="panel-header-row">
+          <h3>Markets <span class="tag">tap a symbol to trade</span></h3>
+          <button class="btn btn-outline btn-sm watchlist-collapse-btn" id="marketsCollapseBtn">▾ collapse</button>
+        </div>
+        <div id="marketsBody">
+          <div class="market-filter" id="marketFilter"></div>
+          <table>
+            <thead><tr><th>Symbol</th><th>Exchange</th><th>Price</th><th>Chg</th></tr></thead>
+            <tbody id="watchlistTable"></tbody>
+          </table>
+        </div>
       </div>
 
       <div class="panel">

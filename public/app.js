@@ -1156,6 +1156,13 @@ document.getElementById("myWatchlistCollapseBtn")?.addEventListener("click", (e)
   e.target.textContent = isOpen ? "▸ expand" : "▾ collapse";
 });
 
+document.getElementById("marketsCollapseBtn")?.addEventListener("click", (e) => {
+  const body = document.getElementById("marketsBody");
+  const isOpen = body.style.display !== "none";
+  body.style.display = isOpen ? "none" : "block";
+  e.target.textContent = isOpen ? "▸ expand" : "▾ collapse";
+});
+
 function renderWatchlist() {
   const symbols = (window.__symbols || []).filter(
     (s) => selectedExchangeFilter === "ALL" || s.exchange === selectedExchangeFilter
