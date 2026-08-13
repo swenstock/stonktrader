@@ -293,12 +293,12 @@ function tickCountdowns() {
 let currentDrilldownCatId = null;
 
 // Tier filter — which price tiers to show, trader's choice (default: all)
-const ALL_TIER_LEVELS = ["free", "low", "mid", "high"];
+const ALL_TIER_LEVELS = ["free", "runner", "low", "mid", "high"];
 let tierFilter = new Set(ALL_TIER_LEVELS);
 
 function renderTierFilterBar() {
   const el = document.getElementById("tierFilterBar");
-  const labels = { free: "Freeroll", low: "Clerk", mid: "Trader", high: "Jr. Stonkbroker" };
+  const labels = { free: "Freeroll", runner: "Runner", low: "Clerk", mid: "Trader", high: "Jr. Stonkbroker" };
   el.innerHTML =
     `<span class="tier-filter-label">Show:</span>` +
     ALL_TIER_LEVELS.map(

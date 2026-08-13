@@ -699,6 +699,31 @@ check right next to it, which had the identical vulnerability and would
 have hit the same failure mode for someone buying with 100% of their
 remaining cash.
 
+## New tier: Runner — the entry point below Clerk
+
+**30 STONK (~$1.04 at current price)**, applies to all four categories
+(Full Day, Morning, Afternoon, Weekly Qualifier), max 10 entries same as
+every other paid tier. Named after the genuine old Wall Street entry-level
+job — running orders around a trading floor, the rung below clerk.
+
+**Deliberately carries no freeroll surcharge** — the standard +50 STONK
+surcharge alone already exceeds a $1 target, so Runner is a standalone
+cheap tier that doesn't feed the freeroll fund, unlike Clerk/Trader/Jr.
+Stonkbroker. Its own ladder math works completely normally otherwise —
+tested directly: confirmed a Runner room's full 30 STONK entry counts
+toward its own pool (no surcharge carve-out), confirmed entering one does
+NOT touch the freeroll fund, and confirmed 118 entrants (the real
+breakeven point for funding a ticket at this price) correctly funds
+exactly 1 ticket via the same ladder algorithm every other tier uses.
+
+Total tiers: 17 (was 13) — 4 per daily category, 5 for Weekly Qualifier
+(the extra one being Freeroll, exclusive to that category).
+
+Also fixed a real bug found while building this: the tier filter bar's
+default list didn't include the new level, which would have silently
+hidden Runner from the lobby entirely until a trader manually re-enabled
+it in the filter — added it to the default-on list.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

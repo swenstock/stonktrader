@@ -18,23 +18,30 @@ const CATEGORIES = [
 // completely separate from the normal rake split (see satelliteScheduler.js resolveSatellite).
 const BASE_PRICE_LEVELS = { low: 100, mid: 300, high: 750 };
 
-// Named tiers instead of bare Low/Mid/High — reads as a career progression
-// (Clerk -> Trader -> Jr. Stonkbroker -> ... -> Stonk Broker) matching the
-// site's broader "earn your way up" story.
-const PRICE_LEVEL_NAMES = { free: "Freeroll", low: "Clerk", mid: "Trader", high: "Jr. Stonkbroker" };
+// Runner sits below Clerk — genuine old Wall Street term for the entry-level
+// job running orders around a trading floor. ~$1 USD at current STONK
+// price. No freeroll surcharge here (unlike low/mid/high) — the surcharge
+// alone already exceeds a $1 entry, so Runner is a standalone cheap tier
+// that doesn't feed the freeroll fund.
+const RUNNER_PRICE = 30;
 
-// Flatten into concrete tiers — Weekly Qualifier gets a 4th free level,
-// dailies stay at the standard 3. Two fee fields matter here:
+// Named tiers instead of bare Low/Mid/High — reads as a career progression
+// (Runner -> Clerk -> Trader -> Jr. Stonkbroker -> ... -> Stonk Broker)
+// matching the site's broader "earn your way up" story.
+const PRICE_LEVEL_NAMES = { free: "Freeroll", runner: "Runner", low: "Clerk", mid: "Trader", high: "Jr. Stonkbroker" };
+
+// Flatten into concrete tiers — Weekly Qualifier gets a 5th free level,
+// every category (including dailies) gets Runner. Two fee fields matter here:
 //   entryFee    = TOTAL charged to the user (base + surcharge) — what's shown/charged
 //   poolFee     = BASE only — what's recorded as this room's own pool contribution,
 //                 keeping the already-tested ladder math untouched. The surcharge
 //                 never touches this room's own prize pool; it's siphoned
 //                 entirely to the freeroll fund.
 const TIERS = CATEGORIES.flatMap((cat) => {
-  const levels = cat.id === "weekly_qualifier" ? ["free", "low", "mid", "high"] : ["low", "mid", "high"];
+  const levels = cat.id === "weekly_qualifier" ? ["free", "runner", "low", "mid", "high"] : ["runner", "low", "mid", "high"];
   return levels.map((level) => {
-    const poolFee = level === "free" ? 0 : BASE_PRICE_LEVELS[level];
-    const surcharge = level === "free" ? 0 : FREEROLL_SURCHARGE;
+    const poolFee = level === "free" ? 0 : level === "runner" ? RUNNER_PRICE : BASE_PRICE_LEVELS[level];
+    const surcharge = level === "free" || level === "runner" ? 0 : FREEROLL_SURCHARGE;
     return {
       id: `${cat.id}_${level}`,
       categoryId: cat.id,
@@ -54,4 +61,4 @@ const TIERS = CATEGORIES.flatMap((cat) => {
   });
 });
 
-module.exports = { CATEGORIES, BASE_PRICE_LEVELS, PRICE_LEVEL_NAMES, TIERS, FREEROLL_SURCHARGE, FREEROLL_FUND_THRESHOLD };
+module.exports = { CATEGORIES, BASE_PRICE_LEVELS, RUNNER_PRICE, PRICE_LEVEL_NAMES, TIERS, FREEROLL_SURCHARGE, FREEROLL_FUND_THRESHOLD };
