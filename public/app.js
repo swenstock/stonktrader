@@ -870,10 +870,10 @@ let editingAllocationId = null;
 function editPendingAllocation(id) {
   const alloc = allocationsCache.find((a) => a.id === Number(id));
   if (!alloc) return;
-  editingAllocationId = alloc.id;
   const targetValue =
     alloc.targetType === "contest" ? "contest::" : `satellite:${alloc.targetTierId}:${alloc.targetPriceLevel}`;
-  openAllocationModal(targetValue);
+  openAllocationModal(targetValue); // resets editingAllocationId to null internally — must set it AFTER this call, not before
+  editingAllocationId = alloc.id;
   document.getElementById("allocTargetSelect").disabled = true; // editing an existing reservation — the room it targets can't change
   // openAllocationModal already opened with 10 default rows — if this
   // reservation actually has real picks saved, clear those defaults and

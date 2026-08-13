@@ -502,6 +502,22 @@ max" check simultaneously and race past the cap. If a batch partially
 succeeds before hitting the max, you're told exactly how many actually
 went through.
 
+## Fixed: editing your first entry got treated as an 11th
+
+**Root cause**: `editPendingAllocation()` set `editingAllocationId` to mark
+"I'm editing entry X," then called `openAllocationModal()` to open the UI
+— but that function's very first line unconditionally resets
+`editingAllocationId = null` (needed for the "open fresh, not editing
+anything" case). Since the reset ran *after* the assignment, it silently
+wiped out the edit context every time — so clicking "Set up portfolio" on
+any existing entry always fell through to the create-new path instead,
+hitting the max-10 check even on your very first entry if you'd bulk-
+reserved 10 already-empty ones.
+
+**Fixed** by simply reordering the two lines — set `editingAllocationId`
+*after* calling `openAllocationModal()`, not before. One-line-order bug,
+confirmed via direct code inspection of the corrected sequence.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)
