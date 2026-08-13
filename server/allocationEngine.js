@@ -6,9 +6,13 @@ const { TIERS, FREEROLL_FUND_THRESHOLD } = require("./tierConfig");
 const MAX_ALLOCATION_PCT = 10; // matches the 10% max-initial-position trading rule, expressed 0-100
 
 function validateAllocations(allocations) {
-  if (!Array.isArray(allocations) || allocations.length === 0) {
-    return "At least one allocation is required";
+  if (!Array.isArray(allocations)) {
+    return "Allocations must be an array";
   }
+  // Empty array is valid — reserves the room with 100% cash, no picks yet.
+  // The trader sets up their actual portfolio later in My Contests, any
+  // time before that room opens.
+  if (allocations.length === 0) return null;
   let total = 0;
   const seen = new Set();
   for (const a of allocations) {

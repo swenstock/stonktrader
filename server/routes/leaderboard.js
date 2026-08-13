@@ -3,6 +3,41 @@ const router = express.Router();
 const db = require("../db");
 const { totalValueForPortfolios } = require("../portfolioValue");
 
+// GET /api/leaderboard/recent-winners — archive of real prize winners
+// (rank 1, prize_type != 'none') across recently resolved contests and
+// satellites, most recent first.
+router.get("/recent-winners", (req, res) => {
+  const contestWinners = db
+    .prepare(
+      `SELECT 'contest' as type, contests.id as sourceId, 'Main Event' as name, contests.resolved_at as resolvedAt,
+       contest_results.prize_type as prizeType, contest_results.prize_amount as prizeAmount, users.display_name as displayName
+       FROM contest_results
+       JOIN contests ON contests.id = contest_results.contest_id
+       JOIN accounts ON accounts.id = contest_results.account_id
+       JOIN users ON users.id = accounts.user_id
+       WHERE contest_results.rank = 1 AND contest_results.prize_type != 'none' AND contests.status = 'resolved'`
+    )
+    .all();
+
+  const satelliteWinners = db
+    .prepare(
+      `SELECT 'satellite' as type, satellites.id as sourceId, satellites.name as name, satellites.resolved_at as resolvedAt,
+       satellite_results.prize_type as prizeType, satellite_results.prize_amount as prizeAmount, users.display_name as displayName
+       FROM satellite_results
+       JOIN satellites ON satellites.id = satellite_results.satellite_id
+       JOIN accounts ON accounts.id = satellite_results.account_id
+       JOIN users ON users.id = accounts.user_id
+       WHERE satellite_results.rank = 1 AND satellite_results.prize_type != 'none' AND satellites.status = 'resolved'`
+    )
+    .all();
+
+  const combined = [...contestWinners, ...satelliteWinners]
+    .sort((a, b) => new Date(b.resolvedAt) - new Date(a.resolvedAt))
+    .slice(0, 30);
+
+  res.json(combined);
+});
+
 // GET /api/leaderboard/contest/:id — live ranking within one Main Event
 // (works for both open and resolved contests)
 router.get("/contest/:id", (req, res) => {

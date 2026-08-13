@@ -222,7 +222,7 @@ async function refreshContests() {
     renderSatelliteCategoryTree();
     if (currentDrilldownCatId) {
       const freshCat = satellitesCache.categories.find((c) => c.id === currentDrilldownCatId);
-      if (freshCat) showSatelliteDrilldown(freshCat);
+      if (freshCat) showSatelliteDrilldown(freshCat, false);
     }
     renderWeeklyRoom();
   } catch (err) {
@@ -280,19 +280,27 @@ function tickCountdowns() {
 // ---------------- Compact DraftKings-style satellite matrix ----------------
 let currentDrilldownCatId = null;
 
+const CATEGORY_DESCRIPTIONS = {
+  weekly_qualifier: "Runs Monday 12:00am ET through Friday close — the SAME window as the Main Event. Win a room here and you're straight into the Main Event for free.",
+  full_day: "Runs the full trading session, 9:30 AM \u2013 4:00 PM ET, every weekday. New room opens each trading day.",
+  morning: "Runs the first half of the trading session, 9:30 AM \u2013 1:00 PM ET, every weekday.",
+  afternoon: "Runs the second half of the trading session, 1:00 PM \u2013 4:00 PM ET, every weekday.",
+};
+
 function renderSatelliteCategoryTree() {
   const el = document.getElementById("satelliteCategoriesTree");
   el.innerHTML = satellitesCache.categories
     .map((cat, i) => {
-      const fees = cat.levels.map((l) => l.entryFee);
-      const min = Math.min(...fees), max = Math.max(...fees);
-      const feeRange = min === max ? `${min.toLocaleString()} STONK` : `${min.toLocaleString()}–${max.toLocaleString()} STONK`;
       const openCount = cat.levels.filter((l) => l.status === "open").length;
       const hasFree = cat.levels.some((l) => l.priceLevel === "free");
-      return `<div class="portfolio-row">
+      const tierPreview = cat.levels
+        .map((l) => `${l.priceLevelName || l.priceLevel} ${l.entryFee === 0 ? "FREE" : l.entryFee.toLocaleString()}`)
+        .join(" · ");
+      return `<div class="portfolio-row" title="${CATEGORY_DESCRIPTIONS[cat.id] || ""}">
         <div class="portfolio-row-main">
           <div class="portfolio-row-label">${cat.icon} ${cat.name} ${hasFree ? '<span class="table-badge" style="margin-left:6px;">Free tier available</span>' : ""}</div>
-          <div class="portfolio-row-sub mono">${feeRange} · ${openCount} of ${cat.levels.length} rooms open now</div>
+          <div class="portfolio-row-sub mono">${tierPreview}</div>
+          <div class="portfolio-row-sub mono" style="margin-top:2px;">${openCount} of ${cat.levels.length} rooms open now</div>
         </div>
         <button class="btn btn-outline btn-sm lobby-cat-btn" data-idx="${i}">Browse rooms</button>
       </div>`;
@@ -323,7 +331,7 @@ function showPrizeBreakdown(lvl) {
   alert(lines.join("\n"));
 }
 
-function showSatelliteDrilldown(cat) {
+function showSatelliteDrilldown(cat, scrollTo = true) {
   currentDrilldownCatId = cat.id;
   document.getElementById("lobbyDrilldownTitle").textContent = `${cat.icon} ${cat.name}`;
   const el = document.getElementById("satelliteCategories");
@@ -336,31 +344,34 @@ function showSatelliteDrilldown(cat) {
       const countdown = isPending
         ? `<span class="countdown-text" data-ends="${lvl.opensAt}">${fmtCountdown(lvl.opensAt)}</span>`
         : null;
-      const entryStatus = lvl.myEntryCount > 0 ? `You're in (${lvl.myEntryCount}/${lvl.maxEntriesPerAccount})` : null;
       const statusLine = atMax
-        ? entryStatus
+        ? "Max entries reached"
         : isPending
           ? countdown
           : isLocked
             ? "Locked"
-            : `${lvl.entrantCount} entries${entryStatus ? ` · ${entryStatus}` : ""}`;
+            : `${lvl.entrantCount} entries`;
       const ticketLine =
         !isPending && !isLocked
           ? `<span class="stake-tickets">🎟️ ${lvl.ticketsProjected ?? 0} funded <span class="breakdown-btn" data-breakdown-id="${lvl.id}">ⓘ breakdown</span></span>`
           : "";
       const feeLabel = lvl.entryFee === 0 ? "FREE" : `${lvl.entryFee.toLocaleString()} STONK`;
       const usdLabel = lvl.entryFee === 0 ? "no wallet needed" : `~$${lvl.entryFeeUsd?.toFixed(2) ?? "0.00"}`;
-      // Pending tiers aren't disabled — tapping one opens the auto-fill
-      // allocation prompt scoped to that exact tier, since you can't
-      // enter directly yet but you CAN queue an allocation for it.
-      const clickAction = atMax || isLocked ? "" : isPending ? "pending-alloc-chip" : "join-sat-row-btn";
+      // Pending rooms show a real Enter/Join button too — clicking reserves
+      // your spot right away (100% cash, no picks yet). Set up the actual
+      // portfolio anytime before that room opens, from My Contests.
+      const clickAction = atMax || isLocked ? "" : isPending ? "reserve-room-btn" : "join-sat-row-btn";
       const disabled = atMax || isLocked;
-      return `<button class="stake-chip ${chipState} ${clickAction}" ${disabled ? "disabled" : ""} data-id="${lvl.id}" data-tier="${lvl.tierId}" data-level="${lvl.priceLevel}">
+      const hoverStats = !isPending
+        ? `${lvl.entrantCount} traders · ${lvl.poolGross.toLocaleString()} STONK collected · projected: ${lvl.ticketsProjected || 0} ticket(s) + ${(lvl.remainderProjected || 0).toLocaleString()} STONK remainder`
+        : `Opens ${new Date(lvl.opensAt).toLocaleString()}`;
+      return `<button class="stake-chip ${chipState} ${clickAction}" ${disabled ? "disabled" : ""} title="${hoverStats}" data-id="${lvl.id}" data-tier="${lvl.tierId}" data-level="${lvl.priceLevel}">
         <span class="stake-tier-name">${lvl.priceLevelName || lvl.priceLevel}</span>
         <span class="stake-fee">${feeLabel} <span class="stake-fee-usd">(${usdLabel})</span></span>
         <span class="stake-sub">${statusLine}</span>
+        ${lvl.myEntryCount > 0 ? `<span class="stake-entry-counter">You've entered ${lvl.myEntryCount}/${lvl.maxEntriesPerAccount} time${lvl.myEntryCount === 1 ? "" : "s"}</span>` : ""}
         ${ticketLine}
-        ${isPending ? `<span class="stake-alloc-hint">⚙️ Set up allocation</span>` : ""}
+        ${isPending ? `<span class="stake-alloc-hint">Enter this room ›</span>` : ""}
       </button>`;
     })
     .join("");
@@ -375,23 +386,52 @@ function showSatelliteDrilldown(cat) {
   el.querySelectorAll(".join-sat-row-btn").forEach((btn) => {
     btn.addEventListener("click", () => joinSatellite(btn.dataset.id));
   });
-  el.querySelectorAll(".pending-alloc-chip").forEach((btn) => {
-    btn.addEventListener("click", () => openAllocationModalForTier("satellite", btn.dataset.tier, btn.dataset.level));
+  el.querySelectorAll(".reserve-room-btn").forEach((btn) => {
+    btn.addEventListener("click", () => reserveRoom(btn.dataset.tier, btn.dataset.level));
   });
 
   document.getElementById("lobbyDrilldownPanel").style.display = "block";
-  document.getElementById("lobbyDrilldownPanel").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  if (scrollTo) document.getElementById("lobbyDrilldownPanel").scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 document.getElementById("closeLobbyDrilldown").addEventListener("click", () => {
   currentDrilldownCatId = null;
   document.getElementById("lobbyDrilldownPanel").style.display = "none";
 });
 
+function showYoureIn(title, message) {
+  document.getElementById("youreInTitle").textContent = title;
+  document.getElementById("youreInMessage").textContent = message;
+  document.getElementById("youreInModal").style.display = "flex";
+}
+function closeYoureIn() {
+  document.getElementById("youreInModal").style.display = "none";
+}
+document.getElementById("youreInDoneBtn").addEventListener("click", closeYoureIn);
+document.getElementById("youreInModalBackdrop").addEventListener("click", closeYoureIn);
+
 async function joinSatellite(satelliteId) {
   try {
     await api(`/satellites/${satelliteId}/enter`, { method: "POST" });
     await refreshContests();
     refreshPortfoliosBalance();
+    showYoureIn("You're in!", "Head to My Contests to trade — the room's own $100,000 portfolio is ready for you.");
+  } catch (err) {
+    alert(err.message);
+  }
+}
+
+// Reserving a room that hasn't opened yet — creates an empty (100% cash)
+// pending allocation. No picks required now; set up the actual portfolio
+// anytime before the room opens, from My Contests.
+async function reserveRoom(tierId, priceLevel) {
+  try {
+    await api("/allocations", {
+      method: "POST",
+      body: JSON.stringify({ targetType: "satellite", tierId, priceLevel, allocations: [] }),
+    });
+    await refreshContests();
+    await refreshMyContests();
+    showYoureIn("You're in!", "Your spot is reserved. Set up your portfolio anytime before this room opens — it'll auto-fill with your picks the instant it does.");
   } catch (err) {
     alert(err.message);
   }
@@ -448,18 +488,18 @@ function renderWeeklyRoom() {
         <div class="table-name">Weekly Stonk Broker Challenge <span class="live-dot">●</span></div>
         <div class="table-duration">${c.entrantCount.toLocaleString()} entries funded · closes Friday</div>
       </div>
-      <div class="table-badge ${c.joined ? "joined" : ""}">${c.joined ? "You're in" : "Open now"}</div>
+      <div class="table-badge ${c.joined ? "joined" : ""}">${c.joined ? `You're in (${c.myEntryCount}/${c.maxEntriesPerAccount})` : "Open now"}</div>
     </div>
     <div class="table-row"><span>Entry</span><span class="fee">${c.entryFee.toLocaleString()} STONK <span style="color:var(--text-dim);font-weight:400;">(~$${c.entryFeeUsd?.toFixed(2) ?? "0.00"})</span></span></div>
     <div class="table-row"><span>Pool so far</span><span>${c.poolGross.toLocaleString()} STONK</span></div>
     <div class="countdown"><span class="clock">⏱</span> <b class="countdown-text" data-ends="${c.weekEnd}">${fmtCountdown(c.weekEnd)}</b></div>
     ${
-      c.joined
-        ? `<button class="btn btn-outline" disabled>Already in this week's Main Event</button>`
+      c.myEntryCount >= c.maxEntriesPerAccount
+        ? `<button class="btn btn-outline" disabled>Max ${c.maxEntriesPerAccount} entries reached</button>`
         : hasTicket
           ? `<button class="btn btn-gold join-btn" data-id="${c.id}" data-use-ticket="1">Use my funded ticket — free entry</button>
-             <button class="btn btn-outline join-btn" data-id="${c.id}" style="margin-top:8px;">Pay ${c.entryFee.toLocaleString()} STONK instead</button>`
-          : `<button class="btn btn-gold join-btn" data-id="${c.id}">Enter for ${c.entryFee.toLocaleString()} STONK</button>`
+             <button class="btn btn-outline join-btn" data-id="${c.id}" style="margin-top:8px;">Pay ${c.entryFee.toLocaleString()} STONK instead${c.myEntryCount > 0 ? ` (Entry ${c.myEntryCount + 1})` : ""}</button>`
+          : `<button class="btn btn-gold join-btn" data-id="${c.id}">Enter for ${c.entryFee.toLocaleString()} STONK${c.myEntryCount > 0 ? ` (Entry ${c.myEntryCount + 1})` : ""}</button>`
     }
     <div class="join-msg" data-msg-for="${c.id}"></div>
   </div>`;
@@ -478,6 +518,7 @@ async function joinContest(contestId, useTicket) {
     msgEl.textContent = useTicket ? "Ticket redeemed — you're in!" : "You're in! Check My Contests.";
     await refreshContests();
     refreshPortfoliosBalance();
+    showYoureIn("You're in!", useTicket ? "Your ticket got you a free seat in this week's Main Event." : "You're entered in this week's Main Event — good luck out there.");
   } catch (err) {
     msgEl.style.color = "var(--red)";
     msgEl.textContent = err.message;
@@ -538,7 +579,10 @@ function allocationRowHtml(a) {
     a.targetType === "contest"
       ? "Main Event"
       : `${a.targetTierId.replace("_", " ")} — ${a.targetPriceLevel}`;
-  const items = a.allocations.map((x) => `${x.symbol} ${x.percent}%`).join(", ");
+  const hasPicks = a.allocations.length > 0;
+  const items = hasPicks
+    ? a.allocations.map((x) => `${x.symbol} ${x.percent}%`).join(", ")
+    : "Reserved — no picks yet, 100% cash. Set up your portfolio before this room opens.";
   const statusBadge =
     a.status === "pending"
       ? `<span class="table-badge">Waiting for open</span>`
@@ -554,7 +598,7 @@ function allocationRowHtml(a) {
     ${statusBadge}
     ${
       isPending
-        ? `<button class="btn btn-outline btn-sm adjust-alloc-btn" data-id="${a.id}">Adjust</button>
+        ? `<button class="btn btn-outline btn-sm adjust-alloc-btn" data-id="${a.id}">${hasPicks ? "Adjust" : "Set up portfolio"}</button>
            <button class="btn btn-outline btn-sm cancel-alloc-btn" data-id="${a.id}">Cancel</button>`
         : ""
     }
@@ -567,11 +611,18 @@ function editPendingAllocation(id) {
   const targetValue =
     alloc.targetType === "contest" ? "contest::" : `satellite:${alloc.targetTierId}:${alloc.targetPriceLevel}`;
   openAllocationModal(targetValue);
-  // openAllocationModal already added one empty row — clear it and
-  // repopulate with this allocation's existing symbols/percentages instead.
-  document.getElementById("allocationRows").innerHTML = "";
-  allocRowCount = 0;
-  alloc.allocations.forEach((a) => addAllocRow(a.symbol, a.percent));
+  // openAllocationModal already opened with 10 default rows — if this
+  // reservation actually has real picks saved, clear those defaults and
+  // show the real ones instead. If it's a pure reservation (empty
+  // allocations, just holding a spot), leave the 10 defaults as a helpful
+  // starting point rather than showing an empty modal.
+  if (alloc.allocations.length > 0) {
+    document.getElementById("allocationRows").innerHTML = "";
+    allocRowCount = 0;
+    alloc.allocations.forEach((a) => addAllocRow(a.symbol, a.percent));
+  }
+  document.getElementById("allocationModalIntro").textContent =
+    "You can set up your portfolio anytime before this room opens — it fires automatically at the opening price.";
 }
 
 async function cancelAllocation(id) {
@@ -1006,7 +1057,7 @@ function renderLiveContestsList() {
 
   (satellitesCache.categories || []).forEach((cat) => {
     const openCount = cat.levels.filter((l) => l.status === "open").length;
-    const sub = openCount > 0 ? `${openCount} of 3 rooms open right now` : "Not open right now — check price levels for next open time";
+    const sub = openCount > 0 ? `${openCount} of ${cat.levels.length} rooms open right now` : "Not open right now — check price levels for next open time";
     categories.push({
       kind: "satellite",
       name: `${cat.icon} ${cat.name}`,
@@ -1085,11 +1136,34 @@ document.getElementById("closeLiveLeaderboard").addEventListener("click", () => 
   document.getElementById("liveLeaderboardPanel").style.display = "none";
 });
 
+function renderPastWinnersArchive(winners) {
+  const el = document.getElementById("pastWinnersArchive");
+  if (!el) return;
+  el.innerHTML =
+    winners
+      .map((w) => {
+        const prizeLabel =
+          w.prizeType === "broker"
+            ? "🏆 Activated Stonk Broker"
+            : w.prizeType === "ticket"
+              ? "🎟️ Main Event Ticket"
+              : `${(w.prizeAmount || 0).toLocaleString()} STONK`;
+        return `<div class="portfolio-row">
+        <div class="portfolio-row-main">
+          <div class="portfolio-row-label">${w.displayName} <span style="color:var(--text-dim);font-weight:400;">won ${prizeLabel}</span></div>
+          <div class="portfolio-row-sub mono">${w.name} · ${new Date(w.resolvedAt).toLocaleDateString()}</div>
+        </div>
+      </div>`;
+      })
+      .join("") || `<div class="history-empty">No resolved contests yet — check back after the first rooms wrap up.</div>`;
+}
+
 async function refreshLeaderboards() {
   try {
-    const [myStats, lifetime] = await Promise.all([
+    const [myStats, lifetime, pastWinners] = await Promise.all([
       token ? api("/leaderboard/me") : Promise.resolve(null),
       api("/leaderboard/lifetime"),
+      api("/leaderboard/recent-winners"),
     ]);
 
     if (myStats) {
@@ -1120,6 +1194,7 @@ async function refreshLeaderboards() {
     }
 
     renderLiveContestsList();
+    renderPastWinnersArchive(pastWinners);
   } catch (err) {
     console.error(err);
   }
@@ -1227,6 +1302,8 @@ function openAllocationModal(presetValue) {
     addAllocRow(symbols[i]?.symbol || "", 10);
   }
   document.getElementById("allocationMsg").textContent = "";
+  document.getElementById("allocationModalIntro").textContent =
+    "Set this up before a contest opens. The moment it does, you're entered and this allocation fires at the opening price — free to trade normally after.";
   document.getElementById("allocationModal").style.display = "flex";
 }
 

@@ -76,7 +76,7 @@
       <div class="lobby-hero-text">
         <div class="eyebrow">STONK BROKER TERMINAL</div>
         <h1 class="pixel-headline">CAN'T BUY<br>THE BROKER?<br><span class="accent">EARN THE<br>BROKER.</span></h1>
-        <p>Start completely <b class="hero-price-callout">FREE</b> — no wallet, no risk, just an account. Or jump in for as little as <b class="hero-price-callout">$5</b>. Every path leads the same place: win a room, earn a Main Event ticket, win the Main Event, walk away with a real Stonk Broker. $100,000 in paper money is all it takes to prove you've got what it takes.</p>
+        <p><b class="hero-price-callout" style="font-size:1.5em;">START 100% FREE.</b> Sign up, no wallet, no risk — just an account and a free roll into the game. All it takes to become a Stonk Broker is outtrading the floor with a $100,000 paper money account. Win your free room, earn a Main Event ticket, win the Main Event, walk away with a real Stonk Broker. Ready for more? Rooms start at just $5 too.</p>
         <div class="journey-strip">
           <span class="journey-step">🎲 FREE ROLL</span><span class="journey-arrow">→</span>
           <span class="journey-step">🔔 SATELLITE</span><span class="journey-arrow">→</span>
@@ -327,8 +327,8 @@
     <div class="trade-modal-backdrop" id="allocationModalBackdrop"></div>
     <div class="trade-modal-card">
       <button class="trade-modal-close" id="allocationModalClose">✕</button>
-      <h3>Auto-fill allocation</h3>
-      <p style="color:var(--text-dim);font-size:12.5px;margin:-4px 0 14px;">Set this up before a contest opens. The moment it does, you're entered and this allocation fires at the opening price — free to trade normally after.</p>
+      <h3>Set up your portfolio</h3>
+      <p id="allocationModalIntro" style="color:var(--text-dim);font-size:12.5px;margin:-4px 0 14px;">Set this up before a contest opens. The moment it does, you're entered and this allocation fires at the opening price — free to trade normally after.</p>
       <label>Which contest</label>
       <select id="allocTargetSelect"></select>
       <div id="allocationRows" style="margin-top:10px;"></div>
@@ -340,6 +340,17 @@
   </div>
 
   <!-- ===== Scheduled order modal (queue for NEXT market open, on an already-joined portfolio) ===== -->
+  <!-- ===== "You're in!" confirmation (reused for both open-room joins and pending reservations) ===== -->
+  <div id="youreInModal" class="trade-modal" style="display:none;">
+    <div class="trade-modal-backdrop" id="youreInModalBackdrop"></div>
+    <div class="trade-modal-card" style="text-align:center;">
+      <div class="order-filled-check">✓</div>
+      <h3 id="youreInTitle">You're in!</h3>
+      <p id="youreInMessage" style="color:var(--text-dim);font-size:13.5px;"></p>
+      <button class="btn btn-gold" id="youreInDoneBtn" style="width:100%;margin-top:10px;">Got it</button>
+    </div>
+  </div>
+
   <div id="scheduledOrderModal" class="trade-modal" style="display:none;">
     <div class="trade-modal-backdrop" id="scheduledOrderModalBackdrop"></div>
     <div class="trade-modal-card">
@@ -389,6 +400,9 @@
         <tbody id="lifetimeLeaderboardTable"></tbody>
       </table>
     </div>
+
+    <div class="section-head"><h2 style="font-size:18px;">🗄️ Archive of Past Winners</h2></div>
+    <div id="pastWinnersArchive" class="portfolio-list" style="max-width:1200px;margin:0 auto 40px;padding:0 28px;"></div>
   </div>
 
   <!-- ===== HOW IT WORKS ===== -->

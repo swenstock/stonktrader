@@ -7,10 +7,10 @@ const FREEROLL_SURCHARGE = 50; // added to every paid room's entry fee, funds th
 const FREEROLL_FUND_THRESHOLD = 3000; // once the surcharge fund crosses this, one freeroll ticket becomes available
 
 const CATEGORIES = [
+  { id: "weekly_qualifier", name: "Weekly Qualifier", icon: "🎟️", cadence: "weekly" },
   { id: "full_day", name: "Full Day", icon: "🔔", cadence: "daily", openHour: 9.5, lockHour: 16 },
   { id: "morning", name: "Morning", icon: "☀️", cadence: "daily", openHour: 9.5, lockHour: 13 },
   { id: "afternoon", name: "Afternoon", icon: "🔥", cadence: "daily", openHour: 13, lockHour: 16 },
-  { id: "weekly_qualifier", name: "Weekly Qualifier", icon: "🎟️", cadence: "weekly" },
 ];
 
 // Base tier price is 100/300/750, then every paid room gets the flat +50
@@ -18,9 +18,10 @@ const CATEGORIES = [
 // completely separate from the normal rake split (see satelliteScheduler.js resolveSatellite).
 const BASE_PRICE_LEVELS = { low: 100, mid: 300, high: 750 };
 
-// Named tiers instead of bare Low/Mid/High — echoes the same
-// Rookie->Trader progression language used elsewhere (career stats, etc).
-const PRICE_LEVEL_NAMES = { free: "Freeroll", low: "Rookie", mid: "Trader", high: "Whale" };
+// Named tiers instead of bare Low/Mid/High — reads as a career progression
+// (Clerk -> Trader -> Jr. Stonkbroker -> ... -> Stonk Broker) matching the
+// site's broader "earn your way up" story.
+const PRICE_LEVEL_NAMES = { free: "Freeroll", low: "Clerk", mid: "Trader", high: "Jr. Stonkbroker" };
 
 // Flatten into concrete tiers — Weekly Qualifier gets a 4th free level,
 // dailies stay at the standard 3. Two fee fields matter here:

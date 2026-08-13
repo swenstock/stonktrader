@@ -345,6 +345,7 @@ tr.watch-row:hover{background:var(--surface-2);}
 .stake-tier-name{font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.03em;}
 .stake-fee-usd{font-weight:400;color:var(--text-dim);font-size:11px;}
 .stake-tickets{font-size:10.5px;color:var(--green);}
+.stake-entry-counter{font-size:10.5px;color:var(--gold);font-weight:700;}
 .breakdown-btn{color:var(--text-dim);text-decoration:underline;cursor:pointer;margin-left:4px;}
 .breakdown-btn:hover{color:var(--gold);}
 .stake-sub{font-size:11px;color:var(--text-dim);}

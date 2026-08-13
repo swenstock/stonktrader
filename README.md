@@ -394,6 +394,44 @@ circular dependency between `satelliteScheduler.js` and `allocationEngine.js`.
   chart toggle — ticks are bucketed client-side into 5-second OHLC candles
   since there's no server-side historical OHLC source yet
 
+## Reserve-then-configure flow, tier renaming, and two real bug fixes
+
+**Two bugs found and fixed from real testing feedback:**
+1. The Lobby was periodically auto-scrolling to the Main Event every ~5
+   seconds — traced to a background poll re-rendering an open satellite
+   drill-down, which re-triggered `scrollIntoView` every refresh. Fixed by
+   separating "keep the data live" from "scroll to it" — only the initial
+   user click scrolls now.
+2. Leaderboards showed "4 of 3 rooms open" for the Weekly Qualifier —
+   a hardcoded `3` left over from before it got a 4th (freeroll) level.
+   Fixed to use the real room count.
+
+**Tiers renamed**: Clerk / Trader / Jr. Stonkbroker (was Rookie/Trader/Whale).
+
+**Weekly Qualifier reordered to the front** of every category list — it
+runs concurrently with the Main Event, not sequentially like the dailies,
+so it leads.
+
+**Reserve-then-configure entry flow**: pending (not-yet-open) rooms now
+have a real "Enter this room" button instead of requiring a full
+allocation setup first. Clicking it reserves the spot immediately (100%
+cash, zero picks) — tested end-to-end: the reservation correctly
+auto-enters with zero positions and the full $100,000 untouched once the
+room opens. The trader can then set up their actual portfolio anytime
+before that room opens, from My Contests — reusing the same allocation
+modal, now with copy that adapts to whether picks already exist.
+
+A "You're in!" confirmation now fires on every entry — satellites, Main
+Event, and reservations alike.
+
+**Archive of Past Winners**: new section on Leaderboards, aggregating every
+rank-1 real-prize winner (Broker, ticket, or STONK) across resolved
+contests and satellites, most recent first.
+
+**Hover tooltips** added throughout: category rows explain what each
+session is and when it runs; individual room chips show live stats
+(traders, STONK collected, projected prize) on hover.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)
