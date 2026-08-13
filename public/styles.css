@@ -346,6 +346,7 @@ tr.watch-row:hover{background:var(--surface-2);}
 .stake-fee-usd{font-weight:400;color:var(--text-dim);font-size:11px;}
 .stake-tickets{font-size:10.5px;color:var(--green);}
 .stake-entry-counter{font-size:10.5px;color:var(--gold);font-weight:700;}
+.cat-tier-preview{font-size:11px;color:var(--text-dim);font-weight:400;margin-left:8px;}
 .breakdown-btn{color:var(--text-dim);text-decoration:underline;cursor:pointer;margin-left:4px;}
 .breakdown-btn:hover{color:var(--gold);}
 .stake-sub{font-size:11px;color:var(--text-dim);}
@@ -363,6 +364,13 @@ tr.watch-row:hover{background:var(--surface-2);}
 .portfolio-row-pl{font-size:15px;font-weight:700;}
 .editable-alloc-row{transition:border-color .15s ease;}
 .editable-alloc-row:hover{border-color:var(--gold);}
+.entry-group{margin-bottom:10px;}
+.entry-group-summary{margin-bottom:0;border-radius:10px 10px 0 0;}
+.entry-group-items{background:var(--surface-2);border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;padding:10px;}
+.entry-group-item{margin-bottom:8px;display:flex;align-items:center;gap:8px;}
+.entry-group-item:last-child{margin-bottom:0;}
+.entry-group-item .portfolio-row{flex:1;margin-bottom:0;}
+.entry-number-tag{font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;flex-shrink:0;width:52px;}
 
 /* ---------- How It Works ---------- */
 .howitworks-page{max-width:900px;margin:0 auto;padding:0 28px 60px;display:flex;flex-direction:column;gap:22px;}

@@ -4,6 +4,7 @@ const db = require("../db");
 const requireAuth = require("../middleware/requireAuth");
 const { validateAllocations } = require("../allocationEngine");
 const { TIERS } = require("../satelliteScheduler");
+const { CONFIG: MAIN_EVENT_CONFIG } = require("../contestScheduler");
 
 function serialize(r) {
   return {
@@ -26,6 +27,9 @@ router.get("/", requireAuth, (req, res) => {
   res.json(rows.map(serialize));
 });
 
+// POST — reserve a NEW spot. Stacks up to the tier's max entries per
+// account rather than replacing any existing reservation — each call adds
+// another one, matching how entering an already-open room works.
 router.post("/", requireAuth, (req, res) => {
   const { targetType, tierId, priceLevel, allocations } = req.body || {};
 
@@ -33,27 +37,33 @@ router.post("/", requireAuth, (req, res) => {
     return res.status(400).json({ error: "targetType must be 'contest' or 'satellite'" });
   }
 
-  let finalTierId, finalPriceLevel;
+  let finalTierId, finalPriceLevel, maxAllowed;
   if (targetType === "satellite") {
     const validTier = TIERS.find((t) => t.categoryId === tierId && t.priceLevel === priceLevel);
     if (!validTier) return res.status(400).json({ error: "Unknown satellite tier/price level" });
     finalTierId = tierId;
     finalPriceLevel = priceLevel;
+    maxAllowed = validTier.maxEntriesPerAccount;
   } else {
     finalTierId = "main_event";
     finalPriceLevel = null;
+    maxAllowed = MAIN_EVENT_CONFIG.maxEntriesPerAccount;
   }
 
   const err = validateAllocations(allocations);
   if (err) return res.status(400).json({ error: err });
 
-  // Replace any existing pending allocation for this exact same target —
-  // one-time use, latest set wins.
-  db.prepare(
-    `UPDATE pending_allocations SET status = 'cancelled'
-     WHERE account_id = ? AND target_type = ? AND target_tier_id = ?
-     AND IFNULL(target_price_level, '') = IFNULL(?, '') AND status = 'pending'`
-  ).run(req.account.id, targetType, finalTierId, finalPriceLevel);
+  const existingCount = db
+    .prepare(
+      `SELECT COUNT(*) as n FROM pending_allocations
+       WHERE account_id = ? AND target_type = ? AND target_tier_id = ?
+       AND IFNULL(target_price_level, '') = IFNULL(?, '') AND status = 'pending'`
+    )
+    .get(req.account.id, targetType, finalTierId, finalPriceLevel).n;
+
+  if (existingCount >= maxAllowed) {
+    return res.status(400).json({ error: `You've reached the max of ${maxAllowed} entries for this room` });
+  }
 
   const info = db
     .prepare(
@@ -62,6 +72,24 @@ router.post("/", requireAuth, (req, res) => {
     .run(req.account.id, targetType, finalTierId, finalPriceLevel, JSON.stringify(allocations));
 
   res.json({ ok: true, id: info.lastInsertRowid });
+});
+
+// PUT — edit ONE specific existing reservation's picks, without touching
+// any of the account's other reservations for the same room.
+router.put("/:id", requireAuth, (req, res) => {
+  const { allocations } = req.body || {};
+  const row = db.prepare("SELECT * FROM pending_allocations WHERE id = ?").get(req.params.id);
+  if (!row || row.account_id !== req.account.id) return res.status(404).json({ error: "Not found" });
+  if (row.status !== "pending") return res.status(400).json({ error: "Only pending reservations can be adjusted" });
+
+  const err = validateAllocations(allocations);
+  if (err) return res.status(400).json({ error: err });
+
+  db.prepare("UPDATE pending_allocations SET allocations_json = ? WHERE id = ?").run(
+    JSON.stringify(allocations),
+    req.params.id
+  );
+  res.json({ ok: true });
 });
 
 router.delete("/:id", requireAuth, (req, res) => {

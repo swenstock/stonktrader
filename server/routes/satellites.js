@@ -37,7 +37,17 @@ function nextOccurrence(tier, now) {
   return now;
 }
 
-function serializePendingTier(tier, now) {
+function serializePendingTier(tier, now, myAccountId) {
+  const myPendingCount = myAccountId
+    ? db
+        .prepare(
+          `SELECT COUNT(*) as n FROM pending_allocations
+           WHERE account_id = ? AND target_type = 'satellite' AND target_tier_id = ?
+           AND IFNULL(target_price_level, '') = IFNULL(?, '') AND status = 'pending'`
+        )
+        .get(myAccountId, tier.categoryId, tier.priceLevel).n
+    : 0;
+
   return {
     id: null,
     tierId: tier.categoryId,
@@ -48,14 +58,16 @@ function serializePendingTier(tier, now) {
     cadence: tier.cadence,
     entryFee: tier.entryFee,
     entryFeeUsd: stonkToUsd(tier.entryFee),
+    ticketCost: 3000,
     status: "pending",
     opensAt: nextOccurrence(tier, now).toISOString(),
     locksAt: null,
     entrantCount: 0,
     poolGross: 0,
     ticketsProjected: 0,
-    joined: false,
-    myEntryCount: 0,
+    remainderProjected: 0,
+    joined: myPendingCount > 0,
+    myEntryCount: myPendingCount,
     maxEntriesPerAccount: tier.maxEntriesPerAccount,
   };
 }
@@ -134,7 +146,7 @@ router.get("/", (req, res) => {
     // already resolved today. Full results for resolved sessions remain
     // available in the history list below, this is just what the lobby
     // chip shows.
-    return serializePendingTier(tier, now);
+    return serializePendingTier(tier, now, myAccountId);
   });
 
   // Group into categories for compact display — each category shows its

@@ -298,9 +298,8 @@ function renderSatelliteCategoryTree() {
         .join(" · ");
       return `<div class="portfolio-row" title="${CATEGORY_DESCRIPTIONS[cat.id] || ""}">
         <div class="portfolio-row-main">
-          <div class="portfolio-row-label">${cat.icon} ${cat.name} ${hasFree ? '<span class="table-badge" style="margin-left:6px;">Free tier available</span>' : ""}</div>
-          <div class="portfolio-row-sub mono">${tierPreview}</div>
-          <div class="portfolio-row-sub mono" style="margin-top:2px;">${openCount} of ${cat.levels.length} rooms open now</div>
+          <div class="portfolio-row-label">${cat.icon} ${cat.name} <span class="cat-tier-preview mono">${tierPreview}</span> ${hasFree ? '<span class="table-badge" style="margin-left:6px;">Free tier available</span>' : ""}</div>
+          <div class="portfolio-row-sub mono">${openCount} of ${cat.levels.length} rooms open now</div>
         </div>
         <button class="btn btn-outline btn-sm lobby-cat-btn" data-idx="${i}">Browse rooms</button>
       </div>`;
@@ -347,14 +346,13 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
       const statusLine = atMax
         ? "Max entries reached"
         : isPending
-          ? countdown
+          ? `0 entries · ${countdown}`
           : isLocked
             ? "Locked"
             : `${lvl.entrantCount} entries`;
-      const ticketLine =
-        !isPending && !isLocked
-          ? `<span class="stake-tickets">🎟️ ${lvl.ticketsProjected ?? 0} funded <span class="breakdown-btn" data-breakdown-id="${lvl.id}">ⓘ breakdown</span></span>`
-          : "";
+      const ticketLine = !isLocked
+        ? `<span class="stake-tickets">🎟️ ${lvl.ticketsProjected ?? 0} funded <span class="breakdown-btn" data-breakdown-id="${lvl.id}">ⓘ breakdown</span></span>`
+        : "";
       const feeLabel = lvl.entryFee === 0 ? "FREE" : `${lvl.entryFee.toLocaleString()} STONK`;
       const usdLabel = lvl.entryFee === 0 ? "no wallet needed" : `~$${lvl.entryFeeUsd?.toFixed(2) ?? "0.00"}`;
       // Pending rooms show a real Enter/Join button too — clicking reserves
@@ -528,25 +526,85 @@ async function joinContest(contestId, useTicket) {
 // ---------------- My Contests ----------------
 let allocationsCache = [];
 
+function groupEntriesByRoom(portfolios, allocations) {
+  const groups = {};
+
+  portfolios.forEach((p) => {
+    const key = `portfolio:${p.context.type}:${p.context.sourceId}`;
+    if (!groups[key]) {
+      groups[key] = { label: p.label.replace(/\s*\(Entry \d+\)\s*$/, ""), items: [] };
+    }
+    groups[key].items.push({ kind: "portfolio", data: p });
+  });
+
+  allocations
+    .filter((a) => a.status !== "cancelled")
+    .forEach((a) => {
+      const key = `pending:${a.targetType}:${a.targetTierId}:${a.targetPriceLevel}`;
+      const label = a.targetType === "contest" ? "Main Event" : `${a.targetTierId.replace("_", " ")} — ${a.targetPriceLevel}`;
+      if (!groups[key]) groups[key] = { label, items: [] };
+      groups[key].items.push({ kind: "pending", data: a });
+    });
+
+  return Object.entries(groups).map(([key, g]) => ({ key, ...g }));
+}
+
+function renderEntryGroup(group) {
+  if (group.items.length === 1) {
+    const item = group.items[0];
+    return item.kind === "portfolio" ? portfolioRowHtml(item.data) : allocationRowHtml(item.data);
+  }
+  return `<div class="entry-group">
+    <div class="portfolio-row entry-group-summary" data-group-key="${group.key}">
+      <div class="portfolio-row-main">
+        <div class="portfolio-row-label" style="text-transform:capitalize;">${group.label}</div>
+        <div class="portfolio-row-sub mono">${group.items.length} entries — click to view each</div>
+      </div>
+      <span class="table-badge expand-caret">▾ expand</span>
+    </div>
+    <div class="entry-group-items" data-group-items="${group.key}" style="display:none;">
+      ${group.items
+        .map(
+          (item, i) =>
+            `<div class="entry-group-item"><div class="entry-number-tag">Entry ${i + 1}</div>${
+              item.kind === "portfolio" ? portfolioRowHtml(item.data) : allocationRowHtml(item.data)
+            }</div>`
+        )
+        .join("")}
+    </div>
+  </div>`;
+}
+
 async function refreshMyContests() {
   try {
     const [portfolios, allocations] = await Promise.all([api("/portfolios"), api("/allocations")]);
     allocationsCache = allocations;
-    const active = portfolios.filter((p) => p.context.status === "open" || p.context.status === "pending");
+    const activePortfolios = portfolios.filter((p) => p.context.status === "open" || p.context.status === "pending");
     const past = portfolios.filter((p) => p.context.status === "resolved");
+    const pendingAllocs = allocations.filter((a) => a.status !== "cancelled");
 
+    const groups = groupEntriesByRoom(activePortfolios, pendingAllocs);
     document.getElementById("activePortfoliosList").innerHTML =
-      active.map(portfolioRowHtml).join("") ||
+      groups.map(renderEntryGroup).join("") ||
       `<div class="history-empty">Nothing active — head to the Lobby to enter a contest.</div>`;
     document.getElementById("pastPortfoliosList").innerHTML =
       past.map(portfolioRowHtml).join("") || `<div class="history-empty">No resolved contests yet.</div>`;
 
+    // Pending Auto-fill Allocations section stays a flat list (its own
+    // dedicated section further down) — unaffected by the grouping above.
     document.getElementById("pendingAllocationsList").innerHTML =
-      allocations
-        .filter((a) => a.status !== "cancelled")
-        .map(allocationRowHtml)
-        .join("") || `<div class="history-empty">No auto-fill allocations set.</div>`;
+      pendingAllocs.map(allocationRowHtml).join("") || `<div class="history-empty">No auto-fill allocations set.</div>`;
 
+    document.querySelectorAll(".entry-group-summary").forEach((row) => {
+      row.style.cursor = "pointer";
+      row.addEventListener("click", () => {
+        const items = document.querySelector(`[data-group-items="${row.dataset.groupKey}"]`);
+        const caret = row.querySelector(".expand-caret");
+        const isOpen = items.style.display !== "none";
+        items.style.display = isOpen ? "none" : "block";
+        if (caret) caret.textContent = isOpen ? "▾ expand" : "▴ collapse";
+      });
+    });
     document.querySelectorAll(".adjust-alloc-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -555,13 +613,22 @@ async function refreshMyContests() {
     });
     document.querySelectorAll(".editable-alloc-row").forEach((row) => {
       row.style.cursor = "pointer";
-      row.addEventListener("click", () => editPendingAllocation(row.dataset.allocId));
+      row.addEventListener("click", (e) => {
+        e.stopPropagation();
+        editPendingAllocation(row.dataset.allocId);
+      });
     });
     document.querySelectorAll(".trade-portfolio-btn").forEach((btn) => {
-      btn.addEventListener("click", () => openTradeView(btn.dataset.id, btn.dataset.label));
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openTradeView(btn.dataset.id, btn.dataset.label);
+      });
     });
     document.querySelectorAll(".schedule-order-btn").forEach((btn) => {
-      btn.addEventListener("click", () => openScheduledOrderModal(btn.dataset.id, btn.dataset.label));
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openScheduledOrderModal(btn.dataset.id, btn.dataset.label);
+      });
     });
     document.querySelectorAll(".cancel-alloc-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
@@ -605,12 +672,16 @@ function allocationRowHtml(a) {
   </div>`;
 }
 
+let editingAllocationId = null;
+
 function editPendingAllocation(id) {
   const alloc = allocationsCache.find((a) => a.id === Number(id));
   if (!alloc) return;
+  editingAllocationId = alloc.id;
   const targetValue =
     alloc.targetType === "contest" ? "contest::" : `satellite:${alloc.targetTierId}:${alloc.targetPriceLevel}`;
   openAllocationModal(targetValue);
+  document.getElementById("allocTargetSelect").disabled = true; // editing an existing reservation — the room it targets can't change
   // openAllocationModal already opened with 10 default rows — if this
   // reservation actually has real picks saved, clear those defaults and
   // show the real ones instead. If it's a pure reservation (empty
@@ -1292,7 +1363,9 @@ function updateAllocTotal(containerId = "allocationRows", totalId = "allocTotalP
 }
 
 function openAllocationModal(presetValue) {
+  editingAllocationId = null;
   populateAllocTargetSelect();
+  document.getElementById("allocTargetSelect").disabled = false;
   if (presetValue) document.getElementById("allocTargetSelect").value = presetValue;
   document.getElementById("allocationRows").innerHTML = "";
   allocRowCount = 0;
@@ -1330,12 +1403,17 @@ document.getElementById("submitAllocationBtn").addEventListener("click", async (
   }));
 
   try {
-    await api("/allocations", {
-      method: "POST",
-      body: JSON.stringify({ targetType, tierId: tierId || undefined, priceLevel: priceLevel || undefined, allocations }),
-    });
+    if (editingAllocationId) {
+      await api(`/allocations/${editingAllocationId}`, { method: "PUT", body: JSON.stringify({ allocations }) });
+      msg.textContent = "Updated — this reservation is set.";
+    } else {
+      await api("/allocations", {
+        method: "POST",
+        body: JSON.stringify({ targetType, tierId: tierId || undefined, priceLevel: priceLevel || undefined, allocations }),
+      });
+      msg.textContent = "Saved — this fires automatically the instant that contest opens.";
+    }
     msg.style.color = "var(--green)";
-    msg.textContent = "Saved — this fires automatically the instant that contest opens.";
     refreshContests();
     refreshMyContests();
     setTimeout(closeAllocationModal, 1400);

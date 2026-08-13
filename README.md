@@ -432,6 +432,35 @@ contests and satellites, most recent first.
 session is and when it runs; individual room chips show live stats
 (traders, STONK collected, projected prize) on hover.
 
+## Multi-entry reservation bug fix + grouped My Contests view
+
+**Found and fixed a real bug**: reserving a not-yet-open room a second time
+was silently *replacing* the first reservation instead of adding a second
+one — meaning multi-entry (up to 10) never actually worked for rooms you
+reserve before they open, only for rooms you join after they're already
+live. Root cause: `POST /api/allocations` unconditionally cancelled any
+existing pending reservation for the same room before creating a new one.
+
+Fixed by:
+- `POST /api/allocations` now checks count against the tier's actual max
+  and stacks a new reservation instead of replacing — tested directly:
+  5 calls to reserve the same room now correctly produce 5 separate
+  reservations, and the freeroll's 1-entry cap still correctly rejects a
+  2nd attempt.
+- Added `PUT /api/allocations/:id` so *editing* one specific existing
+  reservation's picks no longer collides with *creating* a new one — these
+  were sharing the same endpoint before, which is what caused the
+  replace-instead-of-stack bug in the first place.
+- `myEntryCount` on pending (not-yet-open) tiers is now computed for real
+  from actual pending reservations, instead of being hardcoded to 0.
+
+**My Contests now groups multiple entries into the same room** under a
+collapsible row ("Full Day — Jr. Stonkbroker · 3 entries") instead of only
+ever showing one. Expanding it reveals each individual entry — whether an
+already-open portfolio you can trade, or a pending reservation you can
+still configure — and clicking through drills into that specific
+portfolio's trade view, same as before.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)
