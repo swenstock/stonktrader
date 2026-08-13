@@ -408,6 +408,12 @@ tr.watch-row:hover{background:var(--surface-2);}
 .entry-number-tag{font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;flex-shrink:0;width:52px;}
 .unconfigured-entry{margin-bottom:8px;}
 .unconfigured-entry .portfolio-row{border-color:#5A431A;background:rgba(140,255,0,.03);}
+.has-scheduled-order .portfolio-row, .portfolio-row.has-scheduled-order{border-color:#2A5A8A;background:rgba(79,168,255,.05);}
+.scheduled-order-badge{
+  display:inline-block;font-size:9.5px;font-weight:700;color:#4FA8FF;background:rgba(79,168,255,.12);
+  border:1px solid #2A5A8A;border-radius:999px;padding:2px 8px;margin-left:6px;vertical-align:middle;
+}
+.scheduled-order-summary{color:#4FA8FF;margin-top:2px;}
 
 /* ---------- How It Works ---------- */
 .howitworks-page{max-width:900px;margin:0 auto;padding:0 28px 60px;display:flex;flex-direction:column;gap:22px;}

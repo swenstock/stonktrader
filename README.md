@@ -609,6 +609,30 @@ refresh the page later. Fixed by refreshing My Contests immediately after
 a successful queue, same pattern already used everywhere else a mutation
 happens.
 
+## Scheduled orders now visible and editable per-entry
+
+**Real gap fixed**: with multiple entries in the same room (up to 10), there
+was no way to tell which specific ones already had a market-open order
+queued — a genuine risk of losing track and only ending up trading a
+fraction of what you intended.
+
+- Every entry row now shows a clear **"⏰ Order Queued"** badge, a
+  blue-tinted highlight, and a plain-language summary ("70% allocated on
+  open" or "100% cash on open") right where you're already looking —
+  no need to cross-reference a separate list
+- The **"Schedule open order" button becomes "Adjust queued order"** once
+  one exists, and reopens the modal pre-filled with your actual saved
+  picks instead of resetting to defaults
+- Orders can now be **cancelled directly from the entry row**, not just
+  from the separate Scheduled Orders section
+- The dedicated Scheduled Orders section also got an **Adjust** button
+  (previously cancel-only) and now shows which specific entry each order
+  belongs to, plus the same allocation-percentage summary
+
+No new backend endpoint needed — a scheduled order is already one-per-
+portfolio with "latest replaces" semantics, so editing just reuses the
+existing POST.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

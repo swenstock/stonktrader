@@ -784,14 +784,17 @@ function renderEntryGroup(group) {
   return unconfiguredHtml + configuredHtml;
 }
 
-function scheduledOrderRowHtml(o) {
-  const items = o.allocations.map((x) => `${x.symbol} ${x.percent}%`).join(", ") || "No picks set";
-  return `<div class="portfolio-row">
+function scheduledOrderRowHtml(o, portfolioLabel) {
+  const totalPct = o.allocations.reduce((s, a) => s + a.percent, 0);
+  const items = o.allocations.length > 0 ? `${totalPct}% allocated on open — ${o.allocations.map((x) => `${x.symbol} ${x.percent}%`).join(", ")}` : "100% cash on open — no picks set";
+  return `<div class="portfolio-row has-scheduled-order">
     <div class="portfolio-row-main">
-      <div class="portfolio-row-label">Fires at ${new Date(o.targetOpenAt).toLocaleString()}</div>
+      <div class="portfolio-row-label">${portfolioLabel || `Portfolio #${o.portfolioId}`}</div>
       <div class="portfolio-row-sub mono">${items}</div>
+      <div class="portfolio-row-sub mono scheduled-order-summary">⏰ Fires ${new Date(o.targetOpenAt).toLocaleString()}</div>
     </div>
     <span class="table-badge">Queued</span>
+    <button class="btn btn-outline btn-sm adjust-scheduled-btn" data-portfolio-id="${o.portfolioId}" data-label="${portfolioLabel || ""}">Adjust</button>
     <button class="btn btn-outline btn-sm cancel-scheduled-btn" data-id="${o.id}">Cancel</button>
   </div>`;
 }
@@ -817,6 +820,12 @@ async function refreshMyContests() {
     const past = portfolios.filter((p) => p.context.status === "resolved");
     const pendingAllocs = allocations.filter((a) => a.status !== "cancelled");
 
+    // Build the portfolio -> scheduled order lookup FIRST — portfolioRowHtml
+    // needs this to show the "Order Queued" indicator per entry, otherwise
+    // there's no way to tell which of e.g. 10 entries already has one.
+    const activeScheduled = scheduledOrders.filter((o) => o.status === "pending");
+    scheduledOrdersByPortfolio = Object.fromEntries(activeScheduled.map((o) => [o.portfolioId, o]));
+
     const groups = groupEntriesByRoom(activePortfolios, pendingAllocs);
     document.getElementById("activePortfoliosList").innerHTML =
       groups.map(renderEntryGroup).join("") ||
@@ -824,12 +833,21 @@ async function refreshMyContests() {
     document.getElementById("pastPortfoliosList").innerHTML =
       past.map(portfolioRowHtml).join("") || `<div class="history-empty">No resolved contests yet.</div>`;
 
-    const activeScheduled = scheduledOrders.filter((o) => o.status === "pending");
+    const portfolioById = Object.fromEntries(portfolios.map((p) => [p.id, p]));
     document.getElementById("scheduledOrdersList").innerHTML =
-      activeScheduled.map(scheduledOrderRowHtml).join("") ||
+      activeScheduled.map((o) => scheduledOrderRowHtml(o, portfolioById[o.portfolioId]?.label)).join("") ||
       `<div class="history-empty">No orders queued for the next market open.</div>`;
     document.querySelectorAll(".cancel-scheduled-btn").forEach((btn) => {
-      btn.addEventListener("click", () => cancelScheduledOrder(btn.dataset.id));
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        cancelScheduledOrder(btn.dataset.id);
+      });
+    });
+    document.querySelectorAll(".adjust-scheduled-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openScheduledOrderModal(btn.dataset.portfolioId, btn.dataset.label);
+      });
     });
 
     document.querySelectorAll(".entry-group-summary").forEach((row) => {
@@ -942,16 +960,31 @@ async function cancelAllocation(id) {
   }
 }
 
+let scheduledOrdersByPortfolio = {};
+
 function portfolioRowHtml(p) {
   const plCls = p.pl >= 0 ? "up" : "down";
   const isActive = p.context.status === "open" || p.context.status === "pending";
-  return `<div class="portfolio-row">
+  const order = scheduledOrdersByPortfolio[p.id];
+  const hasOrder = !!order;
+  const orderSummary = hasOrder
+    ? order.allocations.length > 0
+      ? `${order.allocations.reduce((s, a) => s + a.percent, 0)}% allocated on open`
+      : "100% cash on open"
+    : "";
+  return `<div class="portfolio-row ${hasOrder ? "has-scheduled-order" : ""}">
     <div class="portfolio-row-main">
-      <div class="portfolio-row-label">${p.label}</div>
+      <div class="portfolio-row-label">${p.label} ${hasOrder ? `<span class="scheduled-order-badge">⏰ Order Queued</span>` : ""}</div>
       <div class="portfolio-row-sub mono">${p.positionCount} position${p.positionCount === 1 ? "" : "s"} · $${p.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+      ${hasOrder ? `<div class="portfolio-row-sub mono scheduled-order-summary">⏰ ${orderSummary} · fires ${new Date(order.targetOpenAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</div>` : ""}
     </div>
     <div class="portfolio-row-pl ${plCls} mono">${p.pl >= 0 ? "+" : "-"}$${Math.abs(p.pl).toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
-    ${isActive ? `<button class="btn btn-outline btn-sm schedule-order-btn" data-id="${p.id}" data-label="${p.label}">Schedule open order</button>` : ""}
+    ${
+      isActive
+        ? `<button class="btn ${hasOrder ? "btn-gold" : "btn-outline"} btn-sm schedule-order-btn" data-id="${p.id}" data-label="${p.label}">${hasOrder ? "Adjust queued order" : "Schedule open order"}</button>`
+        : ""
+    }
+    ${hasOrder ? `<button class="btn btn-outline btn-sm cancel-scheduled-btn" data-id="${order.id}">Cancel order</button>` : ""}
     ${isActive ? `<button class="btn btn-gold btn-sm trade-portfolio-btn" data-id="${p.id}" data-label="${p.label}">Trade</button>` : `<span class="table-badge">Resolved</span>`}
   </div>`;
 }
@@ -1660,13 +1693,19 @@ let scheduledOrderPortfolioId = null;
 
 function openScheduledOrderModal(portfolioId, label) {
   scheduledOrderPortfolioId = portfolioId;
-  document.getElementById("scheduledOrderContextLabel").textContent =
-    `${label} — fires at the next real market open (9:30am ET). Free to trade normally after.`;
+  const existing = scheduledOrdersByPortfolio[portfolioId];
+  document.getElementById("scheduledOrderContextLabel").textContent = existing
+    ? `${label} — adjusting your queued order, fires at ${new Date(existing.targetOpenAt).toLocaleString()}.`
+    : `${label} — fires at the next real market open (9:30am ET). Free to trade normally after.`;
   document.getElementById("scheduledOrderRows").innerHTML = "";
-  const symbols = window.__symbols || [];
-  const rowCount = Math.min(10, symbols.length || 10);
-  for (let i = 0; i < rowCount; i++) {
-    addAllocRow(symbols[i]?.symbol || "", 10, "scheduledOrderRows", "scheduledTotalPct", "schedRow");
+  if (existing && existing.allocations.length > 0) {
+    existing.allocations.forEach((a) => addAllocRow(a.symbol, a.percent, "scheduledOrderRows", "scheduledTotalPct", "schedRow"));
+  } else {
+    const symbols = window.__symbols || [];
+    const rowCount = Math.min(10, symbols.length || 10);
+    for (let i = 0; i < rowCount; i++) {
+      addAllocRow(symbols[i]?.symbol || "", 10, "scheduledOrderRows", "scheduledTotalPct", "schedRow");
+    }
   }
   document.getElementById("scheduledOrderMsg").textContent = "";
   document.getElementById("scheduledOrderModal").style.display = "flex";
