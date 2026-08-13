@@ -219,6 +219,23 @@
 
     <div class="main-grid" style="grid-template-columns:1fr;">
       <div class="panel">
+        <div class="panel-header-row">
+          <h3>My Watchlist</h3>
+          <button class="btn btn-outline btn-sm watchlist-collapse-btn" id="myWatchlistCollapseBtn">▾ collapse</button>
+        </div>
+        <div id="myWatchlistBody">
+          <div class="watchlist-add-row">
+            <select id="watchlistAddSelect"></select>
+            <button class="btn btn-outline btn-sm" id="watchlistAddBtn">+ Add</button>
+          </div>
+          <table>
+            <thead><tr><th>Symbol</th><th>Exchange</th><th>Price</th><th>Chg</th><th></th></tr></thead>
+            <tbody id="myWatchlistTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
         <h3>Markets <span class="tag">tap a symbol to trade</span></h3>
         <div class="market-filter" id="marketFilter"></div>
         <table>
@@ -266,44 +283,57 @@
 
       <!-- Normal trading state -->
       <div id="tradeModalMain">
-        <h3><span id="chartSymbolLabel">AAPL</span> <span class="tag price-flash" id="chartPriceLabel"></span></h3>
-        <div class="day-range mono" id="dayRangeLabel"></div>
-        <div class="chart-mode-toggle">
-          <button type="button" class="chart-mode-btn active" data-mode="line">Line</button>
-          <button type="button" class="chart-mode-btn" data-mode="candles">Candles</button>
+        <div class="trade-modal-header">
+          <select id="symbolPicker" class="symbol-picker"></select>
+          <span class="tag price-flash" id="chartPriceLabel"></span>
+          <span class="trade-portfolio-total mono" id="tradeModalPortfolioTotal"></span>
         </div>
-        <div id="chartContainer" style="height:220px;"></div>
-        <div class="trade-form">
-          <label>Shares</label>
-          <input type="number" id="tradeShares" min="1" value="10">
-          <div class="trade-btns">
-            <button class="btn btn-green" id="buyBtn">Buy</button>
-            <button class="btn btn-red" id="sellBtn">Sell</button>
-          </div>
-          <div class="trade-msg" id="tradeMsg"></div>
+        <div class="day-range mono" id="dayRangeLabel"></div>
 
-          <div class="pct-trade-row">
-            <label>Or buy % of what you have left to allocate <span id="buyAllotmentHint" class="mono" style="color:var(--text-dim);"></span></label>
-            <div class="pct-btns">
-              <button class="btn btn-outline btn-sm pct-buy-btn" data-pct="25">25%</button>
-              <button class="btn btn-outline btn-sm pct-buy-btn" data-pct="50">50%</button>
-              <button class="btn btn-outline btn-sm pct-buy-btn" data-pct="75">75%</button>
-              <button class="btn btn-outline btn-sm pct-buy-btn" data-pct="100">100%</button>
-              <input type="number" id="customBuyPct" placeholder="%" min="1" max="100">
-              <button class="btn btn-green btn-sm" id="customBuyPctBtn">Buy</button>
+        <div class="trade-modal-columns">
+          <div class="trade-modal-chart-col">
+            <div class="chart-mode-toggle">
+              <button type="button" class="chart-mode-btn active" data-mode="line">Line</button>
+              <button type="button" class="chart-mode-btn" data-mode="candles">Candles</button>
             </div>
+            <div id="chartContainer" style="height:260px;"></div>
           </div>
 
-          <div class="pct-trade-row">
-            <label>Or sell % of your position <span id="sellPositionHint" class="mono" style="color:var(--text-dim);"></span></label>
-            <div class="pct-btns">
-              <button class="btn btn-outline btn-sm pct-sell-btn" data-pct="25">25%</button>
-              <button class="btn btn-outline btn-sm pct-sell-btn" data-pct="50">50%</button>
-              <button class="btn btn-outline btn-sm pct-sell-btn" data-pct="75">75%</button>
-              <button class="btn btn-outline btn-sm pct-sell-btn" data-pct="100">100%</button>
-              <input type="number" id="customSellPct" placeholder="%" min="1" max="100">
-              <button class="btn btn-red btn-sm" id="customSellPctBtn">Sell</button>
+          <div class="trade-modal-order-col">
+            <div class="position-summary" id="positionSummary"></div>
+
+            <div class="trade-mode-toggle">
+              <button type="button" class="trade-mode-btn active" data-mode="pct">Percentage</button>
+              <button type="button" class="trade-mode-btn" data-mode="shares">Shares</button>
             </div>
+
+            <div id="sharesModeBlock" style="display:none;">
+              <label>Shares</label>
+              <input type="number" id="tradeShares" min="1" value="10">
+            </div>
+
+            <div id="pctModeBlock">
+              <label>
+                Percentage
+                <span class="pct-hint-icon" tabindex="0">ⓘ
+                  <span class="pct-hint-tooltip">This percentage means something different depending which button you press: hit <b>Buy</b> and it's % of what you have left to allocate into this position (capped by the 10% rule). Hit <b>Sell</b> and it's % of the shares you currently hold.</span>
+                </span>
+              </label>
+              <div class="pct-btns">
+                <button class="btn btn-outline btn-sm pct-quick-btn active" data-pct="25">25%</button>
+                <button class="btn btn-outline btn-sm pct-quick-btn" data-pct="50">50%</button>
+                <button class="btn btn-outline btn-sm pct-quick-btn" data-pct="75">75%</button>
+                <button class="btn btn-outline btn-sm pct-quick-btn" data-pct="100">100%</button>
+                <input type="number" id="customPct" placeholder="%" min="1" max="100">
+              </div>
+              <div class="pct-reference mono" id="pctReferenceLine"></div>
+            </div>
+
+            <div class="trade-btns" style="margin-top:12px;">
+              <button class="btn btn-green" id="buyBtn">Buy</button>
+              <button class="btn btn-red" id="sellBtn">Sell</button>
+            </div>
+            <div class="trade-msg" id="tradeMsg"></div>
           </div>
         </div>
       </div>

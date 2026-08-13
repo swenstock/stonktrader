@@ -771,6 +771,37 @@ every time, regardless of how much the price moved in between. Only wired
 this into the 100% buy button specifically — 25/50/75% have natural
 headroom below the boundary and were never actually at risk.
 
+## Trade modal redesign — horizontal layout, unified order entry
+
+Rebuilt from a cluttered vertical stack (three separate Buy/Sell pairs, two
+duplicate "OR..." rows) into a clean horizontal two-column layout, ~900px
+wide instead of 480px (scoped override so other modals stay unaffected):
+
+- **Symbol picker** at the top — switch symbols mid-modal without closing,
+  chart/position/reference numbers all refresh in place
+- **Portfolio total value** always visible in the header, so you can trade
+  without losing track of where the account stands overall
+- **Left column**: chart (Line/Candles, unchanged)
+- **Right column**: position summary + live P&L for the current symbol (or
+  a clear "no position yet" state), a Percentage/Shares mode toggle
+  (Percentage is the default), and a single Buy/Sell pair at the bottom
+- **Percentage mode**: 25/50/75/100/custom chips select a value first —
+  pressing Buy or Sell afterward is what decides what that percentage
+  actually means (room left to allocate vs. current position), explained
+  via a hover tooltip right next to the toggle rather than two separate
+  rows of buttons that said the same thing differently
+- Collapses to stacked on narrow screens, same responsive pattern as the
+  rest of the site
+
+## New: My Watchlist panel
+
+Separate, personal, curated list — distinct from the full "Markets" browse
+table. Add any of the 61 symbols via a dropdown, remove with one click,
+collapsible (single toggle for the whole panel), rows are click-to-trade
+same as everywhere else. Stored in `localStorage`, so it's per-browser, not
+synced across devices — reasonable for now, worth moving server-side later
+if that matters.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

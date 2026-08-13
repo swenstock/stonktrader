@@ -157,6 +157,7 @@ async function boot() {
   window.__symbols = symbols;
   connectWebSocket();
   renderTierFilterBar();
+  populateWatchlistAddSelect();
   refreshPortfoliosBalance();
   refreshContests();
   refreshReferrals();
@@ -189,6 +190,7 @@ function connectWebSocket() {
       });
       if (document.getElementById("tradeView").style.display !== "none") {
         renderWatchlist();
+        renderMyWatchlist();
         refreshCurrentPortfolio();
       }
     }
@@ -983,11 +985,30 @@ function openTradeView(portfolioId, label) {
 document.getElementById("backToMyContestsBtn").addEventListener("click", () => switchView("mycontests"));
 
 // ---------------- Trade popup modal ----------------
+let tradeMode = "pct"; // 'pct' | 'shares' — percentage is the default per design
+let selectedPct = 25;
+
+function populateSymbolPicker() {
+  const picker = document.getElementById("symbolPicker");
+  picker.innerHTML = (window.__symbols || [])
+    .map((s) => `<option value="${s.symbol}">${s.symbol}</option>`)
+    .join("");
+}
+
 function openTradeModal(sym) {
-  selectedSymbol = sym;
-  document.getElementById("chartSymbolLabel").textContent = sym;
   document.getElementById("tradeModal").style.display = "flex";
   showTradeModalState("main");
+  populateSymbolPicker();
+  document.getElementById("symbolPicker").value = sym;
+  switchTradeSymbol(sym);
+  document.getElementById("tradeMsg").textContent = "";
+}
+
+// Switches the symbol shown WITHIN an already-open modal — chart, position
+// summary, and reference numbers all refresh in place, no closing required.
+function switchTradeSymbol(sym) {
+  selectedSymbol = sym;
+  document.getElementById("tradeModal").style.display = "flex";
   initChart(); // fresh chart each open — avoids sizing issues on a container that was hidden
   chartHistory[sym] = chartHistory[sym] || [];
   candleHistory[sym] = candleHistory[sym] || [];
@@ -997,9 +1018,36 @@ function openTradeModal(sym) {
     document.getElementById("chartPriceLabel").textContent = `${q.currency} ${q.price.toFixed(2)}`;
     updateDayRange(q);
   }
-  document.getElementById("tradeMsg").textContent = "";
+  renderPositionSummary();
+  renderPortfolioTotalInModal();
   updatePctHints();
 }
+
+function renderPortfolioTotalInModal() {
+  const el = document.getElementById("tradeModalPortfolioTotal");
+  if (!el || !latestPortfolioData) return;
+  el.textContent = `Portfolio: $${latestPortfolioData.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+}
+
+function renderPositionSummary() {
+  const el = document.getElementById("positionSummary");
+  if (!el || !latestPortfolioData) return;
+  const pos = latestPortfolioData.positions.find((p) => p.symbol === selectedSymbol);
+  if (!pos) {
+    el.innerHTML = `<div class="position-summary-empty">No position yet — this'll be your first buy.</div>`;
+    return;
+  }
+  const cls = pos.unrealizedPL >= 0 ? "up" : "down";
+  const pct = latestPortfolioData.totalValue > 0 ? (pos.value / latestPortfolioData.totalValue) * 100 : 0;
+  el.innerHTML = `
+    <div class="position-summary-row"><span>${selectedSymbol} position</span><b class="mono">${pos.quantity} shares</b></div>
+    <div class="position-summary-row"><span>Avg cost</span><b class="mono">$${pos.avgCost.toFixed(2)}</b></div>
+    <div class="position-summary-row"><span>P&amp;L</span><b class="mono ${cls}">${pos.unrealizedPL >= 0 ? "+" : ""}$${pos.unrealizedPL.toFixed(2)}</b></div>
+    <div class="position-summary-row"><span>% of portfolio</span><b class="mono">${pct.toFixed(1)}%</b></div>
+  `;
+}
+
+document.getElementById("symbolPicker").addEventListener("change", (e) => switchTradeSymbol(e.target.value));
 
 function updateDayRange(q) {
   const el = document.getElementById("dayRangeLabel");
@@ -1037,6 +1085,76 @@ function renderMarketFilter(symbols) {
 }
 
 let lastKnownPrices = {};
+
+// ---------------- My Watchlist (personal, curated) ----------------
+let myWatchlist = JSON.parse(localStorage.getItem("myWatchlist") || "[]");
+
+function saveMyWatchlist() {
+  localStorage.setItem("myWatchlist", JSON.stringify(myWatchlist));
+}
+
+function populateWatchlistAddSelect() {
+  const select = document.getElementById("watchlistAddSelect");
+  if (!select) return;
+  const available = (window.__symbols || []).filter((s) => !myWatchlist.includes(s.symbol));
+  select.innerHTML =
+    available.map((s) => `<option value="${s.symbol}">${s.symbol} — ${s.name}</option>`).join("") ||
+    `<option disabled>All symbols added</option>`;
+}
+
+function renderMyWatchlist() {
+  const tbody = document.getElementById("myWatchlistTable");
+  if (!tbody) return;
+  tbody.innerHTML =
+    myWatchlist
+      .map((sym) => {
+        const meta = (window.__symbols || []).find((s) => s.symbol === sym);
+        const q = latestQuotes[sym];
+        const price = q ? q.price.toFixed(2) : "—";
+        const chg = q ? q.changePct : 0;
+        const cls = chg >= 0 ? "up" : "down";
+        return `<tr class="watch-row" data-symbol="${sym}">
+          <td class="mono">${sym}</td><td>${meta ? meta.exchange : ""}</td>
+          <td class="mono price-cell" data-symbol="${sym}">${q ? q.currency : ""} ${price}</td>
+          <td class="${cls}">${chg >= 0 ? "+" : ""}${chg}%</td>
+          <td><button class="watchlist-remove-btn" data-symbol="${sym}" title="Remove from watchlist">✕</button></td>
+        </tr>`;
+      })
+      .join("") || `<tr><td colspan="5" style="color:var(--text-dim);">Nothing added yet — pick a symbol above.</td></tr>`;
+
+  tbody.querySelectorAll(".watch-row").forEach((row) => {
+    row.addEventListener("click", (e) => {
+      if (e.target.closest(".watchlist-remove-btn")) return; // don't trade when removing
+      openTradeModal(row.dataset.symbol);
+    });
+  });
+  tbody.querySelectorAll(".watchlist-remove-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      myWatchlist = myWatchlist.filter((s) => s !== btn.dataset.symbol);
+      saveMyWatchlist();
+      populateWatchlistAddSelect();
+      renderMyWatchlist();
+    });
+  });
+}
+
+document.getElementById("watchlistAddBtn")?.addEventListener("click", () => {
+  const select = document.getElementById("watchlistAddSelect");
+  const sym = select.value;
+  if (!sym || myWatchlist.includes(sym)) return;
+  myWatchlist.push(sym);
+  saveMyWatchlist();
+  populateWatchlistAddSelect();
+  renderMyWatchlist();
+});
+
+document.getElementById("myWatchlistCollapseBtn")?.addEventListener("click", (e) => {
+  const body = document.getElementById("myWatchlistBody");
+  const isOpen = body.style.display !== "none";
+  body.style.display = isOpen ? "none" : "block";
+  e.target.textContent = isOpen ? "▸ expand" : "▾ collapse";
+});
 
 function renderWatchlist() {
   const symbols = (window.__symbols || []).filter(
@@ -1148,9 +1266,6 @@ function pushChartPoint(q) {
   }
 }
 
-document.getElementById("buyBtn").addEventListener("click", () => initiateTrade("buy"));
-document.getElementById("sellBtn").addEventListener("click", () => initiateTrade("sell"));
-
 const CLIENT_MAX_POSITION_PCT = 0.10; // must match server's MAX_INITIAL_POSITION_PCT in routes/portfolios.js
 let latestPortfolioData = null;
 let pendingTrade = null;
@@ -1226,10 +1341,8 @@ function currentAllotmentInfo() {
 
 function updatePctHints() {
   const { availableAllotment, existingQty } = currentAllotmentInfo();
-  const buyHint = document.getElementById("buyAllotmentHint");
-  const sellHint = document.getElementById("sellPositionHint");
-  if (buyHint) buyHint.textContent = `(~$${availableAllotment.toFixed(2)} left)`;
-  if (sellHint) sellHint.textContent = `(${existingQty.toFixed(4)} shares held)`;
+  const el = document.getElementById("pctReferenceLine");
+  if (el) el.textContent = `~$${availableAllotment.toFixed(2)} left to allocate  ·  ${existingQty.toFixed(4)} shares held`;
 }
 
 function buyPercentOfAllotment(pct) {
@@ -1258,19 +1371,46 @@ function sellPercentOfPosition(pct) {
   initiateTrade("sell", quantity);
 }
 
-document.querySelectorAll(".pct-buy-btn").forEach((btn) => {
-  btn.addEventListener("click", () => buyPercentOfAllotment(parseFloat(btn.dataset.pct)));
+// ---- Trade mode toggle (Percentage / Shares) ----
+document.querySelectorAll(".trade-mode-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    tradeMode = btn.dataset.mode;
+    document.querySelectorAll(".trade-mode-btn").forEach((b) => b.classList.toggle("active", b === btn));
+    document.getElementById("pctModeBlock").style.display = tradeMode === "pct" ? "block" : "none";
+    document.getElementById("sharesModeBlock").style.display = tradeMode === "shares" ? "block" : "none";
+  });
 });
-document.querySelectorAll(".pct-sell-btn").forEach((btn) => {
-  btn.addEventListener("click", () => sellPercentOfPosition(parseFloat(btn.dataset.pct)));
+
+// ---- Percentage chip selection (doesn't trade yet — just picks the value) ----
+document.querySelectorAll(".pct-quick-btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    selectedPct = parseFloat(btn.dataset.pct);
+    document.querySelectorAll(".pct-quick-btn").forEach((b) => b.classList.toggle("active", b === btn));
+    document.getElementById("customPct").value = "";
+  });
 });
-document.getElementById("customBuyPctBtn").addEventListener("click", () => {
-  const pct = parseFloat(document.getElementById("customBuyPct").value);
-  if (pct > 0 && pct <= 100) buyPercentOfAllotment(pct);
+document.getElementById("customPct").addEventListener("input", (e) => {
+  const val = parseFloat(e.target.value);
+  if (val > 0 && val <= 100) {
+    selectedPct = val;
+    document.querySelectorAll(".pct-quick-btn").forEach((b) => b.classList.remove("active"));
+  }
 });
-document.getElementById("customSellPctBtn").addEventListener("click", () => {
-  const pct = parseFloat(document.getElementById("customSellPct").value);
-  if (pct > 0 && pct <= 100) sellPercentOfPosition(pct);
+
+// ---- Single Buy/Sell pair — dispatches based on the active mode ----
+document.getElementById("buyBtn").addEventListener("click", () => {
+  if (tradeMode === "shares") {
+    initiateTrade("buy", parseFloat(document.getElementById("tradeShares").value));
+  } else {
+    buyPercentOfAllotment(selectedPct);
+  }
+});
+document.getElementById("sellBtn").addEventListener("click", () => {
+  if (tradeMode === "shares") {
+    initiateTrade("sell", parseFloat(document.getElementById("tradeShares").value));
+  } else {
+    sellPercentOfPosition(selectedPct);
+  }
 });
 
 function renderAllocationDonut(p) {
@@ -1341,7 +1481,10 @@ async function refreshCurrentPortfolio() {
     // row is briefly missing its own listener.
 
     renderAllocationDonut(p);
+    renderPositionSummary();
+    renderPortfolioTotalInModal();
     renderWatchlist();
+    renderMyWatchlist();
     updatePctHints();
 
     // Order history
