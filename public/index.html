@@ -13,21 +13,35 @@
 
 <!-- ===== Auth screen ===== -->
 <div id="authScreen" class="auth-screen">
-  <div class="auth-card">
-    <div class="logo">STONK <span class="accent">BROKER</span> CHALLENGE</div>
-    <div class="auth-tabs">
-      <button class="tab-btn active" data-tab="login">Log in</button>
-      <button class="tab-btn" data-tab="signup">Sign up</button>
+  <div class="auth-screen-inner">
+    <div class="auth-pitch">
+      <div class="eyebrow">STONK BROKER TERMINAL</div>
+      <h1 class="pixel-headline auth-pixel-headline">CAN'T BUY<br>THE BROKER?<br><span class="accent">EARN THE<br>BROKER.</span></h1>
+      <p class="auth-pitch-text">Trade real markets with <b class="hero-price-callout">$100,000</b> in paper money. Win rooms, earn free Main Event tickets, and compete for a real, tradeable Stonk Broker NFT.</p>
+      <p class="auth-pitch-cta">Sign up today — get a <b class="hero-price-callout">free roll every week</b>, no wallet, no risk, and a real shot at a Stonk Broker.</p>
+      <div class="journey-strip">
+        <span class="journey-step">🎲 FREE ROLL</span><span class="journey-arrow">→</span>
+        <span class="journey-step">🔔 SATELLITE</span><span class="journey-arrow">→</span>
+        <span class="journey-step">🎟️ TICKET</span><span class="journey-arrow">→</span>
+        <span class="journey-step">🏆 MAIN EVENT</span><span class="journey-arrow">→</span>
+        <span class="journey-step accent-step">💎 STONK BROKER</span>
+      </div>
     </div>
+    <div class="auth-card">
+      <div class="logo">STONK <span class="accent">BROKER</span> CHALLENGE</div>
+      <div class="auth-tabs">
+        <button class="tab-btn active" data-tab="login">Log in</button>
+        <button class="tab-btn" data-tab="signup">Sign up</button>
+      </div>
 
-    <form id="loginForm" class="auth-form">
-      <label>Email</label>
-      <input type="email" id="loginEmail" required autocomplete="email">
-      <label>Password</label>
-      <input type="password" id="loginPassword" required autocomplete="current-password">
-      <button type="submit" class="btn btn-gold">Log in</button>
-      <div class="auth-msg" id="loginMsg"></div>
-    </form>
+      <form id="loginForm" class="auth-form">
+        <label>Email</label>
+        <input type="email" id="loginEmail" required autocomplete="email">
+        <label>Password</label>
+        <input type="password" id="loginPassword" required autocomplete="current-password">
+        <button type="submit" class="btn btn-gold">Log in</button>
+        <div class="auth-msg" id="loginMsg"></div>
+      </form>
 
     <form id="signupForm" class="auth-form" style="display:none;">
       <label>Display name</label>
@@ -41,6 +55,7 @@
       <button type="submit" class="btn btn-gold">Create account — get 100,000 STONK <span id="signupUsdHint"></span></button>
       <div class="auth-msg" id="signupMsg"></div>
     </form>
+    </div>
   </div>
 </div>
 
