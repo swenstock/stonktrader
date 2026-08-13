@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require("../db");
 const requireAuth = require("../middleware/requireAuth");
 const { createPortfolio } = require("../portfolioValue");
-const { TIERS, CATEGORIES } = require("../satelliteScheduler");
+const { TIERS, CATEGORIES, FREEROLL_FUND_THRESHOLD } = require("../satelliteScheduler");
 const { currentStonkUsdPriceMicros } = require("../contestScheduler");
 const { isWeekday, etCalendarDate, etDateTime, currentWeekWindow } = require("../timeHelpers");
 
@@ -55,6 +55,8 @@ function serializePendingTier(tier, now) {
     poolGross: 0,
     ticketsProjected: 0,
     joined: false,
+    myEntryCount: 0,
+    maxEntriesPerAccount: tier.maxEntriesPerAccount,
   };
 }
 
@@ -67,11 +69,16 @@ function serializeSatellite(s, myAccountId) {
   const ticketsProjected = Math.floor(playerPool / s.ticket_cost);
   const remainderProjected = s.status === "open" ? playerPool - ticketsProjected * s.ticket_cost : s.remainder_stonk;
 
-  const myEntry = myAccountId
-    ? db.prepare("SELECT * FROM satellite_entries WHERE satellite_id = ? AND account_id = ?").get(s.id, myAccountId)
+  const tierMeta = TIERS.find((t) => t.categoryId === s.tier_id && t.priceLevel === s.price_level);
+
+  const myEntryCount = myAccountId
+    ? db.prepare("SELECT COUNT(*) as n FROM satellite_entries WHERE satellite_id = ? AND account_id = ?").get(s.id, myAccountId).n
+    : 0;
+  const myFirstEntry = myAccountId
+    ? db.prepare("SELECT * FROM satellite_entries WHERE satellite_id = ? AND account_id = ? ORDER BY id ASC LIMIT 1").get(s.id, myAccountId)
     : null;
 
-  const tierMeta = TIERS.find((t) => t.categoryId === s.tier_id && t.priceLevel === s.price_level);
+  const totalEntryFee = tierMeta ? tierMeta.entryFee : s.entry_fee;
 
   return {
     id: s.id,
@@ -81,8 +88,9 @@ function serializeSatellite(s, myAccountId) {
     icon: tierMeta?.icon || "🎯",
     name: s.name,
     cadence: tierMeta?.cadence || "daily",
-    entryFee: s.entry_fee,
-    entryFeeUsd: stonkToUsd(s.entry_fee),
+    entryFee: totalEntryFee,
+    entryFeeUsd: stonkToUsd(totalEntryFee),
+    surcharge: tierMeta?.surcharge || 0,
     ticketCost: s.ticket_cost,
     status: s.status,
     opensAt: s.opens_at,
@@ -94,8 +102,10 @@ function serializeSatellite(s, myAccountId) {
     remainderProjected: Math.round(remainderProjected || 0),
     remainderStonk: s.remainder_stonk,
     remainderDisplayName: s.remainder_display_name,
-    joined: !!myEntry,
-    myPortfolioId: myEntry ? myEntry.portfolio_id : null,
+    joined: myEntryCount > 0,
+    myEntryCount,
+    maxEntriesPerAccount: tierMeta?.maxEntriesPerAccount ?? 10,
+    myPortfolioId: myFirstEntry ? myFirstEntry.portfolio_id : null,
   };
 }
 
@@ -150,29 +160,51 @@ router.post("/:id/enter", requireAuth, (req, res) => {
   if (!satellite) return res.status(404).json({ error: "Satellite not found" });
   if (satellite.status !== "open") return res.status(400).json({ error: "This satellite has locked" });
 
-  const existing = db
-    .prepare("SELECT id FROM satellite_entries WHERE satellite_id = ? AND account_id = ?")
-    .get(satellite.id, req.account.id);
-  if (existing) return res.status(400).json({ error: "You're already in this satellite" });
+  const tier = TIERS.find((t) => t.categoryId === satellite.tier_id && t.priceLevel === satellite.price_level);
+  if (!tier) return res.status(500).json({ error: "Unknown tier configuration" });
+
+  const existingCount = db
+    .prepare("SELECT COUNT(*) as n FROM satellite_entries WHERE satellite_id = ? AND account_id = ?")
+    .get(satellite.id, req.account.id).n;
+  if (existingCount >= tier.maxEntriesPerAccount) {
+    return res.status(400).json({
+      error:
+        tier.maxEntriesPerAccount === 1
+          ? "You've already used your one freeroll entry for this room"
+          : `You've reached the max of ${tier.maxEntriesPerAccount} entries for this room`,
+    });
+  }
 
   const account = db.prepare("SELECT * FROM accounts WHERE id = ?").get(req.account.id);
-  if (account.stonk_balance < satellite.entry_fee) {
+  if (account.stonk_balance < tier.entryFee) {
     return res.status(400).json({ error: "Not enough STONK to enter" });
   }
 
-  const portfolioId = createPortfolio(account.id, `${satellite.name} · ${new Date().toLocaleDateString()}`);
+  const label = `${satellite.name} · ${new Date().toLocaleDateString()}${existingCount > 0 ? ` (Entry ${existingCount + 1})` : ""}`;
+  const portfolioId = createPortfolio(account.id, label);
 
   db.exec("BEGIN");
-  db.prepare("UPDATE accounts SET stonk_balance = stonk_balance - ? WHERE id = ?").run(
-    satellite.entry_fee,
-    account.id
-  );
+  db.prepare("UPDATE accounts SET stonk_balance = stonk_balance - ? WHERE id = ?").run(tier.entryFee, account.id);
+  // Charge the TOTAL (base + surcharge), but only the BASE counts toward
+  // this room's own pool — matches satellite.entry_fee, which was stored
+  // as poolFee at creation time.
   db.prepare(
     "INSERT INTO satellite_entries (satellite_id, account_id, portfolio_id, entry_fee_paid) VALUES (?, ?, ?, ?)"
-  ).run(satellite.id, account.id, portfolioId, satellite.entry_fee);
+  ).run(satellite.id, account.id, portfolioId, tier.poolFee);
+
+  if (tier.surcharge > 0) {
+    db.prepare("UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk + ? WHERE id = 1").run(tier.surcharge);
+    const fund = db.prepare("SELECT * FROM freeroll_fund WHERE id = 1").get();
+    if (fund.accumulated_stonk >= FREEROLL_FUND_THRESHOLD) {
+      db.prepare(
+        `UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk - ?, tickets_available = tickets_available + 1,
+         total_tickets_funded_lifetime = total_tickets_funded_lifetime + 1 WHERE id = 1`
+      ).run(FREEROLL_FUND_THRESHOLD);
+    }
+  }
   db.exec("COMMIT");
 
-  res.json({ ok: true, satelliteId: satellite.id, portfolioId, entryFeePaid: satellite.entry_fee });
+  res.json({ ok: true, satelliteId: satellite.id, portfolioId, entryFeePaid: tier.entryFee });
 });
 
 module.exports = router;

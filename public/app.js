@@ -104,7 +104,8 @@ function setSession(t, name) {
 function showApp() {
   document.getElementById("authScreen").style.display = "none";
   document.getElementById("appScreen").style.display = "block";
-  document.getElementById("welcomeMsg").textContent = `Hey, ${displayName}`;
+  const welcomeEl = document.getElementById("welcomeMsg");
+  if (welcomeEl) welcomeEl.textContent = `Hey, ${displayName}`;
   boot();
 }
 
@@ -146,6 +147,9 @@ let selectedSymbol = "AAPL";
 let selectedExchangeFilter = "ALL";
 let chart, series;
 const chartHistory = {};
+const candleHistory = {};
+let chartMode = "line"; // 'line' | 'candles'
+const CANDLE_BUCKET_SECONDS = 5;
 let currentPortfolioId = null;
 
 async function boot() {
@@ -155,9 +159,21 @@ async function boot() {
   refreshPortfoliosBalance();
   refreshContests();
   refreshReferrals();
+  refreshStbPrice();
   setInterval(refreshPortfoliosBalance, 5000);
   setInterval(refreshContests, 5000);
   setInterval(tickCountdowns, 1000);
+  setInterval(refreshStbPrice, 15000);
+}
+
+async function refreshStbPrice() {
+  try {
+    const data = await api("/account/price");
+    const el = document.getElementById("navStbPrice");
+    if (el) el.textContent = `$${data.usdPrice.toFixed(4)}`;
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 function connectWebSocket() {
@@ -179,11 +195,12 @@ function connectWebSocket() {
   ws.onclose = () => setTimeout(connectWebSocket, 2000);
 }
 
-// ---------------- STONK balance (nav) ----------------
+// ---------------- STONK balance (shown in My Contests, not nav — a trader can have multiple portfolio balances at once) ----------------
 async function refreshPortfoliosBalance() {
   try {
     const data = await api("/account");
-    document.getElementById("navStonkBalance").textContent = data.stonkBalance.toLocaleString();
+    const el = document.getElementById("myContestsStonkBalance");
+    if (el) el.textContent = data.stonkBalance.toLocaleString();
   } catch (e) {
     console.error(e);
   }
@@ -202,7 +219,11 @@ async function refreshContests() {
       token ? api("/tickets") : Promise.resolve({ unredeemedCount: 0, tickets: [] }),
     ]);
     renderLiveStatsBar();
-    renderSatelliteCategories();
+    renderSatelliteCategoryTree();
+    if (currentDrilldownCatId) {
+      const freshCat = satellitesCache.categories.find((c) => c.id === currentDrilldownCatId);
+      if (freshCat) showSatelliteDrilldown(freshCat);
+    }
     renderWeeklyRoom();
   } catch (err) {
     console.error(err);
@@ -257,55 +278,114 @@ function tickCountdowns() {
 }
 
 // ---------------- Compact DraftKings-style satellite matrix ----------------
-function renderSatelliteCategories() {
-  const el = document.getElementById("satelliteCategories");
+let currentDrilldownCatId = null;
+
+function renderSatelliteCategoryTree() {
+  const el = document.getElementById("satelliteCategoriesTree");
   el.innerHTML = satellitesCache.categories
-    .map((cat) => {
-      const chips = cat.levels
-        .map((lvl) => {
-          const isPending = lvl.status === "pending";
-          const isLocked = lvl.status === "resolved";
-          const chipState = lvl.joined ? "in" : isPending ? "pending" : isLocked ? "locked" : "";
-          const countdown = isPending
-            ? `<span class="countdown-text" data-ends="${lvl.opensAt}">${fmtCountdown(lvl.opensAt)}</span>`
-            : null;
-          const statusLine = lvl.joined
-            ? "You're in"
-            : isPending
-              ? countdown
-              : isLocked
-                ? "Locked"
-                : `${lvl.entrantCount} entries`;
-          const ticketLine =
-            !isPending && !isLocked ? `<span class="stake-tickets">🎟️ ${lvl.ticketsProjected ?? 0} funded</span>` : "";
-          // Pending tiers aren't disabled — tapping one opens the auto-fill
-          // allocation prompt scoped to that exact tier, since you can't
-          // enter directly yet but you CAN queue an allocation for it.
-          const clickAction = lvl.joined || isLocked ? "" : isPending ? "pending-alloc-chip" : "join-sat-row-btn";
-          const disabled = lvl.joined || isLocked;
-          return `<button class="stake-chip ${chipState} ${clickAction}" ${disabled ? "disabled" : ""} data-id="${lvl.id}" data-tier="${lvl.tierId}" data-level="${lvl.priceLevel}">
-            <span class="stake-tier-name">${lvl.priceLevelName || lvl.priceLevel}</span>
-            <span class="stake-fee">${lvl.entryFee.toLocaleString()} STONK <span class="stake-fee-usd">(~$${lvl.entryFeeUsd?.toFixed(2) ?? "0.00"})</span></span>
-            <span class="stake-sub">${statusLine}</span>
-            ${ticketLine}
-            ${isPending ? `<span class="stake-alloc-hint">⚙️ Set up allocation</span>` : ""}
-          </button>`;
-        })
-        .join("");
-      return `<div class="sat-category-v2">
-        <div class="sat-category-head"><span class="session-icon">${cat.icon}</span>${cat.name}</div>
-        <div class="stake-chips">${chips}</div>
+    .map((cat, i) => {
+      const fees = cat.levels.map((l) => l.entryFee);
+      const min = Math.min(...fees), max = Math.max(...fees);
+      const feeRange = min === max ? `${min.toLocaleString()} STONK` : `${min.toLocaleString()}–${max.toLocaleString()} STONK`;
+      const openCount = cat.levels.filter((l) => l.status === "open").length;
+      const hasFree = cat.levels.some((l) => l.priceLevel === "free");
+      return `<div class="portfolio-row">
+        <div class="portfolio-row-main">
+          <div class="portfolio-row-label">${cat.icon} ${cat.name} ${hasFree ? '<span class="table-badge" style="margin-left:6px;">Free tier available</span>' : ""}</div>
+          <div class="portfolio-row-sub mono">${feeRange} · ${openCount} of ${cat.levels.length} rooms open now</div>
+        </div>
+        <button class="btn btn-outline btn-sm lobby-cat-btn" data-idx="${i}">Browse rooms</button>
       </div>`;
     })
     .join("");
 
+  el.querySelectorAll(".lobby-cat-btn").forEach((btn) => {
+    btn.addEventListener("click", () => showSatelliteDrilldown(satellitesCache.categories[Number(btn.dataset.idx)]));
+  });
+}
+
+function showPrizeBreakdown(lvl) {
+  if (!lvl) return;
+  const rake = Math.round(lvl.poolGross * 0.15);
+  const playerPool = lvl.poolGross - rake;
+  const ticketsCost = (lvl.ticketsProjected || 0) * (lvl.ticketCost || 3000);
+  const lines = [
+    `${lvl.name || lvl.priceLevelName} — Prize Pool Breakdown`,
+    ``,
+    `Entries: ${lvl.entrantCount}`,
+    `Gross pool: ${lvl.poolGross.toLocaleString()} STONK`,
+    `Platform + affiliate rake (15%): -${rake.toLocaleString()} STONK`,
+    `Player pool (85%): ${playerPool.toLocaleString()} STONK`,
+    ``,
+    `Tickets funded: ${lvl.ticketsProjected || 0} × ${(lvl.ticketCost || 3000).toLocaleString()} STONK = ${ticketsCost.toLocaleString()} STONK`,
+    `Remainder to next finisher: ${(lvl.remainderProjected || 0).toLocaleString()} STONK`,
+  ];
+  alert(lines.join("\n"));
+}
+
+function showSatelliteDrilldown(cat) {
+  currentDrilldownCatId = cat.id;
+  document.getElementById("lobbyDrilldownTitle").textContent = `${cat.icon} ${cat.name}`;
+  const el = document.getElementById("satelliteCategories");
+  const chips = cat.levels
+    .map((lvl) => {
+      const isPending = lvl.status === "pending";
+      const isLocked = lvl.status === "resolved";
+      const atMax = lvl.myEntryCount >= lvl.maxEntriesPerAccount;
+      const chipState = atMax ? "in" : isPending ? "pending" : isLocked ? "locked" : "";
+      const countdown = isPending
+        ? `<span class="countdown-text" data-ends="${lvl.opensAt}">${fmtCountdown(lvl.opensAt)}</span>`
+        : null;
+      const entryStatus = lvl.myEntryCount > 0 ? `You're in (${lvl.myEntryCount}/${lvl.maxEntriesPerAccount})` : null;
+      const statusLine = atMax
+        ? entryStatus
+        : isPending
+          ? countdown
+          : isLocked
+            ? "Locked"
+            : `${lvl.entrantCount} entries${entryStatus ? ` · ${entryStatus}` : ""}`;
+      const ticketLine =
+        !isPending && !isLocked
+          ? `<span class="stake-tickets">🎟️ ${lvl.ticketsProjected ?? 0} funded <span class="breakdown-btn" data-breakdown-id="${lvl.id}">ⓘ breakdown</span></span>`
+          : "";
+      const feeLabel = lvl.entryFee === 0 ? "FREE" : `${lvl.entryFee.toLocaleString()} STONK`;
+      const usdLabel = lvl.entryFee === 0 ? "no wallet needed" : `~$${lvl.entryFeeUsd?.toFixed(2) ?? "0.00"}`;
+      // Pending tiers aren't disabled — tapping one opens the auto-fill
+      // allocation prompt scoped to that exact tier, since you can't
+      // enter directly yet but you CAN queue an allocation for it.
+      const clickAction = atMax || isLocked ? "" : isPending ? "pending-alloc-chip" : "join-sat-row-btn";
+      const disabled = atMax || isLocked;
+      return `<button class="stake-chip ${chipState} ${clickAction}" ${disabled ? "disabled" : ""} data-id="${lvl.id}" data-tier="${lvl.tierId}" data-level="${lvl.priceLevel}">
+        <span class="stake-tier-name">${lvl.priceLevelName || lvl.priceLevel}</span>
+        <span class="stake-fee">${feeLabel} <span class="stake-fee-usd">(${usdLabel})</span></span>
+        <span class="stake-sub">${statusLine}</span>
+        ${ticketLine}
+        ${isPending ? `<span class="stake-alloc-hint">⚙️ Set up allocation</span>` : ""}
+      </button>`;
+    })
+    .join("");
+  el.innerHTML = `<div class="stake-chips">${chips}</div>`;
+
+  el.querySelectorAll(".breakdown-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showPrizeBreakdown(cat.levels.find((l) => l.id == btn.dataset.breakdownId));
+    });
+  });
   el.querySelectorAll(".join-sat-row-btn").forEach((btn) => {
     btn.addEventListener("click", () => joinSatellite(btn.dataset.id));
   });
   el.querySelectorAll(".pending-alloc-chip").forEach((btn) => {
     btn.addEventListener("click", () => openAllocationModalForTier("satellite", btn.dataset.tier, btn.dataset.level));
   });
+
+  document.getElementById("lobbyDrilldownPanel").style.display = "block";
+  document.getElementById("lobbyDrilldownPanel").scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
+document.getElementById("closeLobbyDrilldown").addEventListener("click", () => {
+  currentDrilldownCatId = null;
+  document.getElementById("lobbyDrilldownPanel").style.display = "none";
+});
 
 async function joinSatellite(satelliteId) {
   try {
@@ -536,7 +616,8 @@ function openTradeModal(sym) {
   showTradeModalState("main");
   initChart(); // fresh chart each open — avoids sizing issues on a container that was hidden
   chartHistory[sym] = chartHistory[sym] || [];
-  series.setData(chartHistory[sym]);
+  candleHistory[sym] = candleHistory[sym] || [];
+  series.setData(chartMode === "candles" ? candleHistory[sym] : chartHistory[sym]);
   const q = latestQuotes[sym];
   if (q) {
     document.getElementById("chartPriceLabel").textContent = `${q.currency} ${q.price.toFixed(2)}`;
@@ -626,14 +707,51 @@ function initChart() {
     timeScale: { timeVisible: true, secondsVisible: true },
     height: 260,
   });
-  series = chart.addLineSeries({ color: "#8CFF00", lineWidth: 2 });
+  if (chartMode === "candles") {
+    series = chart.addCandlestickSeries({
+      upColor: "#3ADC84",
+      downColor: "#FF5C6C",
+      borderVisible: false,
+      wickUpColor: "#3ADC84",
+      wickDownColor: "#FF5C6C",
+    });
+  } else {
+    series = chart.addLineSeries({ color: "#8CFF00", lineWidth: 2 });
+  }
 }
+
+function setChartMode(mode) {
+  chartMode = mode;
+  document.querySelectorAll(".chart-mode-btn").forEach((b) => b.classList.toggle("active", b.dataset.mode === mode));
+  initChart();
+  const data = mode === "candles" ? candleHistory[selectedSymbol] || [] : chartHistory[selectedSymbol] || [];
+  series.setData(data);
+}
+document.querySelectorAll(".chart-mode-btn").forEach((btn) => {
+  btn.addEventListener("click", () => setChartMode(btn.dataset.mode));
+});
 
 function pushChartPoint(q) {
   const now = Math.floor(Date.now() / 1000);
+
   chartHistory[q.symbol] = chartHistory[q.symbol] || [];
   chartHistory[q.symbol].push({ time: now, value: q.price });
   if (chartHistory[q.symbol].length > 300) chartHistory[q.symbol].shift();
+
+  // Bucket ticks into OHLC candles for the candlestick view.
+  candleHistory[q.symbol] = candleHistory[q.symbol] || [];
+  const bucket = Math.floor(now / CANDLE_BUCKET_SECONDS) * CANDLE_BUCKET_SECONDS;
+  const candles = candleHistory[q.symbol];
+  const last = candles[candles.length - 1];
+  if (last && last.time === bucket) {
+    last.high = Math.max(last.high, q.price);
+    last.low = Math.min(last.low, q.price);
+    last.close = q.price;
+  } else {
+    candles.push({ time: bucket, open: q.price, high: q.price, low: q.price, close: q.price });
+    if (candles.length > 300) candles.shift();
+  }
+
   const label = document.getElementById("chartPriceLabel");
   if (label && q.symbol === selectedSymbol) {
     const prevText = label.textContent;
@@ -646,7 +764,14 @@ function pushChartPoint(q) {
     }
     updateDayRange(q);
   }
-  if (q.symbol === selectedSymbol && series) series.update({ time: now, value: q.price });
+  if (q.symbol === selectedSymbol && series) {
+    if (chartMode === "candles") {
+      const c = candleHistory[q.symbol][candleHistory[q.symbol].length - 1];
+      series.update(c);
+    } else {
+      series.update({ time: now, value: q.price });
+    }
+  }
 }
 
 document.getElementById("buyBtn").addEventListener("click", () => initiateTrade("buy"));
@@ -1096,7 +1221,11 @@ function openAllocationModal(presetValue) {
   if (presetValue) document.getElementById("allocTargetSelect").value = presetValue;
   document.getElementById("allocationRows").innerHTML = "";
   allocRowCount = 0;
-  addAllocRow();
+  const symbols = window.__symbols || [];
+  const rowCount = Math.min(10, symbols.length || 10);
+  for (let i = 0; i < rowCount; i++) {
+    addAllocRow(symbols[i]?.symbol || "", 10);
+  }
   document.getElementById("allocationMsg").textContent = "";
   document.getElementById("allocationModal").style.display = "flex";
 }
@@ -1130,6 +1259,8 @@ document.getElementById("submitAllocationBtn").addEventListener("click", async (
     });
     msg.style.color = "var(--green)";
     msg.textContent = "Saved — this fires automatically the instant that contest opens.";
+    refreshContests();
+    refreshMyContests();
     setTimeout(closeAllocationModal, 1400);
   } catch (err) {
     msg.style.color = "var(--red)";

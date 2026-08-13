@@ -1,6 +1,7 @@
 const db = require("./db");
 const { getQuote } = require("./dataProvider");
 const { createPortfolio } = require("./portfolioValue");
+const { TIERS, FREEROLL_FUND_THRESHOLD } = require("./tierConfig");
 
 const MAX_ALLOCATION_PCT = 10; // matches the 10% max-initial-position trading rule, expressed 0-100
 
@@ -55,20 +56,23 @@ function applyPendingSatelliteAllocations(satellite) {
     )
     .all(satellite.tier_id, satellite.price_level);
 
+  const tier = TIERS.find((t) => t.categoryId === satellite.tier_id && t.priceLevel === satellite.price_level);
+
   for (const pa of pending) {
     const account = db.prepare("SELECT * FROM accounts WHERE id = ?").get(pa.account_id);
-    const existingEntry = db
-      .prepare("SELECT id FROM satellite_entries WHERE satellite_id = ? AND account_id = ?")
-      .get(satellite.id, pa.account_id);
+    const existingCount = db
+      .prepare("SELECT COUNT(*) as n FROM satellite_entries WHERE satellite_id = ? AND account_id = ?")
+      .get(satellite.id, pa.account_id).n;
 
-    if (existingEntry) {
+    if (tier && existingCount >= tier.maxEntriesPerAccount) {
       db.prepare("UPDATE pending_allocations SET status='failed', fail_reason=? WHERE id=?").run(
-        "Already entered this satellite another way",
+        "Already at the max entries for this room",
         pa.id
       );
       continue;
     }
-    if (!account || account.stonk_balance < satellite.entry_fee) {
+    const totalFee = tier ? tier.entryFee : satellite.entry_fee;
+    if (!account || account.stonk_balance < totalFee) {
       db.prepare("UPDATE pending_allocations SET status='failed', fail_reason=? WHERE id=?").run(
         "Not enough STONK at open",
         pa.id
@@ -78,13 +82,22 @@ function applyPendingSatelliteAllocations(satellite) {
 
     const portfolioId = createPortfolio(pa.account_id, `${satellite.name} · ${new Date().toLocaleDateString()}`);
     db.exec("BEGIN");
-    db.prepare("UPDATE accounts SET stonk_balance = stonk_balance - ? WHERE id = ?").run(
-      satellite.entry_fee,
-      pa.account_id
-    );
+    db.prepare("UPDATE accounts SET stonk_balance = stonk_balance - ? WHERE id = ?").run(totalFee, pa.account_id);
     db.prepare(
       "INSERT INTO satellite_entries (satellite_id, account_id, portfolio_id, entry_fee_paid) VALUES (?, ?, ?, ?)"
-    ).run(satellite.id, pa.account_id, portfolioId, satellite.entry_fee);
+    ).run(satellite.id, pa.account_id, portfolioId, satellite.entry_fee); // satellite.entry_fee = poolFee already
+
+    if (tier && tier.surcharge > 0) {
+      db.prepare("UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk + ? WHERE id = 1").run(tier.surcharge);
+      const fund = db.prepare("SELECT * FROM freeroll_fund WHERE id = 1").get();
+      if (fund.accumulated_stonk >= FREEROLL_FUND_THRESHOLD) {
+        db.prepare(
+          `UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk - ?, tickets_available = tickets_available + 1,
+           total_tickets_funded_lifetime = total_tickets_funded_lifetime + 1 WHERE id = 1`
+        ).run(FREEROLL_FUND_THRESHOLD);
+      }
+    }
+
     applyAllocationToPortfolio(portfolioId, JSON.parse(pa.allocations_json));
     db.prepare(
       "UPDATE pending_allocations SET status='applied', applied_to_satellite_id=?, applied_at=? WHERE id=?"

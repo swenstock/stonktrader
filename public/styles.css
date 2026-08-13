@@ -35,15 +35,23 @@ html{overflow-x:hidden;}
 .btn-red{background:var(--red);color:#2A0508;}
 
 /* App shell */
-nav{display:flex;justify-content:space-between;align-items:center;padding:16px 28px;border-bottom:1px solid var(--border);
+nav{padding:14px 28px 0;border-bottom:1px solid var(--border);
   background:linear-gradient(180deg, rgba(140,255,0,.03), transparent);}
-.nav-right{display:flex;align-items:center;gap:16px;}
+.nav-top-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;padding-bottom:14px;}
+.nav-spacer{}
+.logo{justify-self:center;text-align:center;}
+.nav-right{display:flex;align-items:center;gap:12px;justify-self:end;}
 .welcome{font-size:13px;color:var(--text-dim);}
 .price-box{
-  border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-family:'IBM Plex Mono',monospace;
-  font-size:11px;color:var(--text-dim);text-align:right;line-height:1.5;
+  border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-family:'IBM Plex Mono',monospace;
+  text-align:right;line-height:1.4;display:flex;flex-direction:column;
 }
-.price-box b{color:var(--gold);font-size:13px;}
+.price-box-label{font-size:9.5px;color:var(--text-dim);letter-spacing:.08em;}
+.price-box-value{color:var(--gold);font-size:14px;font-weight:700;}
+.my-balance-box{
+  max-width:1200px;margin:0 auto 20px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:10px;
+}
 
 .portfolio-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:20px 28px 0;max-width:1200px;margin:0 auto;}
 .ps-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
@@ -88,8 +96,7 @@ tr.watch-row:hover{background:var(--surface-2);}
 @media(max-width:900px){.main-grid{grid-template-columns:1fr;} .portfolio-summary{grid-template-columns:1fr;}}
 
 /* ---------- Nav tabs & chip balance ---------- */
-nav{flex-wrap:wrap;gap:14px;}
-.nav-tabs{display:flex;gap:6px;flex-wrap:wrap;}
+.nav-tabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding-bottom:12px;}
 .nav-right{flex-wrap:wrap;justify-content:flex-end;}
 .nav-tab{
   background:transparent;border:1px solid transparent;color:var(--text-dim);
@@ -121,6 +128,13 @@ nav{flex-wrap:wrap;gap:14px;}
 .pixel-headline .accent{color:var(--gold);text-shadow:0 0 24px rgba(140,255,0,.4);}
 .lobby-hero p{color:var(--text-dim);font-size:14.5px;line-height:1.6;max-width:460px;margin:0 0 20px;}
 .hero-price-callout{color:var(--gold);font-size:1.25em;text-shadow:0 0 16px rgba(140,255,0,.5);}
+.journey-strip{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin:0 0 18px;}
+.journey-step{
+  font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:700;letter-spacing:.02em;
+  background:var(--surface);border:1px solid var(--border);border-radius:999px;padding:6px 12px;color:var(--text);
+}
+.journey-step.accent-step{border-color:var(--gold);color:var(--gold);box-shadow:0 0 14px rgba(140,255,0,.3);}
+.journey-arrow{color:var(--text-dim);font-size:12px;}
 .hero-cta-row{display:flex;align-items:center;gap:16px;margin-bottom:22px;flex-wrap:wrap;}
 .satellite-price-note{
   font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-dim);letter-spacing:.05em;
@@ -240,7 +254,8 @@ nav{flex-wrap:wrap;gap:14px;}
 @media(max-width:920px){
   .lobby-hero{grid-template-columns:1fr;}
   .table-grid{grid-template-columns:1fr;}
-  .nav-tabs{order:3;width:100%;justify-content:center;}
+  .nav-top-row{grid-template-columns:1fr;justify-items:center;text-align:center;gap:10px;}
+  .nav-right{justify-self:center;}
   .stats-strip{grid-template-columns:1fr;}
   .stat-block{border-right:none;border-bottom:1px solid var(--border);}
   .stat-block:last-child{border-bottom:none;}
@@ -330,6 +345,8 @@ nav{flex-wrap:wrap;gap:14px;}
 .stake-tier-name{font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.03em;}
 .stake-fee-usd{font-weight:400;color:var(--text-dim);font-size:11px;}
 .stake-tickets{font-size:10.5px;color:var(--green);}
+.breakdown-btn{color:var(--text-dim);text-decoration:underline;cursor:pointer;margin-left:4px;}
+.breakdown-btn:hover{color:var(--gold);}
 .stake-sub{font-size:11px;color:var(--text-dim);}
 .stake-alloc-hint{font-size:10px;color:var(--gold);opacity:.85;margin-top:2px;}
 
@@ -447,6 +464,12 @@ nav{position:sticky;top:0;z-index:60;}
 
 /* ---------- Brokerage-style trade view additions ---------- */
 .day-range{font-size:11.5px;color:var(--text-dim);margin:-8px 0 10px;}
+.chart-mode-toggle{display:flex;gap:6px;margin-bottom:8px;}
+.chart-mode-btn{
+  background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim);
+  padding:5px 12px;border-radius:6px;font-size:11.5px;cursor:pointer;font-family:'Sora',sans-serif;font-weight:600;
+}
+.chart-mode-btn.active{background:var(--gold);color:#0A1400;border-color:var(--gold);}
 .price-flash{transition:background-color .3s ease, color .3s ease;border-radius:4px;padding:2px 6px;}
 .price-flash.flash-up{background:rgba(58,220,132,.25);color:var(--green);}
 .price-flash.flash-down{background:rgba(255,92,108,.25);color:var(--red);}

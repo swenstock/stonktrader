@@ -16,42 +16,10 @@ const { computeLadder } = require("./prizeLadder");
 const { etDateTime, etCalendarDate, isWeekday, currentWeekWindow } = require("./timeHelpers");
 const mainEvent = require("./contestScheduler");
 const { applyPendingSatelliteAllocations } = require("./allocationEngine");
+const { CATEGORIES, PRICE_LEVEL_NAMES, TIERS, FREEROLL_SURCHARGE, FREEROLL_FUND_THRESHOLD } = require("./tierConfig");
 
 const RAKE = { total: 0.15, platform: 0.10, affiliate: 0.05 };
 const TICKET_COST = 3000;
-
-const CATEGORIES = [
-  { id: "full_day", name: "Full Day", icon: "🔔", cadence: "daily", openHour: 9.5, lockHour: 16 },
-  { id: "morning", name: "Morning", icon: "☀️", cadence: "daily", openHour: 9.5, lockHour: 13 },
-  { id: "afternoon", name: "Afternoon", icon: "🔥", cadence: "daily", openHour: 13, lockHour: 16 },
-  { id: "weekly_qualifier", name: "Weekly Qualifier", icon: "🎟️", cadence: "weekly" },
-];
-
-const PRICE_LEVELS = {
-  daily: { low: 100, mid: 300, high: 750 },
-  weekly: { low: 100, mid: 300, high: 750 }, // same as daily — cheap access to a 3,000 STONK Main Event ticket is the whole point
-};
-
-// Named tiers instead of bare Low/Mid/High — echoes the same
-// Rookie->Trader progression language used elsewhere (career stats, etc).
-const PRICE_LEVEL_NAMES = { low: "Rookie", mid: "Trader", high: "Whale" };
-
-// Flatten into 12 concrete tiers.
-const TIERS = CATEGORIES.flatMap((cat) =>
-  ["low", "mid", "high"].map((level) => ({
-    id: `${cat.id}_${level}`,
-    categoryId: cat.id,
-    categoryName: cat.name,
-    icon: cat.icon,
-    priceLevel: level,
-    priceLevelName: PRICE_LEVEL_NAMES[level],
-    name: `${cat.name} — ${PRICE_LEVEL_NAMES[level]}`,
-    entryFee: PRICE_LEVELS[cat.cadence][level],
-    cadence: cat.cadence,
-    openHour: cat.openHour,
-    lockHour: cat.lockHour,
-  }))
-);
 
 function hourToParts(hourFloat) {
   const hour = Math.floor(hourFloat);
@@ -88,7 +56,7 @@ function openNewSatellite(tier, now) {
       tier.categoryId,
       tier.priceLevel,
       tier.name,
-      tier.entryFee,
+      tier.poolFee, // base only — surcharge is charged separately at entry time, never counted in this room's own pool
       TICKET_COST,
       opensAt.toISOString(),
       locksAt.toISOString()
@@ -134,10 +102,21 @@ function resolveSatellite(satellite) {
   }
 
   const grossPool = entries.reduce((s, e) => s + e.entry_fee_paid, 0);
-  const { unitsFunded: ticketsFunded, remainder } = computeLadder(
-    grossPool * (1 - RAKE.total),
-    satellite.ticket_cost
-  );
+
+  let ticketsFunded, remainder;
+  if (satellite.price_level === "free") {
+    // Freeroll rooms never fund tickets from their own $0 pool — the ticket
+    // (if any) comes from the banked freeroll fund instead, capped at one
+    // per resolved freeroll room so a big bank spreads across occurrences
+    // rather than dumping everything into a single room.
+    const fund = db.prepare("SELECT * FROM freeroll_fund WHERE id = 1").get();
+    ticketsFunded = fund.tickets_available > 0 ? 1 : 0;
+    remainder = 0; // no STONK consolation prize in a freeroll — you get the ticket or nothing
+  } else {
+    const result = computeLadder(grossPool * (1 - RAKE.total), satellite.ticket_cost);
+    ticketsFunded = result.unitsFunded;
+    remainder = result.remainder;
+  }
 
   const portfolioIds = entries.map((e) => e.portfolio_id);
   const valueMap = totalValueForPortfolios(portfolioIds);
@@ -151,6 +130,10 @@ function resolveSatellite(satellite) {
     .sort((a, b) => b.pl - a.pl);
 
   db.exec("BEGIN");
+
+  if (satellite.price_level === "free" && ticketsFunded === 1) {
+    db.prepare("UPDATE freeroll_fund SET tickets_available = tickets_available - 1 WHERE id = 1").run();
+  }
 
   let platformTake = 0;
   let affiliatePaidTotal = 0;
@@ -221,4 +204,12 @@ function start() {
   interval.unref?.();
 }
 
-module.exports = { start, tick, TIERS, CATEGORIES, PRICE_LEVEL_NAMES };
+module.exports = {
+  start,
+  tick,
+  TIERS,
+  CATEGORIES,
+  PRICE_LEVEL_NAMES,
+  FREEROLL_SURCHARGE,
+  FREEROLL_FUND_THRESHOLD,
+};

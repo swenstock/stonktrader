@@ -26,6 +26,7 @@ const CONFIG = {
   rakePlatform: 0.10,
   rakeAffiliate: 0.05,
   minEntrants: 2,
+  maxEntriesPerAccount: 10,
 };
 
 function openNewContest(now = new Date()) {

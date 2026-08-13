@@ -353,7 +353,59 @@ from, cleanly isolated from the trading logic. If Robinhood (or anyone)
 ever provides real backend access, that's a data-layer swap behind this
 same interface, not a rewrite.
 
+## Freeroll tier, multi-entry, and named price tiers
+
+**Named tiers**: Rookie (100+50)/Trader (300+50)/Whale (750+50), plus a new
+**Freeroll** level exclusive to the Weekly Qualifier — 0 STONK, no wallet
+needed, capped at 1 entry per account per room.
+
+**The +50 STONK surcharge** on every paid satellite room (all 12) funds the
+freeroll pool separately from that room's own prize pool — verified this
+split is real: a room's own gross pool only ever reflects the base fee
+(100/300/750), never the surcharge, confirmed with a direct test. Every
+time the surcharge fund crosses 3,000 STONK (~60 paid entries), one
+freeroll ticket becomes available and gets awarded to whoever finishes #1
+in the next freeroll room that resolves — tested end-to-end including the
+fund correctly decrementing after award.
+
+**Multi-entry**: up to 10 entries per account per contest (satellites and
+the Main Event both), each with its own separate portfolio. Enforced with
+a COUNT() check, not a database uniqueness constraint — tested that the
+10th entry succeeds and the 11th is correctly rejected, for both satellites
+and the Main Event.
+
+**Architecture note**: tier configuration (pricing, names, surcharge, max
+entries) lives in `server/tierConfig.js`, extracted specifically to avoid a
+circular dependency between `satelliteScheduler.js` and `allocationEngine.js`.
+
+## Nav, Lobby, and trade UI refresh
+
+- Nav: centered logo, live STONKBROKER price ticker (public `/api/account/price`
+  endpoint) replacing the personal balance — balance now lives in My
+  Contests instead, since a trader can have several simultaneous portfolio
+  balances at once (weekly + morning + full day, etc.)
+- Lobby: Main Event moved above satellites; satellites restructured into a
+  two-level drill-down tree (category → rooms), matching the pattern
+  already used on the Leaderboards page
+- Allocation modal now opens with 10 pre-built rows, each defaulting to a
+  different symbol at 10% — a genuinely usable starting point instead of
+  an empty single row
+- Trade modal: added a 100% quick button (buy/sell), and a candlestick
+  chart toggle — ticks are bucketed client-side into 5-second OHLC candles
+  since there's no server-side historical OHLC source yet
+
 ## Suggested next steps
+
+### Note for real-money integration (not built yet, just a stated requirement)
+When real wallet integration exists: **paid tiers should require a
+connected wallet, the freeroll and account signup should not.** Someone
+should be able to sign up with email/Google/Facebook and play the freeroll
+entirely wallet-free — wallet connection only becomes necessary the moment
+they want to move up to a paid tier. This is already naturally true in the
+current paper-trading build (Connect Wallet has always been cosmetic, never
+gating anything) — just flagging it explicitly so it doesn't get lost when
+real wallet auth eventually gets built.
+
 
 1. `npm install && npm start` locally, create a couple of test accounts, confirm
    the trade flow and leaderboard update as expected.

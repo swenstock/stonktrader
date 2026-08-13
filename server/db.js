@@ -128,8 +128,10 @@ CREATE TABLE IF NOT EXISTS contest_entries (
   entry_fee_paid INTEGER NOT NULL, -- face value, whether paid in STONK or via ticket
   paid_with_ticket_id INTEGER REFERENCES tickets(id),
   escrow_status TEXT NOT NULL DEFAULT 'held', -- held | captured | refunded
-  joined_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(contest_id, account_id)
+  joined_at TEXT DEFAULT CURRENT_TIMESTAMP
+  -- NOTE: no longer UNIQUE(contest_id, account_id) — up to 10 entries per
+  -- account per contest are allowed now, each with its own portfolio.
+  -- Enforced with a COUNT() check in routes/contests.js, not a DB constraint.
 );
 CREATE INDEX IF NOT EXISTS idx_entries_contest ON contest_entries(contest_id);
 CREATE INDEX IF NOT EXISTS idx_entries_account ON contest_entries(account_id);
@@ -181,8 +183,9 @@ CREATE TABLE IF NOT EXISTS satellite_entries (
   account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
   portfolio_id INTEGER NOT NULL REFERENCES portfolios(id) ON DELETE CASCADE,
   entry_fee_paid INTEGER NOT NULL,
-  joined_at TEXT DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE(satellite_id, account_id)
+  joined_at TEXT DEFAULT CURRENT_TIMESTAMP
+  -- NOTE: no longer UNIQUE(satellite_id, account_id) — up to 10 entries for
+  -- paid rooms (1 for freeroll rooms). Enforced app-side, see routes/satellites.js.
 );
 CREATE INDEX IF NOT EXISTS idx_satellite_entries_satellite ON satellite_entries(satellite_id);
 
@@ -274,6 +277,19 @@ CREATE TABLE IF NOT EXISTS ticket_listings (
 );
 CREATE INDEX IF NOT EXISTS idx_ticket_listings_status ON ticket_listings(status);
 CREATE INDEX IF NOT EXISTS idx_ticket_listings_seller ON ticket_listings(seller_account_id);
+
+-- Single-row ledger tracking the freeroll surcharge fund. Every paid
+-- satellite entry adds FREEROLL_SURCHARGE (50 STONK) here, untouched by the
+-- normal rake split. Every time accumulated_stonk crosses 3,000, one
+-- freeroll ticket becomes available (tickets_available increments,
+-- accumulated_stonk decrements by 3000) — see satelliteScheduler.js.
+CREATE TABLE IF NOT EXISTS freeroll_fund (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  accumulated_stonk INTEGER NOT NULL DEFAULT 0,
+  tickets_available INTEGER NOT NULL DEFAULT 0,
+  total_tickets_funded_lifetime INTEGER NOT NULL DEFAULT 0
+);
+INSERT OR IGNORE INTO freeroll_fund (id, accumulated_stonk, tickets_available, total_tickets_funded_lifetime) VALUES (1, 0, 0, 0);
 `);
 
 module.exports = db;

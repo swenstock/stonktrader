@@ -18,8 +18,11 @@ function serializeContest(c, myAccountId) {
   const brokersProjected = Math.floor(playerPool / c.broker_unit_cost);
   const remainderProjected = c.status === "open" ? playerPool - brokersProjected * c.broker_unit_cost : c.remainder_stonk;
 
-  const myEntry = myAccountId
-    ? db.prepare("SELECT * FROM contest_entries WHERE contest_id = ? AND account_id = ?").get(c.id, myAccountId)
+  const myEntryCount = myAccountId
+    ? db.prepare("SELECT COUNT(*) as n FROM contest_entries WHERE contest_id = ? AND account_id = ?").get(c.id, myAccountId).n
+    : 0;
+  const myFirstEntry = myAccountId
+    ? db.prepare("SELECT * FROM contest_entries WHERE contest_id = ? AND account_id = ? ORDER BY id ASC LIMIT 1").get(c.id, myAccountId)
     : null;
   const myTickets = myAccountId
     ? db.prepare("SELECT COUNT(*) as n FROM tickets WHERE account_id = ? AND status = 'unredeemed'").get(myAccountId).n
@@ -40,8 +43,10 @@ function serializeContest(c, myAccountId) {
     remainderProjected: Math.round(remainderProjected || 0),
     remainderStonk: c.remainder_stonk,
     remainderDisplayName: c.remainder_display_name,
-    joined: !!myEntry,
-    myPortfolioId: myEntry ? myEntry.portfolio_id : null,
+    joined: myEntryCount > 0,
+    myEntryCount,
+    maxEntriesPerAccount: CONFIG.maxEntriesPerAccount,
+    myPortfolioId: myFirstEntry ? myFirstEntry.portfolio_id : null,
     myUnredeemedTickets: myTickets,
   };
 }
@@ -97,14 +102,16 @@ router.post("/:id/enter", requireAuth, (req, res) => {
   if (!contest) return res.status(404).json({ error: "Main Event not found" });
   if (contest.status !== "open") return res.status(400).json({ error: "This week's Main Event is closed" });
 
-  const existing = db
-    .prepare("SELECT id FROM contest_entries WHERE contest_id = ? AND account_id = ?")
-    .get(contest.id, req.account.id);
-  if (existing) return res.status(400).json({ error: "You're already in this week's Main Event" });
+  const existingCount = db
+    .prepare("SELECT COUNT(*) as n FROM contest_entries WHERE contest_id = ? AND account_id = ?")
+    .get(contest.id, req.account.id).n;
+  if (existingCount >= CONFIG.maxEntriesPerAccount) {
+    return res.status(400).json({ error: `You've reached the max of ${CONFIG.maxEntriesPerAccount} entries for this week's Main Event` });
+  }
 
   const useTicket = !!req.body?.useTicket;
   const account = db.prepare("SELECT * FROM accounts WHERE id = ?").get(req.account.id);
-  const label = `Main Event · Week of ${new Date(contest.week_start).toLocaleDateString()}`;
+  const label = `Main Event · Week of ${new Date(contest.week_start).toLocaleDateString()}${existingCount > 0 ? ` (Entry ${existingCount + 1})` : ""}`;
 
   if (useTicket) {
     const ticket = db
