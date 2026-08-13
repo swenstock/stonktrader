@@ -751,10 +751,7 @@ function renderEntryGroup(group) {
   const configured = group.items.filter((item) => !isUnconfigured(item));
 
   const unconfiguredHtml = unconfigured
-    .map((item, i) => {
-      const label = group.items.length > 1 ? `<div class="entry-number-tag">New entry</div>` : "";
-      return `<div class="entry-group-item unconfigured-entry">${label}${allocationRowHtml(item.data)}</div>`;
-    })
+    .map((item) => `<div class="entry-group-item unconfigured-entry">${allocationRowHtml(item.data)}</div>`)
     .join("");
 
   let configuredHtml = "";
@@ -779,10 +776,13 @@ function renderEntryGroup(group) {
       <div class="entry-group-items" data-group-items="${group.key}" style="display:${isExpanded ? "block" : "none"};">
         ${configured
           .map(
-            (item, i) =>
-              `<div class="entry-group-item"><div class="entry-number-tag">Entry ${i + 1}</div>${
-                item.kind === "portfolio" ? portfolioRowHtml(item.data) : allocationRowHtml(item.data)
-              }</div>`
+            // Each item's own label already carries its real, permanent
+            // "(Entry N)" number (assigned once, at creation) — showing a
+            // SECOND number here (based on array position, which can
+            // differ from the real one, and shifts around as entries
+            // resolve/change) was the actual source of the confusion, not
+            // a rendering bug. One number per entry, from one source.
+            (item) => `<div class="entry-group-item">${item.kind === "portfolio" ? portfolioRowHtml(item.data) : allocationRowHtml(item.data)}</div>`
           )
           .join("")}
       </div>
@@ -790,21 +790,6 @@ function renderEntryGroup(group) {
   }
 
   return unconfiguredHtml + configuredHtml;
-}
-
-function scheduledOrderRowHtml(o, portfolioLabel) {
-  const totalPct = o.allocations.reduce((s, a) => s + a.percent, 0);
-  const items = o.allocations.length > 0 ? `${totalPct}% allocated on open — ${o.allocations.map((x) => `${x.symbol} ${x.percent}%`).join(", ")}` : "100% cash on open — no picks set";
-  return `<div class="portfolio-row has-scheduled-order">
-    <div class="portfolio-row-main">
-      <div class="portfolio-row-label">${portfolioLabel || `Portfolio #${o.portfolioId}`}</div>
-      <div class="portfolio-row-sub mono">${items}</div>
-      <div class="portfolio-row-sub mono scheduled-order-summary">⏰ Fires ${new Date(o.targetOpenAt).toLocaleString()}</div>
-    </div>
-    <span class="table-badge">Queued</span>
-    <button class="btn btn-outline btn-sm adjust-scheduled-btn" data-portfolio-id="${o.portfolioId}" data-label="${portfolioLabel || ""}">Adjust</button>
-    <button class="btn btn-outline btn-sm cancel-scheduled-btn" data-id="${o.id}">Cancel</button>
-  </div>`;
 }
 
 async function cancelScheduledOrder(id) {
@@ -841,20 +826,10 @@ async function refreshMyContests() {
     document.getElementById("pastPortfoliosList").innerHTML =
       past.map(portfolioRowHtml).join("") || `<div class="history-empty">No resolved contests yet.</div>`;
 
-    const portfolioById = Object.fromEntries(portfolios.map((p) => [p.id, p]));
-    document.getElementById("scheduledOrdersList").innerHTML =
-      activeScheduled.map((o) => scheduledOrderRowHtml(o, portfolioById[o.portfolioId]?.label)).join("") ||
-      `<div class="history-empty">No orders queued for the next market open.</div>`;
     document.querySelectorAll(".cancel-scheduled-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         cancelScheduledOrder(btn.dataset.id);
-      });
-    });
-    document.querySelectorAll(".adjust-scheduled-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        openScheduledOrderModal(btn.dataset.portfolioId, btn.dataset.label);
       });
     });
 

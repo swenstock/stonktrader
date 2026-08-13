@@ -649,6 +649,32 @@ managing the most entries at once, who need this most.
 set that survives re-renders — expand a group once and it stays expanded
 across every subsequent action, until explicitly collapsed again.
 
+## Fixed: missing entry #1, and a second redundant numbering scheme fighting it
+
+**Root cause of "Entry 1 skipped"**: the very first entry in any room was
+deliberately given no "(Entry N)" suffix at all — a design choice from
+before multi-entry existed, meant to avoid clutter on the common
+single-entry case. Now that batches of 10 are normal, that silent omission
+read as a missing number. Fixed at the source — every entry, including the
+first, now always shows its real number. Verified directly: generated 5
+sequential entries and confirmed the first one now correctly shows
+"(Entry 1)" instead of nothing.
+
+**Compounding the confusion**: the entry tree was *also* laying a second,
+separate numbering scheme on top (based on array position, which shifts
+around and doesn't match the real permanent number) — two different
+numbers competing for the same entry. Removed that redundant tag entirely;
+each entry now shows exactly one number, from exactly one source.
+
+**Removed the redundant "Scheduled Orders" section** — since the "Active"
+entry list already shows a clear "⏰ Order Queued" badge and an "Adjust
+queued order" button directly on each entry (added last round), having a
+second section listing the same orders again was showing the same
+information twice in two different shapes, which is what read as the tree
+"toggling" between two states. One canonical place per entry now, matching
+the same fix applied earlier to the old duplicate "Pending Auto-fill
+Allocations" section.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

@@ -111,7 +111,7 @@ router.post("/:id/enter", requireAuth, (req, res) => {
 
   const useTicket = !!req.body?.useTicket;
   const account = db.prepare("SELECT * FROM accounts WHERE id = ?").get(req.account.id);
-  const label = `Main Event · Week of ${new Date(contest.week_start).toLocaleDateString()}${existingCount > 0 ? ` (Entry ${existingCount + 1})` : ""}`;
+  const label = `Main Event · Week of ${new Date(contest.week_start).toLocaleDateString()} (Entry ${existingCount + 1})`;
 
   if (useTicket) {
     const ticket = db

@@ -192,7 +192,7 @@ router.post("/:id/enter", requireAuth, (req, res) => {
     return res.status(400).json({ error: "Not enough STONK to enter" });
   }
 
-  const label = `${satellite.name} · ${new Date().toLocaleDateString()}${existingCount > 0 ? ` (Entry ${existingCount + 1})` : ""}`;
+  const label = `${satellite.name} · ${new Date().toLocaleDateString()} (Entry ${existingCount + 1})`;
   const portfolioId = createPortfolio(account.id, label);
 
   db.exec("BEGIN");
