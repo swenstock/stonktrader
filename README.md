@@ -633,6 +633,22 @@ No new backend endpoint needed — a scheduled order is already one-per-
 portfolio with "latest replaces" semantics, so editing just reuses the
 existing POST.
 
+## Fixed: entry tree kept snapping back to collapsed mid-workflow
+
+**Root cause**: `refreshMyContests()` runs after every single action (setting
+an order, cancelling, anything) and fully regenerates the entries list from
+scratch — but the expand/collapse state of each group tree was never
+tracked anywhere, so every regeneration silently reset every tree back to
+collapsed. For someone working through 10 entries one at a time, this
+meant the tree they'd just expanded to work in would vanish back to
+collapsed after literally every action, making it feel broken and
+unpredictable — exactly the opposite of "easy to decipher" for the traders
+managing the most entries at once, who need this most.
+
+**Fixed** by tracking which specific groups are expanded in a persistent
+set that survives re-renders — expand a group once and it stays expanded
+across every subsequent action, until explicitly collapsed again.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

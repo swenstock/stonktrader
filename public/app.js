@@ -739,6 +739,8 @@ function groupEntriesByRoom(portfolios, allocations) {
   return Object.entries(groups).map(([key, g]) => ({ key, ...g }));
 }
 
+let expandedGroupKeys = new Set();
+
 function renderEntryGroup(group) {
   // Unconfigured = a pending reservation with zero picks saved yet — these
   // stay individually visible always, so they can never get buried and
@@ -760,15 +762,21 @@ function renderEntryGroup(group) {
     const item = configured[0];
     configuredHtml = item.kind === "portfolio" ? portfolioRowHtml(item.data) : allocationRowHtml(item.data);
   } else if (configured.length > 1) {
+    // Preserve whatever expand/collapse state this exact group was in
+    // before this re-render — without this, every action anywhere on the
+    // page (scheduling an order, cancelling, anything) forces a full
+    // re-render that silently snaps every tree back to collapsed,
+    // interrupting anyone mid-way through working across several entries.
+    const isExpanded = expandedGroupKeys.has(group.key);
     configuredHtml = `<div class="entry-group">
       <div class="portfolio-row entry-group-summary" data-group-key="${group.key}">
         <div class="portfolio-row-main">
           <div class="portfolio-row-label" style="text-transform:capitalize;">${group.label}</div>
           <div class="portfolio-row-sub mono">${configured.length} configured entries — click to view each</div>
         </div>
-        <span class="table-badge expand-caret">▾ expand</span>
+        <span class="table-badge expand-caret">${isExpanded ? "▴ collapse" : "▾ expand"}</span>
       </div>
-      <div class="entry-group-items" data-group-items="${group.key}" style="display:none;">
+      <div class="entry-group-items" data-group-items="${group.key}" style="display:${isExpanded ? "block" : "none"};">
         ${configured
           .map(
             (item, i) =>
@@ -853,11 +861,14 @@ async function refreshMyContests() {
     document.querySelectorAll(".entry-group-summary").forEach((row) => {
       row.style.cursor = "pointer";
       row.addEventListener("click", () => {
-        const items = document.querySelector(`[data-group-items="${row.dataset.groupKey}"]`);
+        const key = row.dataset.groupKey;
+        const items = document.querySelector(`[data-group-items="${key}"]`);
         const caret = row.querySelector(".expand-caret");
         const isOpen = items.style.display !== "none";
         items.style.display = isOpen ? "none" : "block";
         if (caret) caret.textContent = isOpen ? "▾ expand" : "▴ collapse";
+        if (isOpen) expandedGroupKeys.delete(key);
+        else expandedGroupKeys.add(key);
       });
     });
     document.querySelectorAll(".adjust-alloc-btn").forEach((btn) => {
