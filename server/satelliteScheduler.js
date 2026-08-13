@@ -32,6 +32,10 @@ const PRICE_LEVELS = {
   weekly: { low: 100, mid: 300, high: 750 }, // same as daily — cheap access to a 3,000 STONK Main Event ticket is the whole point
 };
 
+// Named tiers instead of bare Low/Mid/High — echoes the same
+// Rookie->Trader progression language used elsewhere (career stats, etc).
+const PRICE_LEVEL_NAMES = { low: "Rookie", mid: "Trader", high: "Whale" };
+
 // Flatten into 12 concrete tiers.
 const TIERS = CATEGORIES.flatMap((cat) =>
   ["low", "mid", "high"].map((level) => ({
@@ -40,7 +44,8 @@ const TIERS = CATEGORIES.flatMap((cat) =>
     categoryName: cat.name,
     icon: cat.icon,
     priceLevel: level,
-    name: `${cat.name} — ${level[0].toUpperCase()}${level.slice(1)}`,
+    priceLevelName: PRICE_LEVEL_NAMES[level],
+    name: `${cat.name} — ${PRICE_LEVEL_NAMES[level]}`,
     entryFee: PRICE_LEVELS[cat.cadence][level],
     cadence: cat.cadence,
     openHour: cat.openHour,
@@ -216,4 +221,4 @@ function start() {
   interval.unref?.();
 }
 
-module.exports = { start, tick, TIERS, CATEGORIES };
+module.exports = { start, tick, TIERS, CATEGORIES, PRICE_LEVEL_NAMES };

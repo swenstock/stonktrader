@@ -2,7 +2,11 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 const requireAuth = require("../middleware/requireAuth");
-const { CONFIG, currentWeekWindow, isWeekday } = require("../contestScheduler");
+const { CONFIG, currentWeekWindow, isWeekday, currentStonkUsdPriceMicros } = require("../contestScheduler");
+
+function stonkToUsd(stonkAmount) {
+  return Number(((stonkAmount * currentStonkUsdPriceMicros()) / 1e6).toFixed(2));
+}
 const { createPortfolio } = require("../portfolioValue");
 
 function serializeContest(c, myAccountId) {
@@ -26,6 +30,7 @@ function serializeContest(c, myAccountId) {
     weekStart: c.week_start,
     weekEnd: c.week_end,
     entryFee: c.entry_fee,
+    entryFeeUsd: stonkToUsd(c.entry_fee),
     brokerUnitCost: c.broker_unit_cost,
     status: c.status,
     entrantCount,

@@ -327,6 +327,9 @@ nav{flex-wrap:wrap;gap:14px;}
 .stake-chip.pending:hover{border-color:var(--gold);background:rgba(255,182,39,.05);}
 .stake-fee{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:14px;color:var(--gold);}
 .stake-chip.in .stake-fee{color:var(--green);}
+.stake-tier-name{font-size:13px;font-weight:700;color:var(--text);text-transform:uppercase;letter-spacing:.03em;}
+.stake-fee-usd{font-weight:400;color:var(--text-dim);font-size:11px;}
+.stake-tickets{font-size:10.5px;color:var(--green);}
 .stake-sub{font-size:11px;color:var(--text-dim);}
 .stake-alloc-hint{font-size:10px;color:var(--gold);opacity:.85;margin-top:2px;}
 
@@ -340,6 +343,8 @@ nav{flex-wrap:wrap;gap:14px;}
 .portfolio-row-label{font-weight:700;font-size:14px;margin-bottom:3px;}
 .portfolio-row-sub{font-size:12px;color:var(--text-dim);}
 .portfolio-row-pl{font-size:15px;font-weight:700;}
+.editable-alloc-row{transition:border-color .15s ease;}
+.editable-alloc-row:hover{border-color:var(--gold);}
 
 /* ---------- How It Works ---------- */
 .howitworks-page{max-width:900px;margin:0 auto;padding:0 28px 60px;display:flex;flex-direction:column;gap:22px;}

@@ -266,21 +266,28 @@ function renderSatelliteCategories() {
           const isPending = lvl.status === "pending";
           const isLocked = lvl.status === "resolved";
           const chipState = lvl.joined ? "in" : isPending ? "pending" : isLocked ? "locked" : "";
-          const sub = lvl.joined
+          const countdown = isPending
+            ? `<span class="countdown-text" data-ends="${lvl.opensAt}">${fmtCountdown(lvl.opensAt)}</span>`
+            : null;
+          const statusLine = lvl.joined
             ? "You're in"
             : isPending
-              ? `<span class="countdown-text" data-ends="${lvl.opensAt}">${fmtCountdown(lvl.opensAt)}</span>`
+              ? countdown
               : isLocked
                 ? "Locked"
-                : `${lvl.entrantCount} in`;
+                : `${lvl.entrantCount} entries`;
+          const ticketLine =
+            !isPending && !isLocked ? `<span class="stake-tickets">🎟️ ${lvl.ticketsProjected ?? 0} funded</span>` : "";
           // Pending tiers aren't disabled — tapping one opens the auto-fill
           // allocation prompt scoped to that exact tier, since you can't
           // enter directly yet but you CAN queue an allocation for it.
           const clickAction = lvl.joined || isLocked ? "" : isPending ? "pending-alloc-chip" : "join-sat-row-btn";
           const disabled = lvl.joined || isLocked;
           return `<button class="stake-chip ${chipState} ${clickAction}" ${disabled ? "disabled" : ""} data-id="${lvl.id}" data-tier="${lvl.tierId}" data-level="${lvl.priceLevel}">
-            <span class="stake-fee">${lvl.entryFee.toLocaleString()} STONK</span>
-            <span class="stake-sub">${sub}</span>
+            <span class="stake-tier-name">${lvl.priceLevelName || lvl.priceLevel}</span>
+            <span class="stake-fee">${lvl.entryFee.toLocaleString()} STONK <span class="stake-fee-usd">(~$${lvl.entryFeeUsd?.toFixed(2) ?? "0.00"})</span></span>
+            <span class="stake-sub">${statusLine}</span>
+            ${ticketLine}
             ${isPending ? `<span class="stake-alloc-hint">⚙️ Set up allocation</span>` : ""}
           </button>`;
         })
@@ -363,7 +370,7 @@ function renderWeeklyRoom() {
       </div>
       <div class="table-badge ${c.joined ? "joined" : ""}">${c.joined ? "You're in" : "Open now"}</div>
     </div>
-    <div class="table-row"><span>Entry</span><span class="fee">${c.entryFee.toLocaleString()} STONK</span></div>
+    <div class="table-row"><span>Entry</span><span class="fee">${c.entryFee.toLocaleString()} STONK <span style="color:var(--text-dim);font-weight:400;">(~$${c.entryFeeUsd?.toFixed(2) ?? "0.00"})</span></span></div>
     <div class="table-row"><span>Pool so far</span><span>${c.poolGross.toLocaleString()} STONK</span></div>
     <div class="countdown"><span class="clock">⏱</span> <b class="countdown-text" data-ends="${c.weekEnd}">${fmtCountdown(c.weekEnd)}</b></div>
     ${
@@ -398,9 +405,12 @@ async function joinContest(contestId, useTicket) {
 }
 
 // ---------------- My Contests ----------------
+let allocationsCache = [];
+
 async function refreshMyContests() {
   try {
     const [portfolios, allocations] = await Promise.all([api("/portfolios"), api("/allocations")]);
+    allocationsCache = allocations;
     const active = portfolios.filter((p) => p.context.status === "open" || p.context.status === "pending");
     const past = portfolios.filter((p) => p.context.status === "resolved");
 
@@ -410,13 +420,22 @@ async function refreshMyContests() {
     document.getElementById("pastPortfoliosList").innerHTML =
       past.map(portfolioRowHtml).join("") || `<div class="history-empty">No resolved contests yet.</div>`;
 
-    const pending = allocations.filter((a) => a.status === "pending");
     document.getElementById("pendingAllocationsList").innerHTML =
       allocations
         .filter((a) => a.status !== "cancelled")
         .map(allocationRowHtml)
         .join("") || `<div class="history-empty">No auto-fill allocations set.</div>`;
 
+    document.querySelectorAll(".adjust-alloc-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        editPendingAllocation(btn.dataset.id);
+      });
+    });
+    document.querySelectorAll(".editable-alloc-row").forEach((row) => {
+      row.style.cursor = "pointer";
+      row.addEventListener("click", () => editPendingAllocation(row.dataset.allocId));
+    });
     document.querySelectorAll(".trade-portfolio-btn").forEach((btn) => {
       btn.addEventListener("click", () => openTradeView(btn.dataset.id, btn.dataset.label));
     });
@@ -424,7 +443,10 @@ async function refreshMyContests() {
       btn.addEventListener("click", () => openScheduledOrderModal(btn.dataset.id, btn.dataset.label));
     });
     document.querySelectorAll(".cancel-alloc-btn").forEach((btn) => {
-      btn.addEventListener("click", () => cancelAllocation(btn.dataset.id));
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        cancelAllocation(btn.dataset.id);
+      });
     });
   } catch (err) {
     console.error(err);
@@ -443,14 +465,33 @@ function allocationRowHtml(a) {
       : a.status === "applied"
         ? `<span class="table-badge joined">Filled ✓</span>`
         : `<span class="table-badge" style="opacity:.6;">Failed: ${a.failReason || ""}</span>`;
-  return `<div class="portfolio-row">
+  const isPending = a.status === "pending";
+  return `<div class="portfolio-row ${isPending ? "editable-alloc-row" : ""}" ${isPending ? `data-alloc-id="${a.id}"` : ""}>
     <div class="portfolio-row-main">
       <div class="portfolio-row-label" style="text-transform:capitalize;">${targetLabel}</div>
       <div class="portfolio-row-sub mono">${items}</div>
     </div>
     ${statusBadge}
-    ${a.status === "pending" ? `<button class="btn btn-outline btn-sm cancel-alloc-btn" data-id="${a.id}">Cancel</button>` : ""}
+    ${
+      isPending
+        ? `<button class="btn btn-outline btn-sm adjust-alloc-btn" data-id="${a.id}">Adjust</button>
+           <button class="btn btn-outline btn-sm cancel-alloc-btn" data-id="${a.id}">Cancel</button>`
+        : ""
+    }
   </div>`;
+}
+
+function editPendingAllocation(id) {
+  const alloc = allocationsCache.find((a) => a.id === Number(id));
+  if (!alloc) return;
+  const targetValue =
+    alloc.targetType === "contest" ? "contest::" : `satellite:${alloc.targetTierId}:${alloc.targetPriceLevel}`;
+  openAllocationModal(targetValue);
+  // openAllocationModal already added one empty row — clear it and
+  // repopulate with this allocation's existing symbols/percentages instead.
+  document.getElementById("allocationRows").innerHTML = "";
+  allocRowCount = 0;
+  alloc.allocations.forEach((a) => addAllocRow(a.symbol, a.percent));
 }
 
 async function cancelAllocation(id) {
@@ -884,7 +925,7 @@ function showLiveDrilldown(cat) {
       const sub = isOpen ? `${lvl.entrantCount} entries · ${lvl.poolGross.toLocaleString()} STONK pooled · ${payout}` : payout;
       return `<div class="portfolio-row">
         <div class="portfolio-row-main">
-          <div class="portfolio-row-label">${lvl.entryFee.toLocaleString()} STONK</div>
+          <div class="portfolio-row-label">${lvl.priceLevelName || lvl.priceLevel} — ${lvl.entryFee.toLocaleString()} STONK <span style="font-weight:400;color:var(--text-dim);">(~$${lvl.entryFeeUsd?.toFixed(2) ?? "0.00"})</span></div>
           <div class="portfolio-row-sub mono">${sub}</div>
         </div>
         ${isOpen ? `<button class="btn btn-outline btn-sm view-live-lb-btn" data-id="${lvl.id}">View leaderboard</button>` : ""}
@@ -1003,7 +1044,7 @@ function populateAllocTargetSelect() {
       if (seen.has(key)) return;
       seen.add(key);
       options.push(
-        `<option value="satellite:${cat.id}:${lvl.priceLevel}">${cat.name} — ${lvl.entryFee.toLocaleString()} STONK</option>`
+        `<option value="satellite:${cat.id}:${lvl.priceLevel}">${cat.name} — ${lvl.priceLevelName || lvl.priceLevel} (${lvl.entryFee.toLocaleString()} STONK / ~$${lvl.entryFeeUsd?.toFixed(2) ?? "0.00"})</option>`
       );
     });
   });
@@ -1016,12 +1057,25 @@ function addAllocRow(symbol = "", percent = "", containerId = "allocationRows", 
   const symbolOptions = (window.__symbols || [])
     .map((s) => `<option value="${s.symbol}" ${s.symbol === symbol ? "selected" : ""}>${s.symbol}</option>`)
     .join("");
+
+  // Smart default: fill with as much as makes sense — up to the 10% cap,
+  // capped further by whatever room is left before hitting 100% total —
+  // rather than always defaulting to a flat 5% the user has to fix.
+  let defaultPct = percent;
+  if (!defaultPct) {
+    const currentTotal = [...document.querySelectorAll(`#${containerId} .alloc-percent`)].reduce(
+      (s, r) => s + (parseFloat(r.value) || 0),
+      0
+    );
+    defaultPct = Math.max(0.1, Math.min(10, Math.round((100 - currentTotal) * 10) / 10));
+  }
+
   const row = document.createElement("div");
   row.className = "alloc-row";
   row.id = id;
   row.innerHTML = `
     <select class="alloc-symbol">${symbolOptions}</select>
-    <input type="number" class="alloc-percent" min="0.1" max="10" step="0.1" value="${percent || 5}">
+    <input type="number" class="alloc-percent" min="0.1" max="10" step="0.1" value="${defaultPct}">
     <span style="font-size:12px;color:var(--text-dim);">%</span>
     <button class="trade-modal-close" type="button" onclick="document.getElementById('${id}').remove(); updateAllocTotal('${containerId}','${totalId}');">✕</button>
   `;

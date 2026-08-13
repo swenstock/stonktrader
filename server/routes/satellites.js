@@ -4,7 +4,12 @@ const db = require("../db");
 const requireAuth = require("../middleware/requireAuth");
 const { createPortfolio } = require("../portfolioValue");
 const { TIERS, CATEGORIES } = require("../satelliteScheduler");
+const { currentStonkUsdPriceMicros } = require("../contestScheduler");
 const { isWeekday, etCalendarDate, etDateTime, currentWeekWindow } = require("../timeHelpers");
+
+function stonkToUsd(stonkAmount) {
+  return Number(((stonkAmount * currentStonkUsdPriceMicros()) / 1e6).toFixed(2));
+}
 
 function hourToParts(hourFloat) {
   const hour = Math.floor(hourFloat);
@@ -37,10 +42,12 @@ function serializePendingTier(tier, now) {
     id: null,
     tierId: tier.categoryId,
     priceLevel: tier.priceLevel,
+    priceLevelName: tier.priceLevelName,
     icon: tier.icon,
     name: tier.name,
     cadence: tier.cadence,
     entryFee: tier.entryFee,
+    entryFeeUsd: stonkToUsd(tier.entryFee),
     status: "pending",
     opensAt: nextOccurrence(tier, now).toISOString(),
     locksAt: null,
@@ -70,10 +77,12 @@ function serializeSatellite(s, myAccountId) {
     id: s.id,
     tierId: s.tier_id,
     priceLevel: s.price_level,
+    priceLevelName: tierMeta?.priceLevelName || s.price_level,
     icon: tierMeta?.icon || "🎯",
     name: s.name,
     cadence: tierMeta?.cadence || "daily",
     entryFee: s.entry_fee,
+    entryFeeUsd: stonkToUsd(s.entry_fee),
     ticketCost: s.ticket_cost,
     status: s.status,
     opensAt: s.opens_at,
