@@ -552,6 +552,51 @@ several rounds ago, and the STONK price ticker was being hidden outright on
 phones even though it's now the nav's primary element. Now shrinks instead
 of disappearing.
 
+## TEST_MODE — testing off real market hours
+
+Set `TEST_MODE=true` as an environment variable (locally, or in Render's
+Environment tab) to bypass real market-hours gating entirely, for testing
+only — **never set this on a real deployment serving real players**.
+
+With it on:
+- Every category (Full Day, Morning, Afternoon, Weekly Qualifier) is
+  always open, regardless of real day-of-week or time-of-day — you can
+  trade the "Afternoon" tier at 3am on a Sunday
+- Each room still has a real, predictable cutoff — just short and
+  configurable (`TEST_SATELLITE_MINUTES`, default 3; `TEST_MAIN_EVENT_MINUTES`,
+  default 10) instead of real hours/days
+- The instant a room resolves, a fresh one opens automatically on the very
+  next scheduler tick (~15s later) — continuous cycling, no waiting
+
+Tested directly: confirmed all 13 tiers (12 satellites + Main Event) open
+simultaneously on a Sunday at 3am ET, confirmed each room's duration
+matches the configured test window exactly, and confirmed a resolved room
+is replaced by a genuinely new instance on the next tick. Also confirmed
+`TEST_MODE` unset (the default) leaves all real market-hours behavior
+completely untouched — same full pipeline test still passes identically.
+
+Mock price data (`dataProvider.js`) was already fine for this — it's
+always ticking regardless of real hours; the actual gap was purely the
+contest *scheduling*, not the price feed.
+
+## Expanded symbol universe — 61 tradable stocks
+
+Added ~44 more well-known large caps for easier, more realistic beta
+testing — spanning tech (META, NFLX, ORCL, ADBE, CRM, INTC, AMD, QCOM,
+CSCO, IBM, UBER, PYPL, SNOW, PLTR), finance (BAC, WFC, GS, MS, V, MA, AXP),
+healthcare (JNJ, PFE, UNH, ABBV, MRK, LLY), consumer/retail (KO, PEP, MCD,
+SBUX, NKE, DIS, COST, TGT, HD, LOW), and industrials/energy/auto (XOM, CVX,
+BA, CAT, GE, F, GM, T, VZ) — alongside the original 10 US names and 5
+foreign ones. 61 total, all comfortably above the $2B minimum market cap
+rule (verified directly — zero symbols fall below it), all unique.
+
+With this many symbols, the 10% max-position rule now has real headroom
+for genuine diversification (up to 610% theoretical deployment across 61
+names, vs. the original 15-symbol universe that structurally couldn't
+exceed 150%) — no frontend changes needed, since the symbol list, market
+filter, and allocation modal all already pull the count dynamically rather
+than assuming a fixed number.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

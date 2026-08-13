@@ -29,8 +29,13 @@ const CONFIG = {
   maxEntriesPerAccount: 10,
 };
 
+const TEST_MODE = process.env.TEST_MODE === "true";
+const TEST_MAIN_EVENT_MINUTES = Number(process.env.TEST_MAIN_EVENT_MINUTES) || 10;
+
 function openNewContest(now = new Date()) {
-  const { weekStart, weekEnd } = currentWeekWindow(now);
+  const { weekStart, weekEnd } = TEST_MODE
+    ? { weekStart: now, weekEnd: new Date(now.getTime() + TEST_MAIN_EVENT_MINUTES * 60000) }
+    : currentWeekWindow(now);
   const info = db
     .prepare(
       `INSERT INTO contests (week_start, week_end, entry_fee, broker_unit_cost, status)
@@ -43,6 +48,14 @@ function openNewContest(now = new Date()) {
 }
 
 function ensureOpenContest(now = new Date()) {
+  if (TEST_MODE) {
+    // Always available, always cycling — the moment there's no open Main
+    // Event, immediately start a fresh one on a short compressed window,
+    // regardless of real day/time.
+    const openNow = db.prepare("SELECT id FROM contests WHERE status = 'open'").get();
+    if (!openNow) openNewContest(now);
+    return;
+  }
   if (!isWeekday(now)) return;
   const { weekStart } = currentWeekWindow(now);
   const existing = db.prepare("SELECT id FROM contests WHERE week_start = ?").get(weekStart.toISOString());

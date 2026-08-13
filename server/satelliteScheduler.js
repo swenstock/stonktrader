@@ -27,6 +27,9 @@ function hourToParts(hourFloat) {
   return { hour, minute };
 }
 
+const TEST_MODE = process.env.TEST_MODE === "true";
+const TEST_SATELLITE_MINUTES = Number(process.env.TEST_SATELLITE_MINUTES) || 3;
+
 function dailyWindow(tier, now) {
   const { year, month, day } = etCalendarDate(now);
   const o = hourToParts(tier.openHour);
@@ -38,6 +41,14 @@ function dailyWindow(tier, now) {
 }
 
 function windowFor(tier, now) {
+  // TEST_MODE: ignore real market hours entirely — every category (Full
+  // Day, Morning, Afternoon, Weekly) is always available regardless of
+  // real time of day or day of week, cycling on a short fixed duration
+  // instead. Off by default — only for local/staging testing, never set
+  // this in a real deployment.
+  if (TEST_MODE) {
+    return { opensAt: now, locksAt: new Date(now.getTime() + TEST_SATELLITE_MINUTES * 60000) };
+  }
   if (tier.cadence === "weekly") {
     const { weekStart, weekEnd } = currentWeekWindow(now);
     return { opensAt: weekStart, locksAt: weekEnd };
@@ -68,6 +79,18 @@ function openNewSatellite(tier, now) {
 
 function ensureOpenSatellites(now = new Date()) {
   for (const tier of TIERS) {
+    if (TEST_MODE) {
+      // Always available, always cycling — the moment a tier has no OPEN
+      // room, immediately open a fresh one (short test duration). No
+      // weekday check, no real-hour check, "afternoon" is tradeable at
+      // 3am on a Sunday just as much as any other tier.
+      const openNow = db
+        .prepare("SELECT id FROM satellites WHERE tier_id = ? AND price_level = ? AND status = 'open'")
+        .get(tier.categoryId, tier.priceLevel);
+      if (!openNow) openNewSatellite(tier, now);
+      continue;
+    }
+
     if (tier.cadence === "daily" && !isWeekday(now)) continue;
 
     const { opensAt } = windowFor(tier, now);
