@@ -823,8 +823,15 @@ async function refreshMyContests() {
     document.getElementById("activePortfoliosList").innerHTML =
       groups.map(renderEntryGroup).join("") ||
       `<div class="history-empty">Nothing active — head to the Lobby to enter a contest.</div>`;
+
+    // Past entries get the exact same collapsible-tree treatment as Active
+    // — multiple resolved entries in the same room collapse into one line,
+    // click to expand. No pending allocations apply here (nothing to
+    // configure on a resolved contest), so this reuses the same grouping
+    // function with an empty allocations list.
+    const pastGroups = groupEntriesByRoom(past, []);
     document.getElementById("pastPortfoliosList").innerHTML =
-      past.map(portfolioRowHtml).join("") || `<div class="history-empty">No resolved contests yet.</div>`;
+      pastGroups.map(renderEntryGroup).join("") || `<div class="history-empty">No resolved contests yet.</div>`;
 
     document.querySelectorAll(".cancel-scheduled-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
@@ -1298,6 +1305,15 @@ function renderAllocationDonut(p) {
     .join("");
 }
 
+// Delegated listener, attached once at page load — survives any number of
+// re-renders of #positionsTable since it lives on a stable ancestor, not
+// the rows themselves. Clicking anywhere in a position row opens the same
+// trade modal used from the watchlist.
+document.getElementById("positionsTable").addEventListener("click", (e) => {
+  const row = e.target.closest(".position-row");
+  if (row) openTradeModal(row.dataset.symbol);
+});
+
 async function refreshCurrentPortfolio() {
   if (!currentPortfolioId) return;
   try {
@@ -1315,9 +1331,13 @@ async function refreshCurrentPortfolio() {
         .map((pos) => {
           const cls = pos.unrealizedPL >= 0 ? "up" : "down";
           const pctOfPortfolio = p.totalValue > 0 ? (pos.value / p.totalValue) * 100 : 0;
-          return `<tr><td class="mono">${pos.symbol}</td><td>${pos.quantity}</td><td>$${pos.avgCost.toFixed(2)}</td><td>$${pos.price.toFixed(2)}</td><td class="mono">${pctOfPortfolio.toFixed(1)}%</td><td class="${cls}">${pos.unrealizedPL >= 0 ? "+" : ""}$${pos.unrealizedPL.toFixed(2)}</td></tr>`;
+          return `<tr class="watch-row position-row" data-symbol="${pos.symbol}"><td class="mono">${pos.symbol}</td><td>${pos.quantity}</td><td>$${pos.avgCost.toFixed(2)}</td><td>$${pos.price.toFixed(2)}</td><td class="mono">${pctOfPortfolio.toFixed(1)}%</td><td class="${cls}">${pos.unrealizedPL >= 0 ? "+" : ""}$${pos.unrealizedPL.toFixed(2)}</td></tr>`;
         })
         .join("") || `<tr><td colspan="6" style="color:var(--text-dim);">No positions yet — buy something!</td></tr>`;
+    // Delegated listener (attached once, outside this function — see below)
+    // handles clicks on .position-row regardless of how many times this
+    // table gets re-rendered, so there's no window where a freshly-rendered
+    // row is briefly missing its own listener.
 
     renderAllocationDonut(p);
     renderWatchlist();

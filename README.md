@@ -724,6 +724,27 @@ default list didn't include the new level, which would have silently
 hidden Runner from the lobby entirely until a trader manually re-enabled
 it in the filter — added it to the default-on list.
 
+## Fixed: position rows not clickable, Past section not collapsing
+
+**Positions not clickable**: could not find a definitive bug through code
+review alone (checked syntax, event wiring, CSS z-index, duplicate
+function definitions — all looked correct). Rather than keep guessing,
+switched to a structurally more robust pattern regardless: instead of
+attaching a fresh click listener to every row on every re-render (the
+`positionsTable` panel refreshes periodically), there's now **one single
+delegated listener attached once, at page load, on the stable parent**
+rather than the frequently-replaced rows. This is standard best practice
+for exactly this situation and eliminates an entire category of
+timing/race bug regardless of the precise mechanism behind the original
+symptom.
+
+**Past section not collapsing**: same fix already applied to "Active" a
+few rounds back, now applied to "Past" too — multiple resolved entries in
+the same room collapse into one clickable, expandable line instead of
+listing every entry flat. Reused the exact same grouping function; past
+portfolios don't have pending allocations to worry about, so this was a
+straightforward extension of existing logic.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)
