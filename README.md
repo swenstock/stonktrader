@@ -597,6 +597,18 @@ exceed 150%) — no frontend changes needed, since the symbol list, market
 filter, and allocation modal all already pull the count dynamically rather
 than assuming a fixed number.
 
+## Fixed: scheduled order said "queued" but never appeared anywhere
+
+**Root cause**: the submit handler for the scheduled-order modal showed a
+success message and closed — but never called `refreshMyContests()`
+afterward. The "Scheduled Orders" list underneath had already been
+rendered *before* the new order existed, and nothing ever told it to
+re-fetch, so the order genuinely was created correctly (the API call
+succeeded) but stayed invisible until some unrelated action happened to
+refresh the page later. Fixed by refreshing My Contests immediately after
+a successful queue, same pattern already used everywhere else a mutation
+happens.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

@@ -1694,6 +1694,7 @@ document.getElementById("submitScheduledOrderBtn").addEventListener("click", asy
     });
     msg.style.color = "var(--green)";
     msg.textContent = `Queued — fires at ${new Date(result.targetOpenAt).toLocaleString()}.`;
+    await refreshMyContests();
     setTimeout(closeScheduledOrderModal, 1600);
   } catch (err) {
     msg.style.color = "var(--red)";
