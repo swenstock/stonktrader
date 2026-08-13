@@ -2,17 +2,6 @@
 let token = localStorage.getItem("token");
 let displayName = localStorage.getItem("displayName");
 
-(async function showSignupUsdHint() {
-  try {
-    const res = await fetch("/api/account/price");
-    const data = await res.json();
-    const el = document.getElementById("signupUsdHint");
-    if (el) el.textContent = `(~$${(100000 * data.usdPrice).toLocaleString(undefined, { maximumFractionDigits: 0 })})`;
-  } catch (e) {
-    console.error(e);
-  }
-})();
-
 (function prefillReferralFromURL() {
   const params = new URLSearchParams(location.search);
   const ref = params.get("ref");
