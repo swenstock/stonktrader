@@ -148,7 +148,7 @@ router.post("/:id/trades", requireAuth, (req, res) => {
     const portfolioValue = totalValueForPortfolio(portfolioId);
     const maxAllowed = portfolioValue * MAX_INITIAL_POSITION_PCT;
 
-    if (existingCostBasis + cost > maxAllowed) {
+    if (existingCostBasis + cost > maxAllowed + 0.01) {
       const room = Math.max(0, maxAllowed - existingCostBasis);
       return res.status(400).json({
         error: `This would put more than 10% of your portfolio into ${symbol} at entry. Max additional buy right now: ~$${room.toFixed(2)}. (A position CAN grow past 10% from price gains — this limit only applies to new buys.)`,
@@ -164,7 +164,7 @@ router.post("/:id/trades", requireAuth, (req, res) => {
       .get(portfolioId, symbol);
 
     if (side === "buy") {
-      if (cost > fresh.cash_balance) throw new Error("INSUFFICIENT_CASH");
+      if (cost > fresh.cash_balance + 0.01) throw new Error("INSUFFICIENT_CASH");
       db.prepare("UPDATE portfolios SET cash_balance = cash_balance - ? WHERE id = ?").run(cost, portfolioId);
       if (position) {
         const newQty = position.quantity + quantity;

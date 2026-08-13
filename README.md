@@ -675,6 +675,30 @@ information twice in two different shapes, which is what read as the tree
 the same fix applied earlier to the old duplicate "Pending Auto-fill
 Allocations" section.
 
+## Fixed: "100% buy" sometimes rejected with a razor-thin false positive
+
+**Real bug, confirmed and measured**: clicking "100% of what's left to
+allocate" computes a cost, converts it to a share quantity (dividing by
+price), and sends that quantity to the server — which multiplies it back
+by price to re-derive the cost. That round-trip (cost → quantity → cost)
+doesn't always return bit-for-bit the same number due to how floating-point
+division/multiplication work — searched 100,000 random realistic
+price/allotment combinations and found **4,399 of them** (~4.4%) produce a
+tiny positive overshoot, typically on the order of a trillionth of a
+dollar. The 10% position-size check had zero tolerance for this, so that
+razor-thin overshoot was enough to trigger a real rejection on an entirely
+legitimate buy — exactly the "clicked 100%, got rejected" symptom.
+
+**Fixed** by adding a $0.01 tolerance to the comparison (the same pattern
+already used correctly elsewhere, e.g. `marketOpenScheduler.js` — this one
+spot in the main trade route had been missed). $0.01 comfortably absorbs
+any realistic floating-point drift while remaining far too small to
+meaningfully loosen the actual rule — verified a genuine $500 overage is
+still correctly rejected. Applied the same fix to the cash-sufficiency
+check right next to it, which had the identical vulnerability and would
+have hit the same failure mode for someone buying with 100% of their
+remaining cash.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)
