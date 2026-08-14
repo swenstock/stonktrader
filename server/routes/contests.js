@@ -35,6 +35,7 @@ function serializeContest(c, myAccountId) {
     entryFee: c.entry_fee,
     entryFeeUsd: stonkToUsd(c.entry_fee),
     brokerUnitCost: c.broker_unit_cost,
+    brokerUnitCostUsd: stonkToUsd(c.broker_unit_cost),
     status: c.status,
     entrantCount,
     poolGross: grossPool,

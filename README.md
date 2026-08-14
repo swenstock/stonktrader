@@ -996,6 +996,42 @@ later or leaves it open through the window. If they don't return during
 the eligible window at all, the sequence ends quietly rather than showing
 a stale prompt days later.
 
+## Onboarding reordered: Weekly (bigger prize) leads, Hourly bridges the wait
+
+Previous order led with Hourly (chosen for immediacy). New order leads
+with the bigger hook instead:
+
+1. **Weekly first** — "You're playing for a real Main Event ticket," CTA
+   enters the free Weekly contest directly
+2. **Set up that portfolio**
+3. **Bridge to Hourly** — only shown if an Hourly free roll happens to be
+   open right at that moment (checked live, not assumed) — "while Weekly
+   plays out, try Hourly too." If Hourly isn't open at that exact instant,
+   skips straight to step 5 rather than showing a dead-end prompt
+4. **Set up that portfolio too**
+5. **Delayed "ready for more" prompt** — same mechanic as before, waits for
+   the real gap after the most recent contest resolves
+
+Net effect on a good run: a brand-new signup can end up with two separate
+free contests running before ever seeing a paid prompt — genuinely an
+hour-plus of engagement on their first visit.
+
+Refactored the underlying plumbing while doing this: `joinSatellite` and
+`reserveRoom` now take an `onboardingFromStep` parameter (was a boolean)
+so the same two functions correctly drive both the Weekly and Hourly
+onboarding transitions instead of only ever assuming Hourly. Caught and
+removed a real redundant-call bug in the process — the old code would have
+advanced the onboarding step even if the entry itself failed.
+
+## New: Stonk Broker NFT quote in the Lobby
+
+Fourth stat block, next to the existing Main Event countdown/entries/
+brokers-locked trio — shows the real acquisition + activation cost
+(733,332 STONK, converted live to USD) as the headline number, with the
+exact STONK amount available on hover. Deliberately grounded in the real
+number the platform itself pays to fund one Broker, not an invented market
+price.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

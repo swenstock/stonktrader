@@ -104,23 +104,47 @@ function setSession(t, name, isNewSignup) {
 // ---------------- First-time onboarding sequence ----------------
 const ONBOARDING_CONTENT = {
   welcome: {
-    icon: "🎲",
-    title: "You get a free roll every hour",
-    body: "Plus one every day, and one every week — no wallet, no risk, just an account. Let's start with your free Hourly contest, since it resolves within the hour and you'll see a real result fast.",
-    cta: "Enter my free Hourly contest",
+    icon: "🏆",
+    title: "You're playing for a real Main Event ticket",
+    body: "Your free Weekly contest is a genuine, no-risk shot at winning your way straight into the Main Event — no wallet, no risk, just an account. Let's get you in.",
+    cta: "Enter my free Weekly contest",
     action: () => {
       switchView("lobby");
-      tierFilter = new Set(["free"]);
-      renderTierFilterBar();
-      renderSatelliteCategoryTree();
-      const hourlyCat = satellitesCache.categories?.find((c) => c.id === "hourly");
-      if (hourlyCat) showSatelliteDrilldown(hourlyCat);
+      const weeklyCat = satellitesCache.categories?.find((c) => c.id === "weekly_qualifier");
+      const freerollLevel = weeklyCat?.levels.find((l) => l.priceLevel === "free");
+      if (!freerollLevel) return;
+      if (freerollLevel.status === "pending") {
+        reserveRoom("weekly_qualifier", "free", 1, "welcome", freerollLevel.opensAt);
+      } else {
+        joinSatellite(freerollLevel.id, 1, "welcome", freerollLevel.locksAt);
+      }
     },
   },
   portfolio: {
     icon: "✅",
     title: "You're in!",
-    body: "Now let's set up your portfolio — pick your stocks before your free contest resolves. Head to My Contests to get started.",
+    body: "Now let's set up your portfolio — pick your stocks before your free Weekly contest resolves. Head to My Contests to get started.",
+    cta: "Go to My Contests",
+    action: () => switchView("mycontests"),
+  },
+  to_hourly: {
+    icon: "⚡",
+    title: "While Weekly plays out — try Hourly",
+    body: "You'll hear back on Weekly soon. In the meantime, there's an Hourly free roll open right now — resolves within the hour, so you'll see a second result today too.",
+    cta: "Enter my free Hourly contest",
+    action: () => {
+      switchView("lobby");
+      const hourlyCat = satellitesCache.categories?.find((c) => c.id === "hourly");
+      const freerollLevel = hourlyCat?.levels.find((l) => l.priceLevel === "free");
+      if (freerollLevel && freerollLevel.status === "open") {
+        joinSatellite(freerollLevel.id, 1, "to_hourly", freerollLevel.locksAt);
+      }
+    },
+  },
+  portfolio_hourly: {
+    icon: "✅",
+    title: "You're in your Hourly contest too!",
+    body: "Same deal — set up this portfolio too, and you've got two free results coming today.",
     cta: "Go to My Contests",
     action: () => switchView("mycontests"),
   },
@@ -168,22 +192,45 @@ document.getElementById("onboardingSkipBtn").addEventListener("click", () => {
 // there's a real gap to fill — specifically the window AFTER their first
 // (every-other-hour) freeroll resolves but BEFORE their next one opens,
 // anchored to that room's actual real lock time, not a guess.
-function advanceOnboarding(fromStep, toStep, roomLocksAt) {
+function advanceOnboarding(fromStep, toStep) {
   if (localStorage.getItem("onboardingStep") !== fromStep) return;
-
-  if (toStep === "portfolio" && roomLocksAt) {
-    // Freeroll now runs every OTHER hour — a 1-hour gap between this
-    // room's real resolution and the next freeroll opportunity opening.
-    const resolvesAt = new Date(roomLocksAt).getTime();
-    localStorage.setItem("onboardingReadyEligibleAt", String(resolvesAt));
-    localStorage.setItem("onboardingReadyExpiresAt", String(resolvesAt + 60 * 60000));
-  }
-
   localStorage.setItem("onboardingStep", toStep);
-  if (toStep === "waiting_for_ready") {
-    checkDelayedOnboardingPrompt(); // in case the eligible window already started by the time they finished setup
-  } else {
-    showOnboardingPopup(toStep);
+  showOnboardingPopup(toStep);
+}
+
+function beginWaitingForReady(roomLocksAt) {
+  // Freeroll now runs every OTHER hour — a 1-hour gap between this room's
+  // real resolution and the next freeroll opportunity opening.
+  const resolvesAt = roomLocksAt ? new Date(roomLocksAt).getTime() : Date.now();
+  localStorage.setItem("onboardingReadyEligibleAt", String(resolvesAt));
+  localStorage.setItem("onboardingReadyExpiresAt", String(resolvesAt + 60 * 60000));
+  localStorage.setItem("onboardingStep", "waiting_for_ready");
+  checkDelayedOnboardingPrompt(); // in case the eligible window already started by the time they finished setup
+}
+
+// Single orchestration point for "the trader just finished setting up a
+// portfolio" — called generically from both the trade and allocation-save
+// success paths, and branches on whatever onboarding step they're
+// actually on right now:
+//   portfolio         (just finished Weekly's setup) -> if an Hourly free
+//                      roll happens to be open right now, bridge them
+//                      straight into it; otherwise skip ahead to the
+//                      delayed $1 prompt, anchored to Weekly's own resolution
+//   portfolio_hourly   (just finished Hourly's setup) -> always goes to
+//                      the delayed $1 prompt, anchored to Hourly's resolution
+function onboardingPortfolioConfigured() {
+  const step = localStorage.getItem("onboardingStep");
+  const roomLocksAt = localStorage.getItem("onboardingCurrentRoomLocksAt") || null;
+  if (step === "portfolio") {
+    const hourlyCat = satellitesCache.categories?.find((c) => c.id === "hourly");
+    const hourlyFreeroll = hourlyCat?.levels.find((l) => l.priceLevel === "free");
+    if (hourlyFreeroll && hourlyFreeroll.status === "open") {
+      advanceOnboarding("portfolio", "to_hourly");
+    } else {
+      beginWaitingForReady(roomLocksAt);
+    }
+  } else if (step === "portfolio_hourly") {
+    beginWaitingForReady(roomLocksAt);
   }
 }
 
@@ -361,11 +408,16 @@ function renderLiveStatsBar() {
   const countdownEl = document.getElementById("heroCountdown");
   const entriesEl = document.getElementById("heroEntries");
   const brokersEl = document.getElementById("heroBrokers");
+  const nftQuoteEl = document.getElementById("heroNftQuote");
   if (c) {
     countdownEl.dataset.ends = c.weekEnd;
     countdownEl.textContent = fmtCountdown(c.weekEnd);
     entriesEl.textContent = c.entrantCount.toLocaleString();
     brokersEl.textContent = c.brokersProjected;
+    if (nftQuoteEl) {
+      nftQuoteEl.textContent = `~$${c.brokerUnitCostUsd?.toLocaleString(undefined, { minimumFractionDigits: 0 }) ?? "0"}`;
+      nftQuoteEl.title = `${c.brokerUnitCost.toLocaleString()} STONK to acquire + activate one Stonk Broker NFT`;
+    }
   } else if (contestsCache.nextOpensAt) {
     countdownEl.dataset.ends = contestsCache.nextOpensAt;
     countdownEl.textContent = fmtCountdown(contestsCache.nextOpensAt);
@@ -656,7 +708,7 @@ document.getElementById("youreInModalBackdrop").addEventListener("click", closeY
 // all pass the server's "count < max" check simultaneously and race past
 // the cap. Sequential + awaited keeps the max-10 (or max-1 for freeroll)
 // limit airtight no matter how many are requested at once.
-async function joinSatellite(satelliteId, qty = 1, isFreeroll = false, roomLocksAt = null) {
+async function joinSatellite(satelliteId, qty = 1, onboardingFromStep = null, roomLocksAt = null) {
   let succeeded = 0;
   try {
     for (let i = 0; i < qty; i++) {
@@ -669,7 +721,10 @@ async function joinSatellite(satelliteId, qty = 1, isFreeroll = false, roomLocks
       succeeded === 1 ? "You're in!" : `You're in — ${succeeded} entries!`,
       "Head to My Contests to trade — each entry's own $100,000 portfolio is ready for you."
     );
-    if (isFreeroll) advanceOnboarding("welcome", "portfolio", roomLocksAt);
+    if (onboardingFromStep) {
+      localStorage.setItem("onboardingCurrentRoomLocksAt", roomLocksAt || "");
+      advanceOnboarding(onboardingFromStep, onboardingFromStep === "welcome" ? "portfolio" : "portfolio_hourly");
+    }
   } catch (err) {
     await refreshContests();
     refreshPortfoliosBalance();
@@ -680,7 +735,7 @@ async function joinSatellite(satelliteId, qty = 1, isFreeroll = false, roomLocks
 // Reserving a room that hasn't opened yet — creates an empty (100% cash)
 // pending allocation. No picks required now; set up the actual portfolio
 // anytime before the room opens, from My Contests.
-async function reserveRoom(tierId, priceLevel, qty = 1, isFreeroll = false, roomOpensAt = null) {
+async function reserveRoom(tierId, priceLevel, qty = 1, onboardingFromStep = null, roomOpensAt = null) {
   let succeeded = 0;
   try {
     for (let i = 0; i < qty; i++) {
@@ -696,12 +751,13 @@ async function reserveRoom(tierId, priceLevel, qty = 1, isFreeroll = false, room
       succeeded === 1 ? "You're in!" : `You're in — ${succeeded} spots reserved!`,
       "Set up each portfolio anytime before this contest opens — it'll auto-fill with your picks the instant it does."
     );
-    if (isFreeroll) {
+    if (onboardingFromStep) {
       // Room hasn't opened yet, so there's no real locksAt to use — every
       // room here runs a fixed 1-hour session, so estimate resolution as
       // opensAt + 1hr.
-      const estimatedLocksAt = roomOpensAt ? new Date(new Date(roomOpensAt).getTime() + 60 * 60000).toISOString() : null;
-      advanceOnboarding("welcome", "portfolio", estimatedLocksAt);
+      const estimatedLocksAt = roomOpensAt ? new Date(new Date(roomOpensAt).getTime() + 60 * 60000).toISOString() : "";
+      localStorage.setItem("onboardingCurrentRoomLocksAt", estimatedLocksAt);
+      advanceOnboarding(onboardingFromStep, onboardingFromStep === "welcome" ? "portfolio" : "portfolio_hourly");
     }
   } catch (err) {
     await refreshContests();
@@ -770,9 +826,9 @@ function renderWeeklyFreerollPrompt() {
     </div>`;
     document.getElementById("weeklyFreerollCta").addEventListener("click", () => {
       if (isPending) {
-        reserveRoom("weekly_qualifier", "free", 1, true, freerollLevel.opensAt);
+        reserveRoom("weekly_qualifier", "free", 1, "welcome", freerollLevel.opensAt);
       } else {
-        joinSatellite(freerollLevel.id, 1, true, freerollLevel.locksAt);
+        joinSatellite(freerollLevel.id, 1, "welcome", freerollLevel.locksAt);
       }
     });
   }
@@ -1567,7 +1623,7 @@ async function executeTrade() {
     const summary = `${result.side === "buy" ? "Bought" : "Sold"} ${qtyDisplay} ${result.symbol} @ $${result.price.toFixed(2)}`;
     pendingTrade = null;
     refreshCurrentPortfolio();
-    if (result.side === "buy") setTimeout(() => advanceOnboarding("portfolio", "waiting_for_ready"), 2500);
+    if (result.side === "buy") setTimeout(() => onboardingPortfolioConfigured(), 2500);
 
     if (getTradePref("skipOrderFilled")) {
       showTradeModalState("main");
@@ -2098,7 +2154,7 @@ document.getElementById("submitAllocationBtn").addEventListener("click", async (
     msg.style.color = "var(--green)";
     refreshContests();
     refreshMyContests();
-    if (allocations.length > 0) setTimeout(() => advanceOnboarding("portfolio", "waiting_for_ready"), 1600);
+    if (allocations.length > 0) setTimeout(() => onboardingPortfolioConfigured(), 1600);
     setTimeout(closeAllocationModal, 1400);
   } catch (err) {
     msg.style.color = "var(--red)";
