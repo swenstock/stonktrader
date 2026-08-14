@@ -50,6 +50,25 @@ nav{padding:14px 28px 0;border-bottom:1px solid var(--border);
   background:linear-gradient(180deg, rgba(140,255,0,.03), transparent);}
 .nav-top-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;padding-bottom:14px;
   position:sticky;top:0;z-index:60;background:var(--bg);}
+
+/* Mobile bottom nav — hidden by default (desktop keeps the top nav only),
+   shown via the media query further down. Fixed to the bottom, safe-area
+   aware for the iPhone home indicator, thumb-reach primary destinations
+   per current Apple HIG / Material Design 3 guidance. */
+.bottom-nav{
+  display:none;position:fixed;bottom:0;left:0;right:0;z-index:150;
+  background:var(--bg);border-top:1px solid var(--border);border-bottom:none;
+  padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  justify-content:space-around;align-items:stretch;
+}
+.bottom-nav-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;
+  background:none;border:none;color:var(--text-dim);padding:6px 2px;cursor:pointer;
+  font-family:'Sora',sans-serif;font-size:10px;font-weight:600;border-radius:8px;
+}
+.bottom-nav-btn.active{color:var(--gold);}
+.bottom-nav-icon{font-size:19px;line-height:1;}
+
 .nav-hamburger{
   justify-self:start;background:none;border:1px solid var(--border);border-radius:8px;color:var(--text);
   font-size:18px;width:38px;height:38px;cursor:pointer;visibility:hidden;
@@ -312,15 +331,22 @@ tr.watch-row:hover{background:var(--surface-2);}
 }
 
 @media(max-width:780px){
+  /* Bottom nav takes over as primary navigation on mobile — hamburger
+     stays as the "More" overflow trigger instead of the main entry point.
+     Body needs bottom padding so page content (especially the last panel
+     on any view) doesn't end up hidden behind the fixed bar. */
+  .bottom-nav{display:flex;}
+  body{padding-bottom:calc(58px + env(safe-area-inset-bottom));}
+
   /* Seven nav tabs plus the top row (logo, price, wallet, logout) was
      genuinely too much to fit without wrapping into a messy multi-row
      stack. Collapse the tabs into a hamburger dropdown instead — the
      standard pattern for exactly this problem. Top row stays inline
      (hamburger left, logo center, price/wallet/logout right) rather than
      stacking, so the whole nav takes far less vertical space overall. */
-  .nav-top-row{grid-template-columns:auto 1fr auto;gap:8px;}
-  .nav-hamburger{visibility:visible;justify-self:start;}
-  .logo{font-size:13px;}
+  .nav-top-row{grid-template-columns:1fr auto;gap:8px;}
+  .nav-hamburger{display:none;}
+  .logo{font-size:13px;justify-self:start;}
   .nav-right{gap:6px;}
   .price-box{padding:5px 8px;}
   .price-box-label{display:none;}
@@ -334,6 +360,9 @@ tr.watch-row:hover{background:var(--surface-2);}
     padding:70px 16px 20px;gap:4px;overflow-y:auto;
   }
   .nav-tabs.open{display:flex;}
+  .nav-tabs .nav-tab[data-view="lobby"],
+  .nav-tabs .nav-tab[data-view="mycontests"],
+  .nav-tabs .nav-tab[data-view="leaderboards"]{display:none;}
   .nav-tab{width:100%;text-align:left;}
   .nav-tabs-close{
     display:block;background:none;border:1px solid var(--border);border-radius:8px;color:var(--text-dim);

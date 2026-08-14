@@ -336,11 +336,16 @@ function closeMobileNav() {
   document.getElementById("navMobileBackdrop").classList.remove("open");
 }
 document.getElementById("navHamburgerBtn")?.addEventListener("click", openMobileNav);
+document.getElementById("bottomNavMoreBtn")?.addEventListener("click", openMobileNav);
+document.querySelectorAll(".bottom-nav-btn[data-view]").forEach((btn) => {
+  btn.addEventListener("click", () => switchView(btn.dataset.view));
+});
 document.getElementById("navTabsClose")?.addEventListener("click", closeMobileNav);
 document.getElementById("navMobileBackdrop")?.addEventListener("click", closeMobileNav);
 
 function switchView(view) {
   document.querySelectorAll(".nav-tab").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
+  document.querySelectorAll(".bottom-nav-btn[data-view]").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
   document.querySelectorAll(".view").forEach((v) => (v.style.display = "none"));
   const el = document.getElementById(`${view}View`);
   if (el) el.style.display = "block";

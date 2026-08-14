@@ -92,6 +92,24 @@
   </nav>
   <div class="nav-mobile-backdrop" id="navMobileBackdrop"></div>
 
+  <!-- ===== Mobile bottom navigation — thumb-reach primary nav, current -->
+  <!-- Apple HIG / Material Design 3 standard as of 2026. Desktop keeps -->
+  <!-- the existing top nav; this is hidden above 780px. -->
+  <nav class="bottom-nav" id="bottomNav">
+    <button class="bottom-nav-btn active" data-view="lobby">
+      <span class="bottom-nav-icon">🏠</span><span>Lobby</span>
+    </button>
+    <button class="bottom-nav-btn" data-view="mycontests">
+      <span class="bottom-nav-icon">📋</span><span>Contests</span>
+    </button>
+    <button class="bottom-nav-btn" data-view="leaderboards">
+      <span class="bottom-nav-icon">🏆</span><span>Ranks</span>
+    </button>
+    <button class="bottom-nav-btn" id="bottomNavMoreBtn">
+      <span class="bottom-nav-icon">☰</span><span>More</span>
+    </button>
+  </nav>
+
   <!-- ===== LOBBY ===== -->
   <div id="lobbyView" class="view">
     <div class="lobby-hero">
