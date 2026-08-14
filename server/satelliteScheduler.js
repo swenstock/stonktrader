@@ -217,13 +217,20 @@ function resolveSatellite(satellite) {
         ).run(r.accountId, satellite.id, TICKET_COST);
       } else if (rank === 1 && ticketsFunded === 1 && freerollPrizeType === "runner_entry") {
         prizeType = "runner_entry";
-        // Degen Hours is the one deliberate redirect: instead of a ticket
-        // into that same hour's Runner room (which has usually already
-        // resolved by the time you'd act on it), the win feeds into that
-        // DAY's Race to the Close instead — every hourly win all day long
-        // stacks toward the same 3:30-4:00 finale. Every other category's
-        // freeroll still targets its own tier, unchanged.
-        const targetTierId = satellite.tier_id === "hourly" ? "race_to_close" : satellite.tier_id;
+        // Two deliberate redirects, both landing on a SHARED destination
+        // instead of that same category's own Runner tier:
+        //   Degen Hours -> that day's Race to the Close (built earlier)
+        //   Full Day / Morning / Afternoon -> Weekly Qualifier's Runner tier
+        // Weekly Qualifier's OWN freeroll never reaches this branch at all
+        // — its prizeType is 'main_event_ticket', not 'runner_entry' (see
+        // FREEROLL_PRIZE_CONFIG), so it keeps its existing direct,
+        // guaranteed-ticket behavior completely unchanged.
+        const targetTierId =
+          satellite.tier_id === "hourly"
+            ? "race_to_close"
+            : ["full_day", "morning", "afternoon"].includes(satellite.tier_id)
+              ? "weekly_qualifier"
+              : satellite.tier_id;
         db.prepare(
           "INSERT INTO pending_allocations (account_id, target_type, target_tier_id, target_price_level, allocations_json, source) VALUES (?, 'satellite', ?, 'runner', ?, 'freeroll_prize')"
         ).run(r.accountId, targetTierId, JSON.stringify([]));

@@ -543,9 +543,9 @@ function renderTierFilterBar() {
 
 const CATEGORY_DESCRIPTIONS = {
   weekly_qualifier: "Runs 9:30am ET Monday (opening bell) through 4:00pm ET Friday (closing bell) — the SAME window as the Main Event. Win a contest here and you're straight into the Main Event for free.",
-  full_day: "Runs the full trading session, 9:30 AM \u2013 4:00 PM ET, every weekday. New contest opens each trading day. Win the free tier and you get a ticket into that day's Runner-level satellite.",
-  morning: "Runs the first half of the trading session, 9:30 AM \u2013 1:00 PM ET, every weekday. Win the free tier and you get a ticket into that day's Runner-level satellite.",
-  afternoon: "Runs the second half of the trading session, 1:00 PM \u2013 4:00 PM ET, every weekday. Win the free tier and you get a ticket into that day's Runner-level satellite.",
+  full_day: "Runs the full trading session, 9:30 AM \u2013 4:00 PM ET, every weekday. New contest opens each trading day. Win the free tier and you get a ticket into Weekly Qualifier's Runner tier.",
+  morning: "Runs the first half of the trading session, 9:30 AM \u2013 1:00 PM ET, every weekday. Win the free tier and you get a ticket into Weekly Qualifier's Runner tier.",
+  afternoon: "Runs the second half of the trading session, 1:00 PM \u2013 4:00 PM ET, every weekday. Win the free tier and you get a ticket into Weekly Qualifier's Runner tier.",
   hourly: "🔥 Degen Hours — no 10% position cap, ever. Runs every hour during real market hours (9:30am – 3:30pm ET), weekdays only. Win the free roll and you get a ticket into today's Degen Race to the Close — every hourly win stacks another one.",
   race_to_close: "🏁 The finale — 3:30–4:00pm ET, once a day, weekdays only. Every Degen Hours win today has been stacking tickets toward this. Jump in directly too, any paid tier, as many entries as you want.",
 };

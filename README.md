@@ -1205,6 +1205,30 @@ landing/Lobby freeroll callout strips all updated to describe the actual
 new mechanic — swept for every remaining "24/7" and "every hour" claim
 left over from the previous design.
 
+## Full Day / Morning / Afternoon freerolls now converge on Weekly Qualifier
+
+Winning any of the three daily freerolls (Full Day, Morning, Afternoon) now
+redirects to a ticket into **Weekly Qualifier's Runner tier** specifically,
+instead of that same category's own Runner room. Degen Hours is untouched
+— still redirects to Race to the Close, built last round. Weekly
+Qualifier's own freeroll is also untouched — still gives a direct,
+guaranteed Main Event ticket the moment its own fund has one banked,
+subsidized exactly as it always has been; it never runs through this
+redirect logic at all, confirmed directly rather than assumed.
+
+Net effect: every daily freeroll winner now funnels real, meaningful
+volume into Weekly Qualifier specifically, rather than each category
+running its own small, disconnected Runner room.
+
+Verified directly against all four categories — Full Day, Morning, and
+Afternoon all correctly redirect to `weekly_qualifier`; Degen Hours still
+correctly redirects to `race_to_close`; Weekly's own freeroll config
+confirmed unchanged. Full existing regression suite (accounting, Race to
+the Close end-to-end) still passes.
+
+Updated the callout strip, category descriptions, and the Rules page
+wherever the old "same category's own Runner tier" language appeared.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)
