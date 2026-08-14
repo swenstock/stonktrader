@@ -11,8 +11,10 @@ const MAX_INITIAL_POSITION_PCT = 0.10; // 10% of portfolio value, checked at tim
 // position rule. Everywhere else on the platform, sizing discipline is
 // the whole point; Hourly is explicitly the wild-card mode where you can
 // swing for the fences on a single name. $2B min market cap still applies
-// everywhere, including Hourly — that's a liquidity/manipulation
-// safeguard, not a sizing-discipline one, and stays universal.
+// everywhere, including Hourly — but this is paper trading, nothing here
+// can actually manipulate a real market. It's just which stocks the
+// platform's feed currently includes (established, real companies), not
+// a Degen-specific restriction.
 function isDegenHoursPortfolio(portfolioId) {
   const satelliteEntry = db
     .prepare(
@@ -181,8 +183,10 @@ router.post("/:id/trades", requireAuth, (req, res) => {
   // Trading rules — sensible position sizing, not gambling. Only apply to
   // BUY orders; selling to reduce risk is never restricted. Degen Hours
   // (Hourly) is the one deliberate exception to the sizing rule — the
-  // $2B market cap floor still applies everywhere, no exceptions, since
-  // that's a liquidity/manipulation safeguard, not a discipline one.
+  // $2B market cap floor still applies everywhere, no exceptions. Not a
+  // manipulation safeguard (this is paper trading, nothing real to
+  // manipulate) — just reflects which stocks the platform's feed
+  // currently offers, established companies, no penny stocks.
   if (side === "buy") {
     if (quote.marketCap != null && quote.marketCap < MIN_MARKET_CAP) {
       return res.status(400).json({

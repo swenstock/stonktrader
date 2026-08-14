@@ -74,7 +74,7 @@ nav{padding:14px 28px 0;border-bottom:1px solid var(--border);
 .ps-box b{display:block;font-family:'IBM Plex Mono',monospace;font-size:20px;margin-top:5px;}
 
 .main-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:20px 28px 40px;max-width:1200px;margin:0 auto;}
-.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;overflow-x:hidden;max-width:100%;box-sizing:border-box;}
 .panel h3{margin:0 0 14px;font-size:15px;display:flex;justify-content:space-between;align-items:center;}
 .panel h3 .tag{font-size:11px;color:var(--text-dim);font-weight:400;font-family:'IBM Plex Mono',monospace;}
 
@@ -492,7 +492,8 @@ tr.watch-row:hover{background:var(--surface-2);}
 
 /* ---------- How It Works ---------- */
 .howitworks-page{max-width:900px;margin:0 auto;padding:0 28px 60px;display:flex;flex-direction:column;gap:22px;}
-.hiw-block{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 24px;}
+.hiw-block{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 24px;overflow-wrap:break-word;word-break:break-word;}
+.hiw-block p{overflow-wrap:break-word;word-break:break-word;}
 .hiw-block .hiw-n{font-family:'IBM Plex Mono',monospace;color:var(--gold);font-size:13px;font-weight:700;margin-bottom:8px;}
 .hiw-block h3{margin:0 0 8px;font-size:17px;}
 .hiw-block p{margin:0;color:var(--text-dim);font-size:14px;line-height:1.6;}

@@ -1983,6 +1983,33 @@ async function refreshCurrentPortfolio() {
   }
 }
 
+async function openTraderProfile(accountId) {
+  if (!accountId) return;
+  document.getElementById("traderProfileModal").style.display = "flex";
+  document.getElementById("traderProfileName").textContent = "Loading…";
+  document.getElementById("traderProfileBody").innerHTML = "";
+  try {
+    const stats = await api(`/leaderboard/account/${accountId}`);
+    document.getElementById("traderProfileName").textContent = stats.displayName;
+    document.getElementById("traderProfileBody").innerHTML = `
+      <div class="stats-grid">
+        <div class="ps-box"><span>Contests played</span><b class="mono">${stats.contestsPlayed}</b></div>
+        <div class="ps-box"><span>Wins</span><b class="mono">${stats.wins}</b></div>
+        <div class="ps-box"><span>Brokers won</span><b class="mono">${stats.brokersWon}</b></div>
+        <div class="ps-box"><span>Tickets won</span><b class="mono">${stats.ticketsWon}</b></div>
+      </div>
+      <div class="ps-box" style="margin-top:10px;"><span>Lifetime P&amp;L</span><b class="mono" style="color:${stats.lifetimePL >= 0 ? "var(--green)" : "var(--red)"};">${stats.lifetimePL >= 0 ? "+" : "-"}$${Math.abs(stats.lifetimePL).toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></div>
+    `;
+  } catch (err) {
+    document.getElementById("traderProfileName").textContent = "Couldn't load this trader";
+  }
+}
+function closeTraderProfile() {
+  document.getElementById("traderProfileModal").style.display = "none";
+}
+document.getElementById("traderProfileModalClose")?.addEventListener("click", closeTraderProfile);
+document.getElementById("traderProfileModalBackdrop")?.addEventListener("click", closeTraderProfile);
+
 function leaderboardRowsHtml(rows) {
   return (
     rows
@@ -1990,13 +2017,20 @@ function leaderboardRowsHtml(rows) {
         const cls = r.pl >= 0 ? "up" : "down";
         return `<div class="lb-row">
           <span class="lb-rank ${r.rank === 1 ? "gold" : ""}">${r.rank}</span>
-          <span class="lb-name">${r.displayName}</span>
+          <span class="lb-name lb-name-clickable" data-account-id="${r.accountId ?? ""}">${r.displayName}</span>
           <span class="lb-pnl ${cls} mono">${r.pl >= 0 ? "+" : "-"}$${Math.abs(r.pl).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
         </div>`;
       })
       .join("") || `<div class="history-empty">No entrants yet.</div>`
   );
 }
+// Delegated on the document — covers every leaderboard render (room,
+// context, live drilldown) without needing a listener re-attached after
+// every single re-render.
+document.addEventListener("click", (e) => {
+  const nameEl = e.target.closest(".lb-name-clickable");
+  if (nameEl && nameEl.dataset.accountId) openTraderProfile(nameEl.dataset.accountId);
+});
 
 // ---------------- Leaderboards tab ----------------
 function renderLiveContestsList() {
