@@ -123,14 +123,17 @@ const ONBOARDING_CONTENT = {
   portfolio: {
     icon: "✅",
     title: "You're in!",
-    body: "Now let's set up your portfolio — pick your stocks before your free Weekly contest resolves. Head to My Contests to get started.",
+    bodyFor: (wasReservation) =>
+      wasReservation
+        ? "Now let's set up your portfolio — pick your stocks before your free Weekly contest starts. Once it opens, your reservation fires automatically with whatever's set."
+        : "Now let's set up your portfolio — pick your stocks anytime before your free Weekly contest resolves. Head to My Contests to get started.",
     cta: "Go to My Contests",
     action: () => switchView("mycontests"),
   },
   to_hourly: {
     icon: "⚡",
-    title: "While Weekly plays out — try Hourly",
-    body: "You'll hear back on Weekly soon. In the meantime, there's an Hourly free roll open right now — resolves within the hour, so you'll see a second result today too.",
+    title: "Trade now, free — try Hourly",
+    body: "It's open right now and resolves within the hour. You'll get a fresh free roll like this every other hourly session, all day, every day.",
     cta: "Enter my free Hourly contest",
     action: () => {
       switchView("lobby");
@@ -162,7 +165,19 @@ function showOnboardingPopup(step) {
   if (!content) return;
   document.getElementById("onboardingIcon").textContent = content.icon;
   document.getElementById("onboardingTitle").textContent = content.title;
-  document.getElementById("onboardingBody").textContent = content.body;
+  // The "set up your portfolio" steps need different wording depending on
+  // HOW the trader actually entered: if the room was already open, they
+  // got a real portfolio immediately and can keep adjusting picks right up
+  // until it resolves. If the room wasn't open yet (a reservation), the
+  // real deadline is before it STARTS — once it opens, the reservation
+  // auto-fires with whatever's configured. Same popup covering both cases
+  // with one static verb was correct for one and wrong for the other.
+  const wasReservation = localStorage.getItem("onboardingLastEntryWasReservation") === "true";
+  const body =
+    (step === "portfolio" || step === "portfolio_hourly") && typeof content.bodyFor === "function"
+      ? content.bodyFor(wasReservation)
+      : content.body;
+  document.getElementById("onboardingBody").textContent = body;
   document.getElementById("onboardingCtaBtn").textContent = content.cta;
   document.getElementById("onboardingCtaBtn").onclick = () => {
     closeOnboardingPopup();
@@ -723,6 +738,7 @@ async function joinSatellite(satelliteId, qty = 1, onboardingFromStep = null, ro
     );
     if (onboardingFromStep) {
       localStorage.setItem("onboardingCurrentRoomLocksAt", roomLocksAt || "");
+      localStorage.setItem("onboardingLastEntryWasReservation", "false");
       advanceOnboarding(onboardingFromStep, onboardingFromStep === "welcome" ? "portfolio" : "portfolio_hourly");
     }
   } catch (err) {
@@ -757,6 +773,7 @@ async function reserveRoom(tierId, priceLevel, qty = 1, onboardingFromStep = nul
       // opensAt + 1hr.
       const estimatedLocksAt = roomOpensAt ? new Date(new Date(roomOpensAt).getTime() + 60 * 60000).toISOString() : "";
       localStorage.setItem("onboardingCurrentRoomLocksAt", estimatedLocksAt);
+      localStorage.setItem("onboardingLastEntryWasReservation", "true");
       advanceOnboarding(onboardingFromStep, onboardingFromStep === "welcome" ? "portfolio" : "portfolio_hourly");
     }
   } catch (err) {
