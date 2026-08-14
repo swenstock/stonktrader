@@ -17,8 +17,13 @@
     <div class="auth-pitch">
       <div class="eyebrow">STONK BROKER TERMINAL</div>
       <h1 class="pixel-headline auth-pixel-headline">CAN'T BUY<br>THE BROKER?<br><span class="accent">EARN THE<br>BROKER.</span></h1>
-      <p class="auth-pitch-text">Trade real markets with <b class="hero-price-callout">$100,000</b> in paper money. Win contests, earn free Main Event tickets, and compete for a real, tradeable Stonk Broker NFT.</p>
-      <p class="auth-pitch-cta">Sign up today — get a <b class="hero-price-callout">free roll every week</b>, no wallet, no risk, and a real shot at winning a Stonk Broker. Ready for more? Daily and weekly contests start at just <b class="hero-price-callout">$1</b>.</p>
+      <p class="auth-pitch-text">Trade real markets with <b class="hero-price-callout">$100,000</b> in paper money. Win contests, earn real prizes, and compete for a real, tradeable Stonk Broker NFT.</p>
+      <p class="auth-pitch-cta">Sign up today — a <b class="hero-price-callout">free roll every hour</b>, every day, and every week, no wallet, no risk, and a real shot at winning a Stonk Broker. Ready for more? Daily and weekly contests start at just <b class="hero-price-callout">$1</b>.</p>
+      <div class="freeroll-callout-strip">
+        <div class="freeroll-callout-item"><b>Hourly</b><span>a fresh free roll every hour, 24/7</span></div>
+        <div class="freeroll-callout-item"><b>Daily</b><span>Full Day, Morning &amp; Afternoon each free once a day</span></div>
+        <div class="freeroll-callout-item"><b>Weekly</b><span>your free shot straight at the Main Event</span></div>
+      </div>
       <div class="journey-strip">
         <span class="journey-step">🎲 FREE ROLL</span><span class="journey-arrow">→</span>
         <span class="journey-step">🔔 SATELLITE</span><span class="journey-arrow">→</span>
@@ -91,7 +96,12 @@
       <div class="lobby-hero-text">
         <div class="eyebrow">STONK BROKER TERMINAL</div>
         <h1 class="pixel-headline">CAN'T BUY<br>THE BROKER?<br><span class="accent">EARN THE<br>BROKER.</span></h1>
-        <p><b class="hero-price-callout" style="font-size:1.5em;">START 100% FREE.</b> Sign up, no wallet, no risk — just an account and a free roll into the game. All it takes to become a Stonk Broker is outtrading the floor with a $100,000 paper money account. Win your free contest, earn a Main Event ticket, win the Main Event, walk away with a real Stonk Broker. Ready for more? Daily and weekly contests start at just $1.</p>
+        <p><b class="hero-price-callout" style="font-size:1.5em;">START 100% FREE.</b> Sign up, no wallet, no risk — a free roll every hour, every day, and every week. All it takes to become a Stonk Broker is outtrading the floor with a $100,000 paper money account. Win your free contest, earn a real prize, work your way to the Main Event, walk away with a real Stonk Broker. Ready for more? Daily and weekly contests start at just $1.</p>
+        <div class="freeroll-callout-strip">
+          <div class="freeroll-callout-item"><b>Hourly</b><span>a fresh free roll every hour, 24/7</span></div>
+          <div class="freeroll-callout-item"><b>Daily</b><span>Full Day, Morning &amp; Afternoon each free once a day</span></div>
+          <div class="freeroll-callout-item"><b>Weekly</b><span>your free shot straight at the Main Event</span></div>
+        </div>
         <div class="journey-strip">
           <span class="journey-step">🎲 FREE ROLL</span><span class="journey-arrow">→</span>
           <span class="journey-step">🔔 SATELLITE</span><span class="journey-arrow">→</span>
@@ -394,6 +404,18 @@
   <!-- ===== "You're in!" confirmation (reused for both open-room joins and pending reservations) ===== -->
   <!-- ===== Entry review modal (before joining/reserving any room or the Main Event) ===== -->
   <!-- ===== Trade settings — toggle guardrail screens back on ===== -->
+  <!-- ===== First-time onboarding sequence (new signups only) ===== -->
+  <div id="onboardingModal" class="trade-modal" style="display:none;">
+    <div class="trade-modal-backdrop" id="onboardingBackdrop"></div>
+    <div class="trade-modal-card" style="max-width:420px;text-align:center;">
+      <div class="onboarding-icon" id="onboardingIcon">🎲</div>
+      <h3 id="onboardingTitle">Welcome!</h3>
+      <p id="onboardingBody" style="color:var(--text-dim);font-size:13.5px;line-height:1.6;"></p>
+      <button class="btn btn-gold" id="onboardingCtaBtn" style="width:100%;margin-top:14px;">Continue</button>
+      <button class="onboarding-skip-link" id="onboardingSkipBtn">Maybe later</button>
+    </div>
+  </div>
+
   <div id="tradeSettingsModal" class="trade-modal" style="display:none;">
     <div class="trade-modal-backdrop" id="tradeSettingsBackdrop"></div>
     <div class="trade-modal-card" style="max-width:420px;">
@@ -508,7 +530,7 @@
       <div class="hiw-block">
         <div class="hiw-n">01</div>
         <h3>Enter a satellite</h3>
-        <p>Pick any of the daily sessions (Full Day, Morning, Afternoon) or the Weekly Qualifier — each runs at four price points starting around $1, plus a free roll on the Weekly Qualifier. Entering gives you a dedicated $100,000 paper portfolio, just for that contest.</p>
+        <p>Pick any of the daily sessions (Full Day, Morning, Afternoon), Hourly, or the Weekly Qualifier — every single one of them has its own free roll, plus four paid price points starting around $1. Entering gives you a dedicated $100,000 paper portfolio, just for that contest.</p>
       </div>
       <div class="hiw-block">
         <div class="hiw-n">02</div>
@@ -559,6 +581,12 @@
         <div class="hiw-n">RULE 02</div>
         <h3>Max 10% of your portfolio per position — at entry</h3>
         <p>Any single buy that would push a position's cost basis over 10% of your portfolio's current value gets blocked. This applies only to new purchases — if a position you already own grows past 10% because the stock ran up, that's completely fine and not restricted. The rule stops you from betting the whole portfolio on one name; it doesn't punish you for being right.</p>
+      </div>
+
+      <div class="hiw-block rule-block">
+        <div class="hiw-n">RULE 03</div>
+        <h3>Won prizes ≠ Main Event tickets — use it or lose it</h3>
+        <p>A Main Event ticket is yours to hold — redeem it whenever you want, no expiry. A prize you win from a Full Day, Morning, Afternoon, or Hourly freeroll is different: it's an entry into that same category's Runner tier, automatically locked into the very next occurrence, no choosing a different round and no saving it for later. Set up your picks before it opens, or it plays out with 100% cash — either way, that's your one shot with it.</p>
       </div>
 
       <div class="hiw-block rule-block">

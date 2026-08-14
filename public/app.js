@@ -81,7 +81,7 @@ document.getElementById("signupForm").addEventListener("submit", async (e) => {
         referralCode: document.getElementById("signupReferral").value,
       }),
     });
-    setSession(data.token, data.displayName);
+    setSession(data.token, data.displayName, true); // true = fresh signup, triggers onboarding
   } catch (err) {
     msg.textContent = err.message;
   }
@@ -93,20 +93,87 @@ document.getElementById("logoutBtn").addEventListener("click", () => {
   location.reload();
 });
 
-function setSession(t, name) {
+function setSession(t, name, isNewSignup) {
   token = t;
   displayName = name;
   localStorage.setItem("token", t);
   localStorage.setItem("displayName", name);
-  showApp();
+  showApp(isNewSignup);
 }
 
-function showApp() {
+// ---------------- First-time onboarding sequence ----------------
+const ONBOARDING_CONTENT = {
+  welcome: {
+    icon: "🎲",
+    title: "You get a free roll every hour",
+    body: "Plus one every day, and one every week — no wallet, no risk, just an account. Let's start with your free Hourly contest, since it resolves within the hour and you'll see a real result fast.",
+    cta: "Enter my free Hourly contest",
+    action: () => {
+      switchView("lobby");
+      tierFilter = new Set(["free"]);
+      renderTierFilterBar();
+      renderSatelliteCategoryTree();
+      const hourlyCat = satellitesCache.categories?.find((c) => c.id === "hourly");
+      if (hourlyCat) showSatelliteDrilldown(hourlyCat);
+    },
+  },
+  portfolio: {
+    icon: "✅",
+    title: "You're in!",
+    body: "Now let's set up your portfolio — pick your stocks before your free contest resolves. Head to My Contests to get started.",
+    cta: "Go to My Contests",
+    action: () => switchView("mycontests"),
+  },
+  ready: {
+    icon: "🚀",
+    title: "You're all set up",
+    body: "Ready for more? Check the Lobby for what's starting soon — rooms start at just $1 when you're ready to go beyond free.",
+    cta: "Go to the Lobby",
+    action: () => switchView("lobby"),
+  },
+};
+
+function showOnboardingPopup(step) {
+  const content = ONBOARDING_CONTENT[step];
+  if (!content) return;
+  document.getElementById("onboardingIcon").textContent = content.icon;
+  document.getElementById("onboardingTitle").textContent = content.title;
+  document.getElementById("onboardingBody").textContent = content.body;
+  document.getElementById("onboardingCtaBtn").textContent = content.cta;
+  document.getElementById("onboardingCtaBtn").onclick = () => {
+    closeOnboardingPopup();
+    content.action();
+  };
+  document.getElementById("onboardingModal").style.display = "flex";
+}
+function closeOnboardingPopup() {
+  document.getElementById("onboardingModal").style.display = "none";
+}
+document.getElementById("onboardingBackdrop").addEventListener("click", closeOnboardingPopup);
+document.getElementById("onboardingSkipBtn").addEventListener("click", () => {
+  localStorage.setItem("onboardingStep", "dismissed");
+  closeOnboardingPopup();
+});
+
+// Advances the sequence only if the trader is actually still IN it —
+// existing users, or anyone who already finished/skipped, never see these
+// again regardless of what they do in the app afterward.
+function advanceOnboarding(fromStep, toStep) {
+  if (localStorage.getItem("onboardingStep") !== fromStep) return;
+  localStorage.setItem("onboardingStep", toStep);
+  showOnboardingPopup(toStep);
+}
+
+function showApp(isNewSignup) {
   document.getElementById("authScreen").style.display = "none";
   document.getElementById("appScreen").style.display = "block";
   const welcomeEl = document.getElementById("welcomeMsg");
   if (welcomeEl) welcomeEl.textContent = `Hey, ${displayName}`;
   boot();
+  if (isNewSignup) {
+    localStorage.setItem("onboardingStep", "welcome");
+    setTimeout(() => showOnboardingPopup("welcome"), 600); // small delay so the Lobby is visible underneath first
+  }
 }
 
 // ---------------- Connect Wallet (simulated) ----------------
@@ -446,7 +513,7 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
         feeEach: lvl.entryFee,
         maxQty: remaining,
         note: `${lvl.entrantCount} traders already in this contest. ${lvl.ticketsProjected || 0} ticket(s) currently funded.`,
-        onConfirm: (qty) => joinSatellite(lvl.id, qty),
+        onConfirm: (qty) => joinSatellite(lvl.id, qty, lvl.priceLevel === "free"),
       });
     });
   });
@@ -466,7 +533,7 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
         feeEach: lvl.entryFee,
         maxQty: remaining,
         note: "This contest hasn't opened yet — reserving locks your spot now. Set up your picks anytime before it opens, from My Contests.",
-        onConfirm: (qty) => reserveRoom(btn.dataset.tier, btn.dataset.level, qty),
+        onConfirm: (qty) => reserveRoom(btn.dataset.tier, btn.dataset.level, qty, btn.dataset.level === "free"),
       });
     });
   });
@@ -545,7 +612,7 @@ document.getElementById("youreInModalBackdrop").addEventListener("click", closeY
 // all pass the server's "count < max" check simultaneously and race past
 // the cap. Sequential + awaited keeps the max-10 (or max-1 for freeroll)
 // limit airtight no matter how many are requested at once.
-async function joinSatellite(satelliteId, qty = 1) {
+async function joinSatellite(satelliteId, qty = 1, isFreeroll = false) {
   let succeeded = 0;
   try {
     for (let i = 0; i < qty; i++) {
@@ -558,6 +625,7 @@ async function joinSatellite(satelliteId, qty = 1) {
       succeeded === 1 ? "You're in!" : `You're in — ${succeeded} entries!`,
       "Head to My Contests to trade — each entry's own $100,000 portfolio is ready for you."
     );
+    if (isFreeroll) advanceOnboarding("welcome", "portfolio");
   } catch (err) {
     await refreshContests();
     refreshPortfoliosBalance();
@@ -568,7 +636,7 @@ async function joinSatellite(satelliteId, qty = 1) {
 // Reserving a room that hasn't opened yet — creates an empty (100% cash)
 // pending allocation. No picks required now; set up the actual portfolio
 // anytime before the room opens, from My Contests.
-async function reserveRoom(tierId, priceLevel, qty = 1) {
+async function reserveRoom(tierId, priceLevel, qty = 1, isFreeroll = false) {
   let succeeded = 0;
   try {
     for (let i = 0; i < qty; i++) {
@@ -584,6 +652,7 @@ async function reserveRoom(tierId, priceLevel, qty = 1) {
       succeeded === 1 ? "You're in!" : `You're in — ${succeeded} spots reserved!`,
       "Set up each portfolio anytime before this contest opens — it'll auto-fill with your picks the instant it does."
     );
+    if (isFreeroll) advanceOnboarding("welcome", "portfolio");
   } catch (err) {
     await refreshContests();
     await refreshMyContests();
@@ -886,9 +955,23 @@ function allocationRowHtml(a, entryNumber) {
       : `${a.targetTierId.replace("_", " ")} — ${a.targetPriceLevel}`;
   const numberedLabel = entryNumber ? `${targetLabel} (Entry ${entryNumber})` : targetLabel;
   const hasPicks = a.allocations.length > 0;
+  const isWonPrize = a.source === "freeroll_prize" || a.source === "freeroll_bonus";
+  // A won prize is fundamentally different from a Main Event ticket: it's
+  // NOT something you hold and redeem whenever you want. It's already
+  // locked into the very next occurrence, automatically — use it (set up
+  // your picks) or it plays out with 100% cash and is simply gone. No
+  // saving it for later, no choosing a different round.
+  const wonPrizeLabel =
+    a.source === "freeroll_prize"
+      ? `<span class="won-prize-badge">🎁 Free entry you WON</span>`
+      : a.source === "freeroll_bonus"
+        ? `<span class="won-prize-badge">🎁 Bonus freeroll you WON</span>`
+        : "";
   const items = hasPicks
     ? a.allocations.map((x) => `${x.symbol} ${x.percent}%`).join(", ")
-    : "Reserved — no picks yet, 100% cash. Set up your portfolio before this contest opens.";
+    : isWonPrize
+      ? "Use it or lose it — this is locked into the next round automatically. Set up picks now, or it plays out on 100% cash."
+      : "Reserved — no picks yet, 100% cash. Set up your portfolio before this contest opens.";
   const statusBadge =
     a.status === "pending"
       ? `<span class="table-badge">Waiting for open</span>`
@@ -896,9 +979,9 @@ function allocationRowHtml(a, entryNumber) {
         ? `<span class="table-badge joined">Filled ✓</span>`
         : `<span class="table-badge" style="opacity:.6;">Failed: ${a.failReason || ""}</span>`;
   const isPending = a.status === "pending";
-  return `<div class="portfolio-row ${isPending ? "editable-alloc-row" : ""}" ${isPending ? `data-alloc-id="${a.id}"` : ""}>
+  return `<div class="portfolio-row ${isPending ? "editable-alloc-row" : ""} ${isWonPrize ? "won-prize-row" : ""}" ${isPending ? `data-alloc-id="${a.id}"` : ""}>
     <div class="portfolio-row-main">
-      <div class="portfolio-row-label" style="text-transform:capitalize;">${numberedLabel}</div>
+      <div class="portfolio-row-label" style="text-transform:capitalize;">${numberedLabel} ${wonPrizeLabel}</div>
       <div class="portfolio-row-sub mono">${items}</div>
     </div>
     ${statusBadge}
@@ -1383,6 +1466,7 @@ async function executeTrade() {
     const summary = `${result.side === "buy" ? "Bought" : "Sold"} ${qtyDisplay} ${result.symbol} @ $${result.price.toFixed(2)}`;
     pendingTrade = null;
     refreshCurrentPortfolio();
+    if (result.side === "buy") setTimeout(() => advanceOnboarding("portfolio", "ready"), 2500);
 
     if (getTradePref("skipOrderFilled")) {
       showTradeModalState("main");
@@ -1913,6 +1997,7 @@ document.getElementById("submitAllocationBtn").addEventListener("click", async (
     msg.style.color = "var(--green)";
     refreshContests();
     refreshMyContests();
+    if (allocations.length > 0) setTimeout(() => advanceOnboarding("portfolio", "ready"), 1600);
     setTimeout(closeAllocationModal, 1400);
   } catch (err) {
     msg.style.color = "var(--red)";

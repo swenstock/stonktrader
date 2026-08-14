@@ -228,10 +228,11 @@ CREATE TABLE IF NOT EXISTS pending_allocations (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
   target_type TEXT NOT NULL, -- 'contest' | 'satellite'
-  target_tier_id TEXT NOT NULL, -- 'main_event', or 'full_day'/'morning'/'afternoon'/'weekly_qualifier'
-  target_price_level TEXT, -- NULL for contest, 'low'|'mid'|'high' for satellite
+  target_tier_id TEXT NOT NULL, -- 'main_event', or 'full_day'/'morning'/'afternoon'/'weekly_qualifier'/'hourly'
+  target_price_level TEXT, -- NULL for contest, 'free'|'runner'|'low'|'mid'|'high' for satellite
   allocations_json TEXT NOT NULL, -- [{symbol, percent}, ...]
   status TEXT NOT NULL DEFAULT 'pending', -- pending | applied | cancelled | failed
+  source TEXT NOT NULL DEFAULT 'self', -- 'self' (player clicked Enter/Reserve) | 'freeroll_prize' (won a Runner-tier entry) | 'freeroll_bonus' (won a bonus freeroll entry from an underfunded pool)
   fail_reason TEXT,
   applied_to_contest_id INTEGER REFERENCES contests(id),
   applied_to_satellite_id INTEGER REFERENCES satellites(id),

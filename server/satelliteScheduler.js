@@ -204,12 +204,12 @@ function resolveSatellite(satellite) {
       } else if (rank === 1 && ticketsFunded === 1 && freerollPrizeType === "runner_entry") {
         prizeType = "runner_entry";
         db.prepare(
-          "INSERT INTO pending_allocations (account_id, target_type, target_tier_id, target_price_level, allocations_json) VALUES (?, 'satellite', ?, 'runner', ?)"
+          "INSERT INTO pending_allocations (account_id, target_type, target_tier_id, target_price_level, allocations_json, source) VALUES (?, 'satellite', ?, 'runner', ?, 'freeroll_prize')"
         ).run(r.accountId, satellite.tier_id, JSON.stringify([]));
       } else if (rank === 1 && ticketsFunded === 0) {
         prizeType = "bonus_freeroll";
         db.prepare(
-          "INSERT INTO pending_allocations (account_id, target_type, target_tier_id, target_price_level, allocations_json) VALUES (?, 'satellite', ?, 'free', ?)"
+          "INSERT INTO pending_allocations (account_id, target_type, target_tier_id, target_price_level, allocations_json, source) VALUES (?, 'satellite', ?, 'free', ?, 'freeroll_bonus')"
         ).run(r.accountId, satellite.tier_id, JSON.stringify([]));
       }
     } else if (rank <= ticketsFunded) {

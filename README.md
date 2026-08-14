@@ -914,6 +914,59 @@ conversation is **not built yet**. This round focused entirely on the
 underlying Hourly + freeroll-prize architecture, which needed to be solid
 and well-tested before building a UI flow on top of it. Next up.
 
+## First-time onboarding sequence
+
+Three-step guided popup flow, triggers **only on actual signup** (not
+login) — hooked directly into the signup success event, not a generic
+"first visit" check, so existing users never see it again even if they
+clear browser storage:
+
+1. **Welcome** — CTA drops them straight into the Lobby with the Freeroll
+   filter active and Hourly's drill-down already open (always available,
+   resolves within the hour — the fastest possible first result)
+2. **Portfolio setup** — fires after they successfully enter any freeroll,
+   prompts them to head to My Contests and configure their picks
+3. **Ready for more** — fires after their first real buy (or saving a real,
+   non-empty allocation, covering the reservation path too), prompts them
+   to check the Lobby for what's starting soon from $1
+
+Every step can be skipped via "Maybe later," which permanently ends the
+sequence. State tracked in `localStorage` — consistent with every other
+per-browser preference already in this app (watchlist, trade settings).
+
+**Caught a real syntax bug while building this** — an edit meant to insert
+one line accidentally merged two unrelated event handlers together
+(signup's closing brace landed inside logout's body). Full syntax check
+caught it immediately; fixed before it ever reached a build.
+
+## Clarified: won prizes are NOT tickets — use it or lose it
+
+Confirmed the mechanic: winning a non-weekly freeroll auto-reserves you
+into the very next occurrence of that category's Runner tier — no
+choosing when, no saving it for later, fundamentally different from a
+Main Event ticket (which you hold and redeem whenever you want).
+
+That distinction wasn't visible anywhere before this — a won prize looked
+identical to a reservation you clicked "Enter" on yourself. Fixed:
+
+- Added a `source` field to reservations (`self` / `freeroll_prize` /
+  `freeroll_bonus`), set correctly at the moment a prize is actually
+  awarded, exposed through the API
+- My Contests now shows a gold "🎁 Free entry you WON" badge and a gold
+  highlight on any reservation that came from a prize, with explicit
+  "use it or lose it" copy explaining it's locked into the next round
+  automatically
+- Added a dedicated Rules entry making the ticket-vs-prize distinction
+  unambiguous for anyone reading the rules cold, not just people who
+  happen to win and see the badge
+
+Verified directly: both prize types persist with the correct `source`
+value. Full regression suite still passes.
+
+**Schema changed this round** (`pending_allocations` gained a `source`
+column) — fresh sign-up needed after this deploy, same as any other
+schema change.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

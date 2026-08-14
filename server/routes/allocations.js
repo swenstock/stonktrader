@@ -14,6 +14,7 @@ function serialize(r) {
     targetPriceLevel: r.target_price_level,
     allocations: JSON.parse(r.allocations_json),
     status: r.status,
+    source: r.source, // 'self' | 'freeroll_prize' | 'freeroll_bonus' — lets the UI clearly flag a won prize vs a self-initiated reservation
     failReason: r.fail_reason,
     createdAt: r.created_at,
     appliedAt: r.applied_at,
