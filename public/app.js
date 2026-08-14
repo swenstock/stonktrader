@@ -1292,6 +1292,35 @@ const CLIENT_MAX_POSITION_PCT = 0.10; // must match server's MAX_INITIAL_POSITIO
 let latestPortfolioData = null;
 let pendingTrade = null;
 
+// ---- Trade flow preferences: two guardrail/informational screens a
+// trader can silence — persisted per-browser via localStorage, not tied
+// to a specific trade, and reversible anytime from the ⚙ link in the
+// trade view's sticky bar. ----
+function getTradePref(key) {
+  return localStorage.getItem(key) === "true";
+}
+function setTradePref(key, value) {
+  localStorage.setItem(key, value ? "true" : "false");
+}
+
+function openTradeSettings() {
+  // Checkbox meaning here is inverted from the stored preference — the
+  // stored flag is "skip this screen", the checkbox reads "show this
+  // screen", since that's the more intuitive way to present a toggle
+  // meant specifically for turning things back ON.
+  document.getElementById("settingsReviewToggle").checked = !getTradePref("skipTradeReview");
+  document.getElementById("settingsFilledToggle").checked = !getTradePref("skipOrderFilled");
+  document.getElementById("tradeSettingsModal").style.display = "flex";
+}
+function closeTradeSettings() {
+  document.getElementById("tradeSettingsModal").style.display = "none";
+}
+document.getElementById("tradeSettingsBtn")?.addEventListener("click", openTradeSettings);
+document.getElementById("tradeSettingsClose")?.addEventListener("click", closeTradeSettings);
+document.getElementById("tradeSettingsBackdrop")?.addEventListener("click", closeTradeSettings);
+document.getElementById("settingsReviewToggle")?.addEventListener("change", (e) => setTradePref("skipTradeReview", !e.target.checked));
+document.getElementById("settingsFilledToggle")?.addEventListener("change", (e) => setTradePref("skipOrderFilled", !e.target.checked));
+
 function initiateTrade(side, explicitQuantity, maxAllotment) {
   if (!currentPortfolioId) return;
   const msg = document.getElementById("tradeMsg");
@@ -1304,6 +1333,11 @@ function initiateTrade(side, explicitQuantity, maxAllotment) {
   const q = latestQuotes[selectedSymbol];
   const estPrice = q ? q.price : 0;
   pendingTrade = { side, quantity, symbol: selectedSymbol, estPrice, maxAllotment: !!maxAllotment };
+
+  if (getTradePref("skipTradeReview")) {
+    executeTrade();
+    return;
+  }
 
   document.getElementById("reviewAction").textContent = side === "buy" ? "Buy" : "Sell";
   document.getElementById("reviewAction").style.color = side === "buy" ? "var(--green)" : "var(--red)";
@@ -1321,7 +1355,12 @@ document.getElementById("reviewCancelBtn").addEventListener("click", () => {
   showTradeModalState("main");
 });
 
-document.getElementById("reviewConfirmBtn").addEventListener("click", async () => {
+document.getElementById("reviewConfirmBtn").addEventListener("click", () => {
+  if (document.getElementById("skipReviewCheckbox").checked) setTradePref("skipTradeReview", true);
+  executeTrade();
+});
+
+async function executeTrade() {
   if (!pendingTrade) return;
   const msg = document.getElementById("tradeMsg");
   try {
@@ -1335,19 +1374,30 @@ document.getElementById("reviewConfirmBtn").addEventListener("click", async () =
       }),
     });
     const qtyDisplay = (result.quantity.toFixed ? result.quantity.toFixed(4) : result.quantity).toString().replace(/\.?0+$/, "");
-    document.getElementById("filledSummary").textContent =
-      `${result.side === "buy" ? "Bought" : "Sold"} ${qtyDisplay} ${result.symbol} @ $${result.price.toFixed(2)}`;
-    showTradeModalState("filled");
+    const summary = `${result.side === "buy" ? "Bought" : "Sold"} ${qtyDisplay} ${result.symbol} @ $${result.price.toFixed(2)}`;
     pendingTrade = null;
     refreshCurrentPortfolio();
+
+    if (getTradePref("skipOrderFilled")) {
+      showTradeModalState("main");
+      msg.textContent = `✓ ${summary}`;
+      msg.style.color = "var(--green)";
+      setTimeout(() => {
+        if (msg.textContent === `✓ ${summary}`) msg.textContent = "";
+      }, 3000);
+    } else {
+      document.getElementById("filledSummary").textContent = summary;
+      showTradeModalState("filled");
+    }
   } catch (err) {
     showTradeModalState("main");
     msg.textContent = err.message;
     msg.style.color = "var(--red)";
   }
-});
+}
 
 document.getElementById("filledDoneBtn").addEventListener("click", () => {
+  if (document.getElementById("skipFilledCheckbox").checked) setTradePref("skipOrderFilled", true);
   document.getElementById("tradeMsg").textContent = "";
   showTradeModalState("main");
 });

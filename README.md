@@ -802,6 +802,29 @@ same as everywhere else. Stored in `localStorage`, so it's per-browser, not
 synced across devices — reasonable for now, worth moving server-side later
 if that matters.
 
+## Silenceable trade confirmation screens
+
+Both guardrail/informational steps in the trade flow can now be skipped,
+independently, by any trader who wants a faster loop:
+
+- **Review order screen** — "Don't show this again" checkbox, checking it
+  and confirming makes every future Buy/Sell execute immediately (true
+  one-click trading)
+- **Order filled screen** — "Don't show this again" checkbox, checking it
+  and hitting Done replaces the full confirmation screen with a quick
+  3-second inline flash instead
+
+Both are fully independent — skip one, both, or neither. **Reversible
+anytime** via a "⚙ Trade settings" link in the trade view's sticky bar,
+always visible while trading — opens a small toggle panel showing the
+current state of both, phrased as "show this screen" rather than "skip
+this screen" since that's the more intuitive framing for something meant
+specifically to turn things back on.
+
+Stored in `localStorage`, so — same caveat as the personal watchlist —
+this is per-browser, not synced across devices. Worth moving server-side
+if that becomes a real gap.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)
