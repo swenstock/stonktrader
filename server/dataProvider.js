@@ -75,12 +75,7 @@ const SYMBOLS = {
   GM: { name: "General Motors", exchange: "NYSE", currency: "USD", base: 47.3, marketCap: 55_000_000_000 },
   T: { name: "AT&T Inc.", exchange: "NYSE", currency: "USD", base: 21.4, marketCap: 150_000_000_000 },
   VZ: { name: "Verizon Communications", exchange: "NYSE", currency: "USD", base: 40.2, marketCap: 170_000_000_000 },
-  // Foreign markets — one representative ticker per exchange, extend as needed
-  "HSBA.L": { name: "HSBC Holdings", exchange: "LSE", currency: "GBP", base: 7.12, marketCap: 175_000_000_000 },
-  "SHOP.TO": { name: "Shopify Inc.", exchange: "TSX", currency: "CAD", base: 118.4, marketCap: 150_000_000_000 },
-  "BHP.AX": { name: "BHP Group", exchange: "ASX", currency: "AUD", base: 43.2, marketCap: 135_000_000_000 },
-  "7203.T": { name: "Toyota Motor Corp.", exchange: "TSE", currency: "JPY", base: 2890, marketCap: 250_000_000_000 },
-  "SAP.DE": { name: "SAP SE", exchange: "XETRA", currency: "EUR", base: 231.8, marketCap: 260_000_000_000 },
+  // US equities only for now — foreign markets (LSE/TSX/ASX/TSE/XETRA) removed, may return later.
 };
 
 const state = {};

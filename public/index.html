@@ -266,12 +266,15 @@
         </div>
       </div>
 
-      <div class="panel">
-        <h3>Allocation</h3>
-        <div class="allocation-donut-wrap">
-          <svg id="allocationDonut" viewBox="0 0 120 120" width="120" height="120"></svg>
-          <div id="allocationLegend" class="allocation-legend"></div>
-        </div>
+      <div class="panel allocation-trigger-panel">
+        <button class="allocation-trigger-btn" id="allocationTriggerBtn">
+          <span class="allocation-trigger-icon">🍩</span>
+          <span>
+            <b>View Allocation</b>
+            <span class="allocation-trigger-sub" id="allocationTriggerSub">Tap to see your portfolio breakdown</span>
+          </span>
+          <span class="allocation-trigger-arrow">›</span>
+        </button>
       </div>
 
       <div class="panel">
@@ -419,6 +422,19 @@
       <p id="onboardingBody" style="color:var(--text-dim);font-size:13.5px;line-height:1.6;"></p>
       <button class="btn btn-gold" id="onboardingCtaBtn" style="width:100%;margin-top:14px;">Continue</button>
       <button class="onboarding-skip-link" id="onboardingSkipBtn">Maybe later</button>
+    </div>
+  </div>
+
+  <!-- ===== Allocation popup — was a permanent inline panel, now click to open ===== -->
+  <div id="allocationDonutModal" class="trade-modal" style="display:none;">
+    <div class="trade-modal-backdrop" id="allocationDonutModalBackdrop"></div>
+    <div class="trade-modal-card" style="max-width:420px;">
+      <button class="trade-modal-close" id="allocationDonutModalClose">✕</button>
+      <h3>Allocation</h3>
+      <div class="allocation-donut-wrap">
+        <svg id="allocationDonut" viewBox="0 0 120 120" width="120" height="120"></svg>
+        <div id="allocationLegend" class="allocation-legend"></div>
+      </div>
     </div>
   </div>
 

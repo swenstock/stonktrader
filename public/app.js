@@ -542,10 +542,11 @@ function renderSatelliteCategoryTree() {
         .map((l) => `${l.priceLevelName || l.priceLevel} ${l.entryFee === 0 ? "FREE" : l.entryFee.toLocaleString()}`)
         .join(" · ");
       if (visibleLevels.length === 0) return "";
-      return `<div class="portfolio-row" title="${CATEGORY_DESCRIPTIONS[cat.id] || ""}">
+      return `<div class="portfolio-row">
         <div class="portfolio-row-main">
           <div class="portfolio-row-label">${cat.icon} ${cat.name} <span class="cat-tier-preview mono">${tierPreview}</span> ${hasFree ? '<span class="table-badge" style="margin-left:6px;">Free tier available</span>' : ""}</div>
           <div class="portfolio-row-sub mono">${openCount} of ${visibleLevels.length} contests open now</div>
+          ${CATEGORY_DESCRIPTIONS[cat.id] ? `<div class="cat-description">${CATEGORY_DESCRIPTIONS[cat.id]}</div>` : ""}
         </div>
         <button class="btn btn-outline btn-sm lobby-cat-btn" data-idx="${i}">Browse contests</button>
       </div>`;
@@ -1858,7 +1859,28 @@ function renderAllocationDonut(p) {
         `<div class="allocation-legend-item"><span class="allocation-legend-swatch" style="background:${s.color}"></span>${s.label}: ${((s.value / total) * 100).toFixed(1)}%</div>`
     )
     .join("");
+
+  // Quick preview on the trigger button itself — top holding + cash %, so
+  // there's still useful info visible without actually opening the popup.
+  const triggerSub = document.getElementById("allocationTriggerSub");
+  if (triggerSub) {
+    const topSlice = slices.filter((s) => s.label !== "Cash").sort((a, b) => b.value - a.value)[0];
+    const cashPct = ((p.cash / total) * 100).toFixed(0);
+    triggerSub.textContent = topSlice && topSlice.value > 0.01
+      ? `${topSlice.label} ${((topSlice.value / total) * 100).toFixed(0)}% · ${cashPct}% cash`
+      : "100% cash — no positions yet";
+  }
 }
+
+function openAllocationDonutModal() {
+  document.getElementById("allocationDonutModal").style.display = "flex";
+}
+function closeAllocationDonutModal() {
+  document.getElementById("allocationDonutModal").style.display = "none";
+}
+document.getElementById("allocationTriggerBtn")?.addEventListener("click", openAllocationDonutModal);
+document.getElementById("allocationDonutModalClose")?.addEventListener("click", closeAllocationDonutModal);
+document.getElementById("allocationDonutModalBackdrop")?.addEventListener("click", closeAllocationDonutModal);
 
 // Delegated listener, attached once at page load — survives any number of
 // re-renders of #positionsTable since it lives on a stable ancestor, not
