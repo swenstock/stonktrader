@@ -4,6 +4,8 @@ const { createPortfolio } = require("./portfolioValue");
 const { TIERS, FREEROLL_FUND_THRESHOLD } = require("./tierConfig");
 
 const MAX_ALLOCATION_PCT = 10; // matches the 10% max-initial-position trading rule, expressed 0-100
+const MAIN_EVENT_MAX_ENTRIES = 10; // must match CONFIG.maxEntriesPerAccount in contestScheduler.js — duplicated
+// here (not imported) specifically to avoid a circular require: contestScheduler.js already imports this file.
 
 function validateAllocations(allocations) {
   if (!Array.isArray(allocations)) {
@@ -84,7 +86,8 @@ function applyPendingSatelliteAllocations(satellite) {
       continue;
     }
 
-    const portfolioId = createPortfolio(pa.account_id, `${satellite.name} · ${new Date().toLocaleDateString()}`);
+    const label = `${satellite.name} · ${new Date().toLocaleDateString()} (Entry ${existingCount + 1})`;
+    const portfolioId = createPortfolio(pa.account_id, label);
     db.exec("BEGIN");
     db.prepare("UPDATE accounts SET stonk_balance = stonk_balance - ? WHERE id = ?").run(totalFee, pa.account_id);
     db.prepare(
@@ -119,13 +122,13 @@ function applyPendingContestAllocations(contest) {
 
   for (const pa of pending) {
     const account = db.prepare("SELECT * FROM accounts WHERE id = ?").get(pa.account_id);
-    const existingEntry = db
-      .prepare("SELECT id FROM contest_entries WHERE contest_id = ? AND account_id = ?")
-      .get(contest.id, pa.account_id);
+    const existingCount = db
+      .prepare("SELECT COUNT(*) as n FROM contest_entries WHERE contest_id = ? AND account_id = ?")
+      .get(contest.id, pa.account_id).n;
 
-    if (existingEntry) {
+    if (existingCount >= MAIN_EVENT_MAX_ENTRIES) {
       db.prepare("UPDATE pending_allocations SET status='failed', fail_reason=? WHERE id=?").run(
-        "Already entered this Main Event another way",
+        "Already at the max entries for the Main Event",
         pa.id
       );
       continue;
@@ -143,7 +146,7 @@ function applyPendingContestAllocations(contest) {
       continue;
     }
 
-    const label = `Main Event · Week of ${new Date(contest.week_start).toLocaleDateString()}`;
+    const label = `Main Event · Week of ${new Date(contest.week_start).toLocaleDateString()} (Entry ${existingCount + 1})`;
     const portfolioId = createPortfolio(pa.account_id, label);
     db.exec("BEGIN");
     if (ticket) {

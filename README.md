@@ -825,6 +825,41 @@ Stored in `localStorage`, so — same caveat as the personal watchlist —
 this is per-browser, not synced across devices. Worth moving server-side
 if that becomes a real gap.
 
+## Full consistency sweep — found two real bugs beyond the one reported
+
+**Bug 1 (frontend)**: real portfolios get their "(Entry N)" baked in at
+creation, server-side — but pending reservations, before their room opens,
+had no equivalent numbering at all, so a batch of 5 reservations all
+looked identical. Fixed by computing a stable number for pending entries
+too, based on true creation order (verified: even in scrambled array
+order, the earliest-created reservation always lands on Entry 1).
+
+**Bug 2 (backend, found during the sweep — not the one originally
+reported)**: there are actually **four** separate places a portfolio label
+gets generated (manual join × 2, auto-fill-on-open × 2), and only two of
+the four included the entry number. The other two — both auto-fill paths,
+in `allocationEngine.js` — were missing it entirely.
+
+**Worse, one of those two had a second, more serious bug hiding in the
+same function**: the Main Event auto-fill path checked *existence* of any
+prior entry rather than *counting* entries against the real max — meaning
+if someone reserved the Main Event multiple times before it opened, only
+the **first** reservation would ever actually apply; every other one would
+silently fail with "already entered," directly contradicting the max-10
+multi-entry feature. Fixed to count against the real max, matching the
+satellite auto-fill path and the manual join route.
+
+Verified both fixes directly: auto-filled satellite labels now number
+1/2/3 correctly, and a test reserving the Main Event 5 times now correctly
+produces 5 separate applied entries, each numbered correctly — previously
+this would have produced exactly 1 entry and 4 silent failures. Full
+existing regression suite (accounting, multi-entry, freeroll stacking)
+still passes unchanged.
+
+All four label-generation call sites now read from the exact same pattern:
+`` `... (Entry ${existingCount + 1})` `` — confirmed via direct grep across
+every file, not just spot-checked.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

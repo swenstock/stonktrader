@@ -746,6 +746,16 @@ function renderEntryGroup(group) {
   // this re-render — without this, every action anywhere on the page
   // forces a full re-render that silently snaps every tree back closed,
   // interrupting anyone mid-way through working across several entries.
+  // Pending reservations don't carry an entry number in their own data the
+  // way real portfolios do (that gets baked in server-side, at creation) —
+  // compute a stable one here instead, based on creation order (id
+  // ascending), so every entry in this group is distinguishable, not just
+  // the ones that already became real portfolios.
+  const pendingSortedById = group.items
+    .filter((item) => item.kind === "pending")
+    .sort((a, b) => a.data.id - b.data.id);
+  const pendingEntryNumbers = new Map(pendingSortedById.map((item, i) => [item.data.id, i + 1]));
+
   const isExpanded = expandedGroupKeys.has(group.key);
   return `<div class="entry-group">
     <div class="portfolio-row entry-group-summary ${needsSetupCount > 0 ? "needs-setup" : ""}" data-group-key="${group.key}">
@@ -758,10 +768,13 @@ function renderEntryGroup(group) {
     <div class="entry-group-items" data-group-items="${group.key}" style="display:${isExpanded ? "block" : "none"};">
       ${group.items
         .map(
-          // Each item's own label already carries its real, permanent
-          // "(Entry N)" number (assigned once, at creation) — no second
-          // numbering scheme layered on top here.
-          (item) => `<div class="entry-group-item">${item.kind === "portfolio" ? portfolioRowHtml(item.data) : allocationRowHtml(item.data)}</div>`
+          // Real portfolios already carry their real, permanent "(Entry N)"
+          // number in their own label (assigned once, at creation).
+          // Pending ones get the number computed just above.
+          (item) =>
+            `<div class="entry-group-item">${
+              item.kind === "portfolio" ? portfolioRowHtml(item.data) : allocationRowHtml(item.data, pendingEntryNumbers.get(item.data.id))
+            }</div>`
         )
         .join("")}
     </div>
@@ -865,11 +878,12 @@ async function refreshMyContests() {
   }
 }
 
-function allocationRowHtml(a) {
+function allocationRowHtml(a, entryNumber) {
   const targetLabel =
     a.targetType === "contest"
       ? "Main Event"
       : `${a.targetTierId.replace("_", " ")} — ${a.targetPriceLevel}`;
+  const numberedLabel = entryNumber ? `${targetLabel} (Entry ${entryNumber})` : targetLabel;
   const hasPicks = a.allocations.length > 0;
   const items = hasPicks
     ? a.allocations.map((x) => `${x.symbol} ${x.percent}%`).join(", ")
@@ -883,7 +897,7 @@ function allocationRowHtml(a) {
   const isPending = a.status === "pending";
   return `<div class="portfolio-row ${isPending ? "editable-alloc-row" : ""}" ${isPending ? `data-alloc-id="${a.id}"` : ""}>
     <div class="portfolio-row-main">
-      <div class="portfolio-row-label" style="text-transform:capitalize;">${targetLabel}</div>
+      <div class="portfolio-row-label" style="text-transform:capitalize;">${numberedLabel}</div>
       <div class="portfolio-row-sub mono">${items}</div>
     </div>
     ${statusBadge}
