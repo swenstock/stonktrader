@@ -190,12 +190,19 @@
 
     <div class="section-head">
       <h2>🔔 Daily &amp; Weekly Satellites</h2>
-      <p>Win a funded Main Event ticket — pick a category, then a contest.</p>
+      <p>Win a funded Main Event ticket — tap a category to see its contests.</p>
     </div>
     <div class="tier-filter-bar" id="tierFilterBar"></div>
     <div id="satelliteCategoriesTree" class="portfolio-list"></div>
-    <div class="panel" id="lobbyDrilldownPanel" style="max-width:1200px;margin:0 auto 30px;display:none;">
-      <h3><span id="lobbyDrilldownTitle">Category</span> <span class="tag" style="cursor:pointer;" id="closeLobbyDrilldown">✕ back</span></h3>
+  </div>
+
+  <!-- ===== Category drill-down — pop-out modal, tap a category to open ===== -->
+  <div id="lobbyDrilldownModal" class="trade-modal" style="display:none;">
+    <div class="trade-modal-backdrop" id="lobbyDrilldownBackdrop"></div>
+    <div class="trade-modal-card" style="max-width:640px;">
+      <button class="trade-modal-close" id="closeLobbyDrilldown">✕</button>
+      <h3 id="lobbyDrilldownTitle">Category</h3>
+      <p id="lobbyDrilldownDescription" class="cat-description" style="margin-bottom:14px;"></p>
       <div id="satelliteCategories"></div>
     </div>
   </div>

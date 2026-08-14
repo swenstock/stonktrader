@@ -556,22 +556,17 @@ function renderSatelliteCategoryTree() {
     .map((cat, i) => {
       const visibleLevels = cat.levels.filter((l) => tierFilter.has(l.priceLevel));
       const openCount = visibleLevels.filter((l) => l.status === "open").length;
-      const tierPreview = visibleLevels
-        .map((l) => `${l.priceLevelName || l.priceLevel} ${l.entryFee === 0 ? "FREE" : l.entryFee.toLocaleString()}`)
-        .join(" · ");
       if (visibleLevels.length === 0) return "";
-      return `<div class="portfolio-row">
-        <div class="portfolio-row-main">
-          <div class="portfolio-row-label">${cat.icon} ${cat.name} <span class="cat-tier-preview mono">${tierPreview}</span></div>
-          <div class="portfolio-row-sub mono">${openCount} of ${visibleLevels.length} contests open now</div>
-          ${CATEGORY_DESCRIPTIONS[cat.id] ? `<div class="cat-description">${CATEGORY_DESCRIPTIONS[cat.id]}</div>` : ""}
-        </div>
-        <button class="btn btn-outline btn-sm lobby-cat-btn" data-idx="${i}">Browse contests</button>
-      </div>`;
+      return `<button class="cat-tree-row" data-idx="${i}">
+        <span class="cat-tree-icon">${cat.icon}</span>
+        <span class="cat-tree-name">${cat.name}</span>
+        <span class="cat-tree-status ${openCount > 0 ? "up" : ""}">${openCount > 0 ? `${openCount} open now` : `${visibleLevels.length} tiers`}</span>
+        <span class="cat-tree-chevron">›</span>
+      </button>`;
     })
     .join("");
 
-  el.querySelectorAll(".lobby-cat-btn").forEach((btn) => {
+  el.querySelectorAll(".cat-tree-row").forEach((btn) => {
     btn.addEventListener("click", () => showSatelliteDrilldown(satellitesCache.categories[Number(btn.dataset.idx)]));
   });
 }
@@ -598,6 +593,7 @@ function showPrizeBreakdown(lvl) {
 function showSatelliteDrilldown(cat, scrollTo = true) {
   currentDrilldownCatId = cat.id;
   document.getElementById("lobbyDrilldownTitle").textContent = `${cat.icon} ${cat.name}`;
+  document.getElementById("lobbyDrilldownDescription").textContent = CATEGORY_DESCRIPTIONS[cat.id] || "";
   const el = document.getElementById("satelliteCategories");
   const chips = cat.levels
     .filter((lvl) => tierFilter.has(lvl.priceLevel))
@@ -707,13 +703,14 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
     });
   });
 
-  document.getElementById("lobbyDrilldownPanel").style.display = "block";
-  if (scrollTo) document.getElementById("lobbyDrilldownPanel").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  document.getElementById("lobbyDrilldownModal").style.display = "flex";
 }
-document.getElementById("closeLobbyDrilldown").addEventListener("click", () => {
+function closeLobbyDrilldown() {
   currentDrilldownCatId = null;
-  document.getElementById("lobbyDrilldownPanel").style.display = "none";
-});
+  document.getElementById("lobbyDrilldownModal").style.display = "none";
+}
+document.getElementById("closeLobbyDrilldown").addEventListener("click", closeLobbyDrilldown);
+document.getElementById("lobbyDrilldownBackdrop").addEventListener("click", closeLobbyDrilldown);
 
 let pendingEntryConfirm = null;
 

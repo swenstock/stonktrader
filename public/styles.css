@@ -420,7 +420,17 @@ tr.watch-row:hover{background:var(--surface-2);}
 .stake-fee-usd{font-weight:400;color:var(--text-dim);font-size:11px;}
 .stake-tickets{font-size:10.5px;color:var(--green);}
 .stake-entry-counter{font-size:10.5px;color:var(--gold);font-weight:700;}
-.cat-tier-preview{font-size:11px;color:var(--text-dim);font-weight:400;margin-left:8px;}
+.cat-tree-row{
+  width:100%;display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);
+  border-radius:10px;padding:14px 16px;margin-bottom:8px;cursor:pointer;text-align:left;font-family:'Sora',sans-serif;
+  color:var(--text);
+}
+.cat-tree-row:hover{border-color:var(--gold);background:var(--surface-2);}
+.cat-tree-icon{font-size:20px;flex-shrink:0;}
+.cat-tree-name{font-weight:700;font-size:14.5px;flex:1;}
+.cat-tree-status{font-size:11.5px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;flex-shrink:0;}
+.cat-tree-status.up{color:var(--green);}
+.cat-tree-chevron{color:var(--text-dim);font-size:18px;flex-shrink:0;}
 .tier-filter-bar{max-width:1200px;margin:0 auto 12px;padding:0 28px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .tier-filter-label{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;margin-right:2px;}
 .tier-filter-btn{
