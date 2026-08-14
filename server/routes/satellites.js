@@ -52,10 +52,9 @@ function serializePendingTier(tier, now, myAccountId) {
   // this room's own pool (which is always $0 by definition) — it comes
   // from that CATEGORY's own separate freeroll fund. Reading the real
   // number here instead of leaving it hardcoded at 0.
-  const freerollPrizesAvailable =
-    tier.priceLevel === "free"
-      ? (db.prepare("SELECT prizes_available FROM freeroll_fund WHERE category_id = ?").get(tier.categoryId)?.prizes_available ?? 0)
-      : 0;
+  const freerollFund = tier.priceLevel === "free" ? db.prepare("SELECT * FROM freeroll_fund WHERE category_id = ?").get(tier.categoryId) : null;
+  const freerollPrizesAvailable = freerollFund?.prizes_available ?? 0;
+  const freerollLifetimeAwarded = freerollFund?.total_prizes_funded_lifetime ?? 0;
 
   return {
     id: null,
@@ -74,6 +73,7 @@ function serializePendingTier(tier, now, myAccountId) {
     entrantCount: 0,
     poolGross: 0,
     ticketsProjected: freerollPrizesAvailable,
+    lifetimeAwarded: freerollLifetimeAwarded,
     remainderProjected: 0,
     joined: myPendingCount > 0,
     myEntryCount: myPendingCount,
@@ -94,10 +94,9 @@ function serializeSatellite(s, myAccountId) {
   // number lives in that category's own separate freeroll fund instead.
   // Reading it directly here rather than showing the always-zero
   // pool-based projection, which was never accurate for these rooms.
-  const freerollPrizesAvailable =
-    s.status === "open" && s.price_level === "free"
-      ? (db.prepare("SELECT prizes_available FROM freeroll_fund WHERE category_id = ?").get(s.tier_id)?.prizes_available ?? 0)
-      : null;
+  const freerollFund = s.price_level === "free" ? db.prepare("SELECT * FROM freeroll_fund WHERE category_id = ?").get(s.tier_id) : null;
+  const freerollPrizesAvailable = s.status === "open" && freerollFund ? freerollFund.prizes_available : null;
+  const freerollLifetimeAwarded = freerollFund?.total_prizes_funded_lifetime ?? 0;
 
   const tierMeta = TIERS.find((t) => t.categoryId === s.tier_id && t.priceLevel === s.price_level);
 
@@ -128,6 +127,7 @@ function serializeSatellite(s, myAccountId) {
     entrantCount,
     poolGross: grossPool,
     ticketsProjected: freerollPrizesAvailable !== null ? freerollPrizesAvailable : (s.status === "open" ? ticketsProjected : s.tickets_funded),
+    lifetimeAwarded: freerollLifetimeAwarded,
     ticketsFunded: s.tickets_funded,
     remainderProjected: Math.round(remainderProjected || 0),
     remainderStonk: s.remainder_stonk,

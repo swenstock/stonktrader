@@ -1084,6 +1084,27 @@ against desktop widths:
 Verified CSS braces balanced and `app.js` still parses clean after the
 pass. No backend changes.
 
+## Fixed: Hourly nudge never firing, and Weekly Freeroll hype stats
+
+**The "to_hourly" onboarding prompt only fired after a successful trade or
+portfolio save** — if a trader entered Weekly's freeroll and then just
+browsed around instead of immediately configuring it, that trigger never
+ran and the Hourly nudge could go a long time, or forever, without
+appearing. Added a real fallback: 12 minutes after Weekly entry, the nudge
+fires anyway if the trader is still on that step, regardless of whether
+they've configured Weekly yet. Whichever happens first — finishing setup,
+or the 12-minute mark — advances the sequence. Checked every 60 seconds
+alongside the existing delayed-ready check, so it fires reliably whether
+the tab stays open or they come back later.
+
+**Weekly Freeroll banner now shows real, live hype stats** — this week's
+entrant count, how many Main Event tickets are currently banked and ready
+to award (reusing the accuracy fix from last round), and a running
+all-time total of free Main Event tickets awarded through Weekly Freeroll
+specifically. All funded genuinely by entry fees across every paid Weekly
+Qualifier tier — a real, growing number, not a gimmick. Verified directly
+that the lifetime counter accumulates correctly as prizes get awarded.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

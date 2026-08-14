@@ -253,6 +253,25 @@ function onboardingPortfolioConfigured() {
 // the app) — fires the "ready for more" prompt only inside its real
 // eligible window, not the instant portfolio setup finishes.
 function checkDelayedOnboardingPrompt() {
+  // Fallback nudge toward Hourly — fires 12 minutes after Weekly entry
+  // REGARDLESS of whether the trader has configured Weekly's portfolio
+  // yet, so it doesn't depend entirely on that action happening first.
+  if (localStorage.getItem("onboardingStep") === "portfolio") {
+    const nudgeAt = Number(localStorage.getItem("onboardingHourlyNudgeAt") || 0);
+    if (nudgeAt && Date.now() >= nudgeAt) {
+      const hourlyCat = satellitesCache.categories?.find((c) => c.id === "hourly");
+      const hourlyFreeroll = hourlyCat?.levels.find((l) => l.priceLevel === "free");
+      if (hourlyFreeroll && hourlyFreeroll.status === "open") {
+        advanceOnboarding("portfolio", "to_hourly");
+      } else {
+        // Hourly isn't open right at this exact check either — clear the
+        // nudge so it doesn't keep re-checking forever; the natural
+        // "finished configuring Weekly" trigger can still fire normally.
+        localStorage.removeItem("onboardingHourlyNudgeAt");
+      }
+    }
+  }
+
   if (localStorage.getItem("onboardingStep") !== "waiting_for_ready") return;
   const eligibleAt = Number(localStorage.getItem("onboardingReadyEligibleAt") || 0);
   const expiresAt = Number(localStorage.getItem("onboardingReadyExpiresAt") || 0);
@@ -508,7 +527,7 @@ const CATEGORY_DESCRIPTIONS = {
   full_day: "Runs the full trading session, 9:30 AM \u2013 4:00 PM ET, every weekday. New contest opens each trading day. Win the free tier and you get a ticket into that day's Runner-level satellite.",
   morning: "Runs the first half of the trading session, 9:30 AM \u2013 1:00 PM ET, every weekday. Win the free tier and you get a ticket into that day's Runner-level satellite.",
   afternoon: "Runs the second half of the trading session, 1:00 PM \u2013 4:00 PM ET, every weekday. Win the free tier and you get a ticket into that day's Runner-level satellite.",
-  hourly: "Paid tiers run 24/7, every hour. The free tier runs every OTHER hour — win it and you get a ticket into that hour's Runner-level satellite.",
+  hourly: "🔥 Degen Hours — paid tiers run 24/7, every hour, no 10% position cap here. The free tier runs every OTHER hour — win it and you get a ticket into that hour's Runner-level satellite.",
 };
 
 function renderSatelliteCategoryTree() {
@@ -750,6 +769,13 @@ async function joinSatellite(satelliteId, qty = 1, onboardingFromStep = null, ro
     if (onboardingFromStep) {
       localStorage.setItem("onboardingCurrentRoomLocksAt", roomLocksAt || "");
       localStorage.setItem("onboardingLastEntryWasReservation", "false");
+      if (onboardingFromStep === "welcome") {
+        // Fallback so the Hourly nudge doesn't depend entirely on the
+        // trader actively configuring Weekly's portfolio right away — if
+        // they just browse instead, this fires anyway after a fixed
+        // window rather than potentially never firing at all.
+        localStorage.setItem("onboardingHourlyNudgeAt", String(Date.now() + 12 * 60000));
+      }
       advanceOnboarding(onboardingFromStep, onboardingFromStep === "welcome" ? "portfolio" : "portfolio_hourly");
     }
   } catch (err) {
@@ -785,6 +811,9 @@ async function reserveRoom(tierId, priceLevel, qty = 1, onboardingFromStep = nul
       const estimatedLocksAt = roomOpensAt ? new Date(new Date(roomOpensAt).getTime() + 60 * 60000).toISOString() : "";
       localStorage.setItem("onboardingCurrentRoomLocksAt", estimatedLocksAt);
       localStorage.setItem("onboardingLastEntryWasReservation", "true");
+      if (onboardingFromStep === "welcome") {
+        localStorage.setItem("onboardingHourlyNudgeAt", String(Date.now() + 12 * 60000));
+      }
       advanceOnboarding(onboardingFromStep, onboardingFromStep === "welcome" ? "portfolio" : "portfolio_hourly");
     }
   } catch (err) {
@@ -827,6 +856,14 @@ function renderWeeklyFreerollPrompt() {
     return;
   }
 
+  // This is funded entirely by entry fees across every paid Weekly
+  // Qualifier tier, all-time — a real, growing number, not a gimmick.
+  const statsRow = `<div class="weekly-freeroll-stats">
+    <span><b>${(freerollLevel.entrantCount || 0).toLocaleString()}</b> traders in this week's contest</span>
+    <span><b>${freerollLevel.ticketsProjected || 0}</b> Main Event ticket${(freerollLevel.ticketsProjected || 0) === 1 ? "" : "s"} banked right now</span>
+    <span><b>${(freerollLevel.lifetimeAwarded || 0).toLocaleString()}</b> free Main Event ticket${(freerollLevel.lifetimeAwarded || 0) === 1 ? "" : "s"} awarded all-time</span>
+  </div>`;
+
   const atMax = freerollLevel.myEntryCount >= freerollLevel.maxEntriesPerAccount;
   if (atMax) {
     el.innerHTML = `<div class="weekly-freeroll-banner entered">
@@ -835,6 +872,7 @@ function renderWeeklyFreerollPrompt() {
         <div>
           <b>You're in this week's free Weekly contest!</b>
           <span>Win it and you get a real Main Event ticket. Finish setting up your portfolio.</span>
+          ${statsRow}
         </div>
       </div>
       <button class="btn btn-gold" id="weeklyFreerollCta">Go to My Contests</button>
@@ -848,6 +886,7 @@ function renderWeeklyFreerollPrompt() {
         <div>
           <b>Your free Weekly contest is ${isPending ? "coming up" : "open right now"} — win a real Main Event ticket, 100% free.</b>
           <span>No wallet needed. Set up your portfolio and you're straight in the running.</span>
+          ${statsRow}
         </div>
       </div>
       <button class="btn btn-gold" id="weeklyFreerollCta">${isPending ? "Reserve my free spot" : "Enter free now"}</button>
@@ -1300,14 +1339,18 @@ function renderPortfolioTotalInModal() {
 function renderPositionSummary() {
   const el = document.getElementById("positionSummary");
   if (!el || !latestPortfolioData) return;
+  const degenBadge = latestPortfolioData.isDegenHours
+    ? `<div class="degen-hours-badge">🔥 DEGEN HOURS — no 10% position cap, swing for the fences</div>`
+    : "";
   const pos = latestPortfolioData.positions.find((p) => p.symbol === selectedSymbol);
   if (!pos) {
-    el.innerHTML = `<div class="position-summary-empty">No position yet — this'll be your first buy.</div>`;
+    el.innerHTML = `${degenBadge}<div class="position-summary-empty">No position yet — this'll be your first buy.</div>`;
     return;
   }
   const cls = pos.unrealizedPL >= 0 ? "up" : "down";
   const pct = latestPortfolioData.totalValue > 0 ? (pos.value / latestPortfolioData.totalValue) * 100 : 0;
   el.innerHTML = `
+    ${degenBadge}
     <div class="position-summary-row"><span>${selectedSymbol} position</span><b class="mono">${pos.quantity} shares</b></div>
     <div class="position-summary-row"><span>Avg cost</span><b class="mono">$${pos.avgCost.toFixed(2)}</b></div>
     <div class="position-summary-row"><span>P&amp;L</span><b class="mono ${cls}">${pos.unrealizedPL >= 0 ? "+" : ""}$${pos.unrealizedPL.toFixed(2)}</b></div>
@@ -1679,10 +1722,14 @@ document.getElementById("filledDoneBtn").addEventListener("click", () => {
 
 function currentAllotmentInfo() {
   if (!latestPortfolioData) return { availableAllotment: 0, existingQty: 0 };
-  const maxAllowed = latestPortfolioData.totalValue * CLIENT_MAX_POSITION_PCT;
   const existingPos = latestPortfolioData.positions.find((p) => p.symbol === selectedSymbol);
   const existingCostBasis = existingPos ? existingPos.avgCost * existingPos.quantity : 0;
-  const availableAllotment = Math.max(0, maxAllowed - existingCostBasis);
+  // Degen Hours (Hourly) has no 10% cap — "% left to allocate" should show
+  // real remaining cash, not a capped figure that no longer matches what
+  // the server will actually allow.
+  const availableAllotment = latestPortfolioData.isDegenHours
+    ? latestPortfolioData.cash
+    : Math.max(0, latestPortfolioData.totalValue * CLIENT_MAX_POSITION_PCT - existingCostBasis);
   return { availableAllotment, existingQty: existingPos ? existingPos.quantity : 0 };
 }
 

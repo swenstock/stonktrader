@@ -7,6 +7,23 @@ const { totalValueForPortfolio } = require("../portfolioValue");
 
 const MAX_INITIAL_POSITION_PCT = 0.10; // 10% of portfolio value, checked at time of BUY only — raised from 5%, since a 15-symbol universe at 5% caps total possible deployment at 75%
 
+// "Degen Hours" — Hourly is the one deliberate exception to the 10% max
+// position rule. Everywhere else on the platform, sizing discipline is
+// the whole point; Hourly is explicitly the wild-card mode where you can
+// swing for the fences on a single name. $2B min market cap still applies
+// everywhere, including Hourly — that's a liquidity/manipulation
+// safeguard, not a sizing-discipline one, and stays universal.
+function isDegenHoursPortfolio(portfolioId) {
+  const satelliteEntry = db
+    .prepare(
+      `SELECT satellites.tier_id FROM satellite_entries
+       JOIN satellites ON satellites.id = satellite_entries.satellite_id
+       WHERE satellite_entries.portfolio_id = ?`
+    )
+    .get(portfolioId);
+  return satelliteEntry?.tier_id === "hourly";
+}
+
 // Finds which contest or satellite a portfolio belongs to, for display
 // context ("Morning Session — Aug 12", still open vs resolved, etc).
 function contextFor(portfolioId) {
@@ -109,6 +126,7 @@ router.get("/:id", requireAuth, (req, res) => {
     totalValue: Number(totalValue.toFixed(2)),
     pl: Number((totalValue - 100000).toFixed(2)),
     context: contextFor(portfolio.id),
+    isDegenHours: isDegenHoursPortfolio(portfolio.id), // Hourly — no 10% position cap, see routes/portfolios.js trade route
   });
 });
 
@@ -143,11 +161,14 @@ router.post("/:id/trades", requireAuth, (req, res) => {
     const existingPosition = db.prepare("SELECT * FROM positions WHERE portfolio_id = ? AND symbol = ?").get(portfolioId, symbol);
     const existingCostBasis = existingPosition ? existingPosition.avg_cost * existingPosition.quantity : 0;
     const portfolioValue = totalValueForPortfolio(portfolioId);
-    const maxAllowed = portfolioValue * MAX_INITIAL_POSITION_PCT;
-    const room = Math.max(0, maxAllowed - existingCostBasis);
+    const isDegenHours = isDegenHoursPortfolio(portfolioId);
+    const fresh = db.prepare("SELECT * FROM portfolios WHERE id = ?").get(portfolioId);
+    // Degen Hours: no 10% cap — "100%" genuinely means all your remaining
+    // cash on this one name, exactly as advertised.
+    const room = isDegenHours ? fresh.cash_balance : Math.max(0, portfolioValue * MAX_INITIAL_POSITION_PCT - existingCostBasis);
     quantity = room / quote.price;
     if (quantity <= 0) {
-      return res.status(400).json({ error: `No room left to buy more ${symbol} — already at the 10% max for this position.` });
+      return res.status(400).json({ error: isDegenHours ? "No cash left to buy more." : `No room left to buy more ${symbol} — already at the 10% max for this position.` });
     }
   }
 
@@ -158,7 +179,10 @@ router.post("/:id/trades", requireAuth, (req, res) => {
   const cost = quote.price * quantity;
 
   // Trading rules — sensible position sizing, not gambling. Only apply to
-  // BUY orders; selling to reduce risk is never restricted.
+  // BUY orders; selling to reduce risk is never restricted. Degen Hours
+  // (Hourly) is the one deliberate exception to the sizing rule — the
+  // $2B market cap floor still applies everywhere, no exceptions, since
+  // that's a liquidity/manipulation safeguard, not a discipline one.
   if (side === "buy") {
     if (quote.marketCap != null && quote.marketCap < MIN_MARKET_CAP) {
       return res.status(400).json({
@@ -166,22 +190,24 @@ router.post("/:id/trades", requireAuth, (req, res) => {
       });
     }
 
-    const existingPosition = db
-      .prepare("SELECT * FROM positions WHERE portfolio_id = ? AND symbol = ?")
-      .get(portfolioId, symbol);
-    const existingCostBasis = existingPosition ? existingPosition.avg_cost * existingPosition.quantity : 0;
-    const portfolioValue = totalValueForPortfolio(portfolioId);
-    const maxAllowed = portfolioValue * MAX_INITIAL_POSITION_PCT;
+    if (!isDegenHoursPortfolio(portfolioId)) {
+      const existingPosition = db
+        .prepare("SELECT * FROM positions WHERE portfolio_id = ? AND symbol = ?")
+        .get(portfolioId, symbol);
+      const existingCostBasis = existingPosition ? existingPosition.avg_cost * existingPosition.quantity : 0;
+      const portfolioValue = totalValueForPortfolio(portfolioId);
+      const maxAllowed = portfolioValue * MAX_INITIAL_POSITION_PCT;
 
-    // maxAllotment orders are computed from these exact same numbers a
-    // few lines up, in the exact same request — this check is a formality
-    // for that path (can't meaningfully fail) but stays fully authoritative
-    // for ordinary quantity-specified buys.
-    if (existingCostBasis + cost > maxAllowed + 0.01) {
-      const room = Math.max(0, maxAllowed - existingCostBasis);
-      return res.status(400).json({
-        error: `This would put more than 10% of your portfolio into ${symbol} at entry. Max additional buy right now: ~$${room.toFixed(2)}. (A position CAN grow past 10% from price gains — this limit only applies to new buys.)`,
-      });
+      // maxAllotment orders are computed from these exact same numbers a
+      // few lines up, in the exact same request — this check is a formality
+      // for that path (can't meaningfully fail) but stays fully authoritative
+      // for ordinary quantity-specified buys.
+      if (existingCostBasis + cost > maxAllowed + 0.01) {
+        const room = Math.max(0, maxAllowed - existingCostBasis);
+        return res.status(400).json({
+          error: `This would put more than 10% of your portfolio into ${symbol} at entry. Max additional buy right now: ~$${room.toFixed(2)}. (A position CAN grow past 10% from price gains — this limit only applies to new buys.)`,
+        });
+      }
     }
   }
 
