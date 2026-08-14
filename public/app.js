@@ -326,8 +326,8 @@ function renderTierFilterBar() {
 }
 
 const CATEGORY_DESCRIPTIONS = {
-  weekly_qualifier: "Runs Monday 12:00am ET through Friday close — the SAME window as the Main Event. Win a room here and you're straight into the Main Event for free.",
-  full_day: "Runs the full trading session, 9:30 AM \u2013 4:00 PM ET, every weekday. New room opens each trading day.",
+  weekly_qualifier: "Runs Monday 12:00am ET through Friday close — the SAME window as the Main Event. Win a contest here and you're straight into the Main Event for free.",
+  full_day: "Runs the full trading session, 9:30 AM \u2013 4:00 PM ET, every weekday. New contest opens each trading day.",
   morning: "Runs the first half of the trading session, 9:30 AM \u2013 1:00 PM ET, every weekday.",
   afternoon: "Runs the second half of the trading session, 1:00 PM \u2013 4:00 PM ET, every weekday.",
 };
@@ -346,9 +346,9 @@ function renderSatelliteCategoryTree() {
       return `<div class="portfolio-row" title="${CATEGORY_DESCRIPTIONS[cat.id] || ""}">
         <div class="portfolio-row-main">
           <div class="portfolio-row-label">${cat.icon} ${cat.name} <span class="cat-tier-preview mono">${tierPreview}</span> ${hasFree ? '<span class="table-badge" style="margin-left:6px;">Free tier available</span>' : ""}</div>
-          <div class="portfolio-row-sub mono">${openCount} of ${visibleLevels.length} rooms open now</div>
+          <div class="portfolio-row-sub mono">${openCount} of ${visibleLevels.length} contests open now</div>
         </div>
-        <button class="btn btn-outline btn-sm lobby-cat-btn" data-idx="${i}">Browse rooms</button>
+        <button class="btn btn-outline btn-sm lobby-cat-btn" data-idx="${i}">Browse contests</button>
       </div>`;
     })
     .join("");
@@ -444,7 +444,7 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
         feeText: lvl.entryFee === 0 ? "FREE — no wallet needed" : `${lvl.entryFee.toLocaleString()} STONK (~$${lvl.entryFeeUsd?.toFixed(2) ?? "0.00"})`,
         feeEach: lvl.entryFee,
         maxQty: remaining,
-        note: `${lvl.entrantCount} traders already in this room. ${lvl.ticketsProjected || 0} ticket(s) currently funded.`,
+        note: `${lvl.entrantCount} traders already in this contest. ${lvl.ticketsProjected || 0} ticket(s) currently funded.`,
         onConfirm: (qty) => joinSatellite(lvl.id, qty),
       });
     });
@@ -464,7 +464,7 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
         feeText: lvl.entryFee === 0 ? "FREE — no wallet needed" : `${lvl.entryFee.toLocaleString()} STONK (~$${lvl.entryFeeUsd?.toFixed(2) ?? "0.00"})`,
         feeEach: lvl.entryFee,
         maxQty: remaining,
-        note: "This room hasn't opened yet — reserving locks your spot now. Set up your picks anytime before it opens, from My Contests.",
+        note: "This contest hasn't opened yet — reserving locks your spot now. Set up your picks anytime before it opens, from My Contests.",
         onConfirm: (qty) => reserveRoom(btn.dataset.tier, btn.dataset.level, qty),
       });
     });
@@ -581,7 +581,7 @@ async function reserveRoom(tierId, priceLevel, qty = 1) {
     await refreshMyContests();
     showYoureIn(
       succeeded === 1 ? "You're in!" : `You're in — ${succeeded} spots reserved!`,
-      "Set up each portfolio anytime before this room opens — it'll auto-fill with your picks the instant it does."
+      "Set up each portfolio anytime before this contest opens — it'll auto-fill with your picks the instant it does."
     );
   } catch (err) {
     await refreshContests();
@@ -882,7 +882,7 @@ function allocationRowHtml(a) {
   const hasPicks = a.allocations.length > 0;
   const items = hasPicks
     ? a.allocations.map((x) => `${x.symbol} ${x.percent}%`).join(", ")
-    : "Reserved — no picks yet, 100% cash. Set up your portfolio before this room opens.";
+    : "Reserved — no picks yet, 100% cash. Set up your portfolio before this contest opens.";
   const statusBadge =
     a.status === "pending"
       ? `<span class="table-badge">Waiting for open</span>`
@@ -926,7 +926,7 @@ function editPendingAllocation(id) {
     alloc.allocations.forEach((a) => addAllocRow(a.symbol, a.percent));
   }
   document.getElementById("allocationModalIntro").textContent =
-    "You can set up your portfolio anytime before this room opens — it fires automatically at the opening price.";
+    "You can set up your portfolio anytime before this contest opens — it fires automatically at the opening price.";
 }
 
 async function cancelAllocation(id) {
@@ -1620,12 +1620,12 @@ function renderLiveContestsList() {
 
   (satellitesCache.categories || []).forEach((cat) => {
     const openCount = cat.levels.filter((l) => l.status === "open").length;
-    const sub = openCount > 0 ? `${openCount} of ${cat.levels.length} rooms open right now` : "Not open right now — check price levels for next open time";
+    const sub = openCount > 0 ? `${openCount} of ${cat.levels.length} contests open right now` : "Not open right now — check price levels for next open time";
     categories.push({
       kind: "satellite",
       name: `${cat.icon} ${cat.name}`,
       sub,
-      buttonLabel: "View rooms",
+      buttonLabel: "View contests",
       onClick: () => showLiveDrilldown(cat),
     });
   });
@@ -1718,7 +1718,7 @@ function renderPastWinnersArchive(winners) {
         </div>
       </div>`;
       })
-      .join("") || `<div class="history-empty">No resolved contests yet — check back after the first rooms wrap up.</div>`;
+      .join("") || `<div class="history-empty">No resolved contests yet — check back after the first contests wrap up.</div>`;
 }
 
 async function refreshLeaderboards() {
