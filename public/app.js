@@ -1164,9 +1164,9 @@ document.getElementById("marketsCollapseBtn")?.addEventListener("click", (e) => 
 });
 
 function renderWatchlist() {
-  const symbols = (window.__symbols || []).filter(
-    (s) => selectedExchangeFilter === "ALL" || s.exchange === selectedExchangeFilter
-  );
+  const symbols = (window.__symbols || [])
+    .filter((s) => selectedExchangeFilter === "ALL" || s.exchange === selectedExchangeFilter)
+    .sort((a, b) => (b.marketCap || 0) - (a.marketCap || 0)); // biggest companies first
   const tbody = document.getElementById("watchlistTable");
   tbody.innerHTML = symbols
     .map((s) => {
@@ -1174,9 +1174,12 @@ function renderWatchlist() {
       const price = q ? q.price.toFixed(2) : "—";
       const chg = q ? q.changePct : 0;
       const cls = chg >= 0 ? "up" : "down";
+      const alreadyAdded = myWatchlist.includes(s.symbol);
       return `<tr class="watch-row" data-symbol="${s.symbol}">
         <td class="mono">${s.symbol}</td><td>${s.exchange}</td><td class="mono price-cell" data-symbol="${s.symbol}">${q ? q.currency : ""} ${price}</td>
-        <td class="${cls}">${chg >= 0 ? "+" : ""}${chg}%</td></tr>`;
+        <td class="${cls}">${chg >= 0 ? "+" : ""}${chg}%</td>
+        <td>${alreadyAdded ? `<span class="watchlist-added-tag">✓ Added</span>` : `<button class="watchlist-quickadd-btn" data-symbol="${s.symbol}">+ Watchlist</button>`}</td>
+      </tr>`;
     })
     .join("");
 
@@ -1191,7 +1194,25 @@ function renderWatchlist() {
     if (q) lastKnownPrices[sym] = q.price;
   });
 
-  tbody.querySelectorAll("tr").forEach((row) => row.addEventListener("click", () => openTradeModal(row.dataset.symbol)));
+  tbody.querySelectorAll(".watch-row").forEach((row) => {
+    row.addEventListener("click", (e) => {
+      if (e.target.closest(".watchlist-quickadd-btn")) return; // don't trade when quick-adding
+      openTradeModal(row.dataset.symbol);
+    });
+  });
+  tbody.querySelectorAll(".watchlist-quickadd-btn").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const sym = btn.dataset.symbol;
+      if (!myWatchlist.includes(sym)) {
+        myWatchlist.push(sym);
+        saveMyWatchlist();
+        populateWatchlistAddSelect();
+        renderMyWatchlist();
+      }
+      renderWatchlist(); // re-render this table too, so the button flips to "✓ Added"
+    });
+  });
 }
 
 function selectSymbol(sym) {

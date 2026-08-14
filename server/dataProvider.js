@@ -106,6 +106,7 @@ function listSymbols() {
     name: s.name,
     exchange: s.exchange,
     currency: s.currency,
+    marketCap: s.marketCap,
   }));
 }
 

@@ -516,6 +516,12 @@ tr.watch-row:hover{background:var(--surface-2);}
   background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;padding:4px 8px;
 }
 .watchlist-remove-btn:hover{color:var(--red);}
+.watchlist-quickadd-btn{
+  background:var(--surface-2);border:1px solid var(--border);color:var(--gold);cursor:pointer;
+  font-size:10.5px;padding:4px 9px;border-radius:6px;font-family:'Sora',sans-serif;font-weight:600;white-space:nowrap;
+}
+.watchlist-quickadd-btn:hover{border-color:var(--gold);}
+.watchlist-added-tag{color:var(--green);font-size:10.5px;font-weight:700;white-space:nowrap;}
 .alloc-row-remove{
   background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim);
   width:26px;height:26px;border-radius:50%;font-size:12px;cursor:pointer;flex-shrink:0;
