@@ -80,6 +80,7 @@ nav{padding:14px 28px 0;border-bottom:1px solid var(--border);
 .market-filter button.active{background:var(--gold);color:#0A1400;border-color:var(--gold);}
 
 table{width:100%;border-collapse:collapse;font-size:13px;}
+.scroll-hint{display:none;}
 @media(max-width:640px){
   /* Wide multi-column tables (Positions, Recent Activity, etc.) have
      nowhere to go on a narrow screen once every column needs real room —
@@ -89,6 +90,10 @@ table{width:100%;border-collapse:collapse;font-size:13px;}
      normal table display values, so row/column layout inside stays intact. */
   table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;width:auto;max-width:100%;}
   td, th{white-space:nowrap;}
+  /* The table scrolling on its own wasn't obvious — no visual cue that
+     there was more to see, so cut-off columns (P&L, etc.) just looked
+     broken instead of one swipe away. */
+  .scroll-hint{display:inline;font-size:10px;font-weight:400;text-transform:none;color:var(--text-dim);letter-spacing:0;}
 }
 th{text-align:left;color:var(--text-dim);font-weight:500;font-size:10.5px;text-transform:uppercase;
   letter-spacing:.05em;padding:0 14px 8px 0;border-bottom:1px solid var(--border);}
@@ -558,7 +563,7 @@ tr.watch-row:hover{background:var(--surface-2);}
 .panel-header-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
 .watchlist-add-row{display:flex;gap:8px;margin-bottom:12px;}
 .watchlist-add-row select{
-  flex:1;background:var(--surface-2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:8px 10px;
+  flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:8px 10px;
 }
 .watchlist-remove-btn{
   background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:13px;padding:4px 8px;
@@ -617,7 +622,7 @@ nav{position:sticky;top:0;z-index:60;}
 /* ---------- Allocation modal rows ---------- */
 .alloc-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 .alloc-row select.alloc-symbol{
-  flex:1;background:var(--surface-2);border:1px solid var(--border);color:var(--text);
+  flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--border);color:var(--text);
   border-radius:7px;padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;
 }
 .alloc-row input.alloc-percent{

@@ -133,7 +133,7 @@ const ONBOARDING_CONTENT = {
   to_hourly: {
     icon: "⚡",
     title: "Trade now, free — try Degen Hours",
-    body: "It's open right now and resolves within the hour. Win it and you get a ticket into that hour's Runner-level satellite. You'll get a fresh shot like this every single hour, all day, every day.",
+    body: "It's open right now and resolves within the hour. Win it and you get a ticket into today's Degen Race to the Close — every hourly win stacks another ticket, all day long.",
     cta: "Enter my free Degen Hours contest",
     action: () => {
       switchView("lobby");
@@ -528,7 +528,8 @@ const CATEGORY_DESCRIPTIONS = {
   full_day: "Runs the full trading session, 9:30 AM \u2013 4:00 PM ET, every weekday. New contest opens each trading day. Win the free tier and you get a ticket into that day's Runner-level satellite.",
   morning: "Runs the first half of the trading session, 9:30 AM \u2013 1:00 PM ET, every weekday. Win the free tier and you get a ticket into that day's Runner-level satellite.",
   afternoon: "Runs the second half of the trading session, 1:00 PM \u2013 4:00 PM ET, every weekday. Win the free tier and you get a ticket into that day's Runner-level satellite.",
-  hourly: "🔥 Degen Hours — no 10% position cap, ever. Runs 24/7, every single hour, every level including the free roll — win it and you get a ticket into that hour's Runner-level satellite.",
+  hourly: "🔥 Degen Hours — no 10% position cap, ever. Runs every hour during real market hours (9:30am – 3:30pm ET), weekdays only. Win the free roll and you get a ticket into today's Degen Race to the Close — every hourly win stacks another one.",
+  race_to_close: "🏁 The finale — 3:30–4:00pm ET, once a day, weekdays only. Every Degen Hours win today has been stacking tickets toward this. Jump in directly too, any paid tier, as many entries as you want.",
 };
 
 function renderSatelliteCategoryTree() {
@@ -614,9 +615,10 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
       // portfolio anytime before that room opens, from My Contests.
       // Registration for Daily/Weekly PAID tiers closes the moment the
       // session actually starts — matches the backend's /enter rule.
-      // Freerolls (any category) and Degen Hours (any level) are the
-      // deliberate exceptions and stay enterable all session long.
-      const registrationClosed = !isPending && lvl.priceLevel !== "free" && cat.id !== "hourly";
+      // Freerolls (any category), Degen Hours, and Race to the Close (any
+      // level) are the deliberate exceptions and stay enterable all
+      // session long.
+      const registrationClosed = !isPending && lvl.priceLevel !== "free" && cat.id !== "hourly" && cat.id !== "race_to_close";
       const clickAction = atMax || isLocked || registrationClosed ? "" : isPending ? "reserve-room-btn" : "join-sat-row-btn";
       const disabled = atMax || isLocked || registrationClosed;
       const hoverStats = !isPending

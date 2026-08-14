@@ -1158,6 +1158,53 @@ rebuys detail, kept playful throughout.
   storage yet
 - Admin metrics dashboard was scoped early on but never built
 
+## Race to the Close — fully built and verified end-to-end
+
+**New category**: Runner/Clerk/Trader/Jr. Stonkbroker only, no freeroll of
+its own. Runs once a day, 3:30–4:00pm ET, weekdays only — the last 30
+minutes of the trading session.
+
+**Degen Hours restricted to real market hours**: 9:30am–3:30pm ET,
+weekdays only, six hourly slots offset to :30 past the hour (9:30, 10:30
+... 2:30) so it tiles perfectly against Race to the Close with zero gap
+or overlap. No longer 24/7.
+
+**The core mechanic**: a Degen Hours freeroll win now redirects its prize
+to that day's Race to the Close instead of that hour's own Runner room.
+Every win, any hour, stacks another free ticket toward the same 3:30
+finale — verified directly with real stacked entries, not just logic
+review. Direct paid buy-ins compete in the exact same room, same rules,
+up to the standard 10-entry cap combining both sources.
+
+**Registration**: Race to the Close stays open for buy-ins the entire 30
+minutes (matching Degen Hours' own exception to the normal "closes at
+session start" rule), cutting off in the final 2 minutes — proportionally
+similar to Degen Hours' 5-of-60.
+
+**Two real bugs found and fixed during the build**:
+- `easternParts()`, a shared time utility used throughout the scheduler,
+  never actually requested minute-level precision from the formatter — it
+  silently returned `undefined` for minutes. This would have broken the
+  new :30-boundary slot logic in a way that's easy to miss without
+  integration testing. Caught because a real end-to-end test failed,
+  traced to the actual root cause, fixed the shared utility after
+  confirming it was safe for every existing caller.
+- The frontend's "registration closed" check needed its own Race to the
+  Close exception, or the UI would have blocked buy-ins the backend
+  correctly allows.
+
+**Tested directly, not just reviewed**: category exists with the right
+levels and no freeroll; a real Degen Hours win produces a reservation
+targeting `race_to_close`/`runner`, not its own hour; two wins in one day
+produce two stacked entries; both correctly auto-apply the moment Race to
+the Close opens; a directly-paying entrant competing in the same room
+wins on merit. Full existing regression suite still passes unchanged.
+
+Rules page, onboarding popup, Lobby category descriptions, and the
+landing/Lobby freeroll callout strips all updated to describe the actual
+new mechanic — swept for every remaining "24/7" and "every hour" claim
+left over from the previous design.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

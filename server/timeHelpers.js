@@ -9,6 +9,7 @@ function easternParts(date) {
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
+    minute: "2-digit",
     hour12: false,
   });
   return Object.fromEntries(fmt.formatToParts(date).map((p) => [p.type, p.value]));

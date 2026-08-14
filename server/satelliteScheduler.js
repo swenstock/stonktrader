@@ -40,19 +40,31 @@ function dailyWindow(tier, now) {
   };
 }
 
-function hourlyWindow(now) {
-  const opensAt = new Date(now);
-  opensAt.setMinutes(0, 0, 0); // snap to the top of the current hour
+// Degen Hours runs 6 slots a day, offset 30 minutes from the top of the
+// hour to tile perfectly against real market hours: 9:30-10:30,
+// 10:30-11:30, 11:30-12:30, 12:30-1:30, 1:30-2:30, 2:30-3:30. The last 30
+// minutes of the session (3:30-4:00) deliberately belongs to Race to the
+// Close instead — not a 7th Degen Hours slot. Weekdays only, real market
+// hours only — no more 24/7. Returns null outside that window so the
+// scheduler knows to skip entirely, not just wait.
+function degenHoursWindow(now) {
+  if (!isWeekday(now)) return null;
+  const p = easternParts(now);
+  const h = Number(p.hour), m = Number(p.minute);
+  const slotHour = m >= 30 ? h : h - 1; // which :30-anchored slot `now` currently falls in
+  if (slotHour < 9 || slotHour > 14) return null; // valid slots: 9:30 through 2:30 only
+  const { year, month, day } = etCalendarDate(now);
+  const opensAt = etDateTime(year, month, day, slotHour, 30, 0);
   const locksAt = new Date(opensAt.getTime() + 60 * 60000);
   return { opensAt, locksAt };
 }
 
 function windowFor(tier, now) {
   // TEST_MODE: ignore real market hours entirely — every category (Full
-  // Day, Morning, Afternoon, Weekly, Degen Hours) is always available
-  // regardless of real time of day or day of week, cycling on a short
-  // fixed duration instead. Off by default — only for local/staging
-  // testing, never set this in a real deployment.
+  // Day, Morning, Afternoon, Weekly, Degen Hours, Race to the Close) is
+  // always available regardless of real time of day or day of week,
+  // cycling on a short fixed duration instead. Off by default — only for
+  // local/staging testing, never set this in a real deployment.
   if (TEST_MODE) {
     return { opensAt: now, locksAt: new Date(now.getTime() + TEST_SATELLITE_MINUTES * 60000) };
   }
@@ -61,7 +73,7 @@ function windowFor(tier, now) {
     return { opensAt: weekStart, locksAt: weekEnd };
   }
   if (tier.cadence === "hourly") {
-    return hourlyWindow(now); // 24/7, every hour on the hour, EVERY level including free — a Degen Hours play can go sideways fast with no cap, so frequent free shots matter here
+    return degenHoursWindow(now); // may be null — see above
   }
   return dailyWindow(tier, now);
 }
@@ -101,9 +113,11 @@ function ensureOpenSatellites(now = new Date()) {
       continue;
     }
 
-    if (tier.cadence === "daily" && !isWeekday(now)) continue;
+    if ((tier.cadence === "daily" || tier.cadence === "hourly") && !isWeekday(now)) continue;
 
-    const { opensAt } = windowFor(tier, now);
+    const window = windowFor(tier, now);
+    if (!window) continue; // outside valid hours entirely (Degen Hours outside 9:30-3:30) — not just "not yet", skip until the next valid slot
+    const { opensAt } = window;
     if (now.getTime() < opensAt.getTime()) continue;
 
     const existing = db
@@ -203,9 +217,16 @@ function resolveSatellite(satellite) {
         ).run(r.accountId, satellite.id, TICKET_COST);
       } else if (rank === 1 && ticketsFunded === 1 && freerollPrizeType === "runner_entry") {
         prizeType = "runner_entry";
+        // Degen Hours is the one deliberate redirect: instead of a ticket
+        // into that same hour's Runner room (which has usually already
+        // resolved by the time you'd act on it), the win feeds into that
+        // DAY's Race to the Close instead — every hourly win all day long
+        // stacks toward the same 3:30-4:00 finale. Every other category's
+        // freeroll still targets its own tier, unchanged.
+        const targetTierId = satellite.tier_id === "hourly" ? "race_to_close" : satellite.tier_id;
         db.prepare(
           "INSERT INTO pending_allocations (account_id, target_type, target_tier_id, target_price_level, allocations_json, source) VALUES (?, 'satellite', ?, 'runner', ?, 'freeroll_prize')"
-        ).run(r.accountId, satellite.tier_id, JSON.stringify([]));
+        ).run(r.accountId, targetTierId, JSON.stringify([]));
       } else if (rank === 1 && ticketsFunded === 0) {
         prizeType = "bonus_freeroll";
         db.prepare(

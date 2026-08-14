@@ -11,6 +11,13 @@ const CATEGORIES = [
   { id: "morning", name: "Morning", icon: "☀️", cadence: "daily", openHour: 9.5, lockHour: 13 },
   { id: "afternoon", name: "Afternoon", icon: "🔥", cadence: "daily", openHour: 13, lockHour: 16 },
   { id: "hourly", name: "Degen Hours", icon: "⚡", cadence: "hourly" }, // internal id stays "hourly" — it's a foreign key across satellites/pending_allocations/freeroll_fund, renaming it would mean migrating real data for zero user-facing benefit
+  // Once a day, the last 30 minutes of the trading session — deliberately
+  // NOT a 7th Degen Hours slot (see satelliteScheduler.js degenHoursWindow).
+  // No freeroll level of its own — see levels: below. Every entry here is
+  // either a direct paid buy-in, or a free ticket won from a Degen Hours
+  // freeroll earlier that same day (see FREEROLL_PRIZE_CONFIG.hourly's
+  // redirect, in satelliteScheduler.js resolveSatellite).
+  { id: "race_to_close", name: "Race to the Close", icon: "🏁", cadence: "daily", openHour: 15.5, lockHour: 16, levels: ["runner", "low", "mid", "high"] },
 ];
 
 // Base tier price is 100/300/750, then every paid room gets the flat +50
@@ -56,7 +63,7 @@ const PRICE_LEVEL_NAMES = { free: "Freeroll", runner: "Runner", low: "Clerk", mi
 //                 never touches this room's own prize pool; it's siphoned
 //                 entirely to that category's own freeroll fund.
 const TIERS = CATEGORIES.flatMap((cat) => {
-  const levels = ["free", "runner", "low", "mid", "high"];
+  const levels = cat.levels || ["free", "runner", "low", "mid", "high"];
   return levels.map((level) => {
     const poolFee = level === "free" ? 0 : level === "runner" ? RUNNER_PRICE : BASE_PRICE_LEVELS[level];
     const surcharge = level === "free" || level === "runner" ? 0 : FREEROLL_SURCHARGE;

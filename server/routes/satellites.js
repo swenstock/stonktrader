@@ -5,7 +5,7 @@ const requireAuth = require("../middleware/requireAuth");
 const { createPortfolio } = require("../portfolioValue");
 const { TIERS, CATEGORIES, FREEROLL_PRIZE_CONFIG } = require("../satelliteScheduler");
 const { currentStonkUsdPriceMicros } = require("../contestScheduler");
-const { isWeekday, etCalendarDate, etDateTime, currentWeekWindow } = require("../timeHelpers");
+const { isWeekday, etCalendarDate, etDateTime, easternParts, currentWeekWindow } = require("../timeHelpers");
 
 function stonkToUsd(stonkAmount) {
   return Number(((stonkAmount * currentStonkUsdPriceMicros()) / 1e6).toFixed(2));
@@ -21,6 +21,26 @@ function nextOccurrence(tier, now) {
   if (tier.cadence === "weekly") {
     const { weekStart } = currentWeekWindow(now);
     return weekStart;
+  }
+  if (tier.cadence === "hourly") {
+    // Degen Hours: 6 slots a day, offset 30 min from the top of the hour
+    // (9:30, 10:30 ... 2:30), weekdays only. Probe forward hour-by-hour
+    // rather than day-by-day, since "later today" is the common case.
+    let probe = new Date(now);
+    for (let i = 0; i < 24 * 8; i++) {
+      if (isWeekday(probe)) {
+        const p = easternParts(probe);
+        const h = Number(p.hour);
+        if (h >= 9 && h <= 14) {
+          const { year, month, day } = etCalendarDate(probe);
+          const opensAt = etDateTime(year, month, day, h, 30, 0);
+          const locksAt = new Date(opensAt.getTime() + 60 * 60000);
+          if (now.getTime() < locksAt.getTime()) return opensAt;
+        }
+      }
+      probe = new Date(probe.getTime() + 60 * 60000);
+    }
+    return now;
   }
   let probe = new Date(now);
   for (let i = 0; i < 8; i++) {
@@ -196,6 +216,9 @@ router.post("/:id/enter", requireAuth, (req, res) => {
   // Registration windows, by design, differ by category:
   //   Degen Hours (any level) — enter anytime the room's open, right up
   //     until the last 5 minutes. No holds barred means no holds barred.
+  //   Race to the Close — same idea, scaled to its own shorter window:
+  //     stays open for direct buy-ins the entire 30 minutes, cuts off in
+  //     the last 2 minutes rather than 5, proportionally similar.
   //   Every freeroll, any category — stays open the whole session (this
   //     is deliberately the "always something to jump into" entry point,
   //     including Weekly's, which otherwise closes at the opening bell).
@@ -204,11 +227,17 @@ router.post("/:id/enter", requireAuth, (req, res) => {
   //     Reserve a spot beforehand via the pending-allocation flow instead;
   //     once it's running, no new entries.
   const isDegenHours = satellite.tier_id === "hourly";
+  const isRaceToClose = satellite.tier_id === "race_to_close";
   const isFreeroll = satellite.price_level === "free";
-  if (isDegenHours) {
+  if (isDegenHours || isRaceToClose) {
     const locksAt = new Date(satellite.locks_at).getTime();
-    if (Date.now() >= locksAt - 5 * 60000) {
-      return res.status(400).json({ error: "Degen Hours entry closes 5 minutes before the hour ends — this one's cutting it too close." });
+    const cutoffMinutes = isDegenHours ? 5 : 2;
+    if (Date.now() >= locksAt - cutoffMinutes * 60000) {
+      return res.status(400).json({
+        error: isDegenHours
+          ? "Degen Hours entry closes 5 minutes before the hour ends — this one's cutting it too close."
+          : "Race to the Close entry closes in the final 2 minutes — even the finale has to actually finish.",
+      });
     }
   } else if (!isFreeroll) {
     return res.status(400).json({ error: "Registration for this contest closed the moment it opened — reserve your spot next time before it starts." });
