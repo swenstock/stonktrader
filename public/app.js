@@ -133,7 +133,7 @@ const ONBOARDING_CONTENT = {
   to_hourly: {
     icon: "⚡",
     title: "Trade now, free — try Hourly",
-    body: "It's open right now and resolves within the hour. You'll get a fresh free roll like this every other hourly session, all day, every day.",
+    body: "It's open right now and resolves within the hour. Win it and you get a ticket into that hour's Runner-level satellite. You'll get a fresh shot like this every other hourly session, all day, every day.",
     cta: "Enter my free Hourly contest",
     action: () => {
       switchView("lobby");
@@ -505,10 +505,10 @@ function renderTierFilterBar() {
 
 const CATEGORY_DESCRIPTIONS = {
   weekly_qualifier: "Runs Monday 12:00am ET through Friday close — the SAME window as the Main Event. Win a contest here and you're straight into the Main Event for free.",
-  full_day: "Runs the full trading session, 9:30 AM \u2013 4:00 PM ET, every weekday. New contest opens each trading day.",
-  morning: "Runs the first half of the trading session, 9:30 AM \u2013 1:00 PM ET, every weekday.",
-  afternoon: "Runs the second half of the trading session, 1:00 PM \u2013 4:00 PM ET, every weekday.",
-  hourly: "Runs 24/7 — a fresh contest opens every hour, any day, any time. Always something to play.",
+  full_day: "Runs the full trading session, 9:30 AM \u2013 4:00 PM ET, every weekday. New contest opens each trading day. Win the free tier and you get a ticket into that day's Runner-level satellite.",
+  morning: "Runs the first half of the trading session, 9:30 AM \u2013 1:00 PM ET, every weekday. Win the free tier and you get a ticket into that day's Runner-level satellite.",
+  afternoon: "Runs the second half of the trading session, 1:00 PM \u2013 4:00 PM ET, every weekday. Win the free tier and you get a ticket into that day's Runner-level satellite.",
+  hourly: "Paid tiers run 24/7, every hour. The free tier runs every OTHER hour — win it and you get a ticket into that hour's Runner-level satellite.",
 };
 
 function renderSatelliteCategoryTree() {
@@ -577,8 +577,14 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
           : isLocked
             ? "Locked"
             : `${lvl.entrantCount} entries`;
+      const isFreerollChip = lvl.priceLevel === "free";
+      const prizeNoun = isFreerollChip
+        ? cat.id === "weekly_qualifier"
+          ? "Main Event ticket"
+          : "Runner-level ticket"
+        : "Main Event ticket";
       const ticketLine = !isLocked
-        ? `<span class="stake-tickets">🎟️ ${lvl.ticketsProjected ?? 0} funded <span class="breakdown-btn" data-breakdown-id="${lvl.id}">ⓘ breakdown</span></span>`
+        ? `<span class="stake-tickets">🎟️ ${lvl.ticketsProjected ?? 0} ${prizeNoun}${(lvl.ticketsProjected ?? 0) === 1 ? "" : "s"} banked <span class="breakdown-btn" data-breakdown-id="${lvl.id}">ⓘ breakdown</span></span>`
         : "";
       const feeLabel = lvl.entryFee === 0 ? "FREE" : `${lvl.entryFee.toLocaleString()} STONK`;
       const usdLabel = lvl.entryFee === 0 ? "no wallet needed" : `~$${lvl.entryFeeUsd?.toFixed(2) ?? "0.00"}`;
@@ -588,7 +594,9 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
       const clickAction = atMax || isLocked ? "" : isPending ? "reserve-room-btn" : "join-sat-row-btn";
       const disabled = atMax || isLocked;
       const hoverStats = !isPending
-        ? `${lvl.entrantCount} traders · ${lvl.poolGross.toLocaleString()} STONK collected · projected: ${lvl.ticketsProjected || 0} ticket(s) + ${(lvl.remainderProjected || 0).toLocaleString()} STONK remainder`
+        ? isFreerollChip
+          ? `${lvl.entrantCount} traders · win a ${prizeNoun}, no wallet needed`
+          : `${lvl.entrantCount} traders · ${lvl.poolGross.toLocaleString()} STONK collected · projected: ${lvl.ticketsProjected || 0} ${prizeNoun}${(lvl.ticketsProjected || 0) === 1 ? "" : "s"} + ${(lvl.remainderProjected || 0).toLocaleString()} STONK remainder`
         : `Opens ${new Date(lvl.opensAt).toLocaleString()}`;
       return `<button class="stake-chip ${chipState} ${clickAction}" ${disabled ? "disabled" : ""} title="${hoverStats}" data-id="${lvl.id}" data-tier="${lvl.tierId}" data-level="${lvl.priceLevel}">
         <span class="stake-tier-name">${lvl.priceLevelName || lvl.priceLevel}</span>
@@ -623,7 +631,10 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
         feeText: lvl.entryFee === 0 ? "FREE — no wallet needed" : `${lvl.entryFee.toLocaleString()} STONK (~$${lvl.entryFeeUsd?.toFixed(2) ?? "0.00"})`,
         feeEach: lvl.entryFee,
         maxQty: remaining,
-        note: `${lvl.entrantCount} traders already in this contest. ${lvl.ticketsProjected || 0} ticket(s) currently funded.`,
+        note:
+          lvl.priceLevel === "free"
+            ? `${lvl.entrantCount} traders already in this contest. ${lvl.ticketsProjected > 0 ? `A ${cat.id === "weekly_qualifier" ? "Main Event ticket" : "Runner-level ticket"} is banked and up for grabs right now.` : `Win it and you get a ${cat.id === "weekly_qualifier" ? "Main Event ticket" : "Runner-level ticket"}.`}`
+            : `${lvl.entrantCount} traders already in this contest. ${lvl.ticketsProjected || 0} Main Event ticket${(lvl.ticketsProjected || 0) === 1 ? "" : "s"} currently funded.`,
         onConfirm: (qty) => joinSatellite(lvl.id, qty, lvl.priceLevel === "free", lvl.locksAt),
       });
     });
@@ -1914,14 +1925,20 @@ function renderLiveContestsList() {
 function showLiveDrilldown(cat) {
   document.getElementById("liveDrilldownTitle").textContent = cat.name;
   const body = document.getElementById("liveDrilldownBody");
+  const prizeNoun = cat.id === "weekly_qualifier" ? "Main Event ticket" : "Runner-level ticket";
   body.innerHTML = cat.levels
     .map((lvl) => {
       const isOpen = lvl.status === "open";
       const isPending = lvl.status === "pending";
+      const isFreeroll = lvl.priceLevel === "free";
       const payout = isOpen
-        ? lvl.ticketsProjected > 0
-          ? `${lvl.ticketsProjected} ticket${lvl.ticketsProjected === 1 ? "" : "s"} funded + ${lvl.remainderProjected.toLocaleString()} STONK to next`
-          : `${lvl.remainderProjected.toLocaleString()} STONK pooled toward first ticket`
+        ? isFreeroll
+          ? lvl.ticketsProjected > 0
+            ? `A ${prizeNoun} is banked and up for grabs`
+            : `No ${prizeNoun} banked yet — still a great free rep`
+          : lvl.ticketsProjected > 0
+            ? `${lvl.ticketsProjected} ${prizeNoun}${lvl.ticketsProjected === 1 ? "" : "s"} funded + ${lvl.remainderProjected.toLocaleString()} STONK to next`
+            : `${lvl.remainderProjected.toLocaleString()} STONK pooled toward first ${prizeNoun}`
         : isPending
           ? `<span class="countdown-text" data-ends="${lvl.opensAt}">${fmtCountdown(lvl.opensAt)}</span> until it opens`
           : "Locked";

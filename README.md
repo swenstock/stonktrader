@@ -1032,6 +1032,58 @@ exact STONK amount available on hover. Deliberately grounded in the real
 number the platform itself pays to fund one Broker, not an invented market
 price.
 
+## Made "Runner-level ticket" explicit everywhere Hourly/Daily freerolls appear
+
+Every mention of a non-Weekly freeroll now explicitly says what it's
+actually playing for — a ticket into that same category's Runner-level
+satellite — instead of leaving it vague or (worse) implying a Main Event
+ticket the way generic "🎟️ funded" language could read. Fixed across: the
+Lobby/landing freeroll callout strip, the category hover tooltips, the
+onboarding popups, the room chip hover stats, the entry review note before
+confirming, and the Leaderboards Live drill-down.
+
+**Found a real accuracy bug while doing this, not just a wording one**:
+every freeroll room's "tickets funded" figure was computed from that
+room's own pool — which is always $0 by definition for a freeroll — so it
+displayed **0, always, everywhere**, completely independent of whether a
+real prize was actually banked in that category's separate freeroll fund.
+A trader could be looking at a chip with a genuinely funded, ready-to-win
+Runner-level ticket sitting there and see "0 funded" regardless. Fixed by
+reading the real number from the correct table for freeroll rooms
+specifically — verified directly: funded a category's pool past its
+threshold and confirmed the chip's number flips from 0 to 1, correctly,
+where it previously would have stayed at 0 forever.
+
+## Mobile alignment pass
+
+Audited every element added in the later rounds of this session against
+the existing mobile breakpoints — found several genuinely never got
+phone-width treatment at all, since they were built and tested primarily
+against desktop widths:
+
+- **`.pct-btns`** (the 25/50/75/100/custom row in the trade modal) had
+  **no wrap fallback whatsoever** — on a narrow phone this would overflow
+  horizontally rather than reflow. Fixed with `flex-wrap:wrap`, safe at
+  any width since it only engages when space actually runs out.
+- **Panel headers** (Markets, My Watchlist) had the same no-wrap risk if
+  header text ran long — same fix.
+- **Freeroll callout strip** — fixed `min-width:150px` items produced an
+  uneven 2-then-1 layout on phone widths. Now stacks full-width below 600px.
+- **Weekly freeroll banner** — the text block's `min-width:260px` left
+  almost no room beside it on a phone, forcing an awkward near-empty wrap.
+  Now stacks cleanly, button goes full-width.
+- **Trade modal header** (symbol picker + price + portfolio total) — the
+  `margin-left:auto` push that works fine on desktop doesn't behave
+  predictably once the row actually wraps. Now stacks explicitly below 600px.
+- **Entry group tree** — a fixed 52px side label next to a row that can
+  itself wrap onto multiple lines looked visually off-center on narrow
+  screens. Label now stacks above the row instead of beside it.
+- **Onboarding, entry review, and trade settings modals** — width now
+  respects actual phone padding instead of fighting a fixed max-width.
+
+Verified CSS braces balanced and `app.js` still parses clean after the
+pass. No backend changes.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

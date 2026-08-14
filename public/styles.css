@@ -531,7 +531,7 @@ tr.watch-row:hover{background:var(--surface-2);}
 .pct-quick-btn.active{background:var(--gold);color:#0A1400;border-color:var(--gold);}
 
 /* ---------- My Watchlist panel ---------- */
-.panel-header-row{display:flex;justify-content:space-between;align-items:center;}
+.panel-header-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
 .watchlist-add-row{display:flex;gap:8px;margin-bottom:12px;}
 .watchlist-add-row select{
   flex:1;background:var(--surface-2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:8px 10px;
@@ -597,7 +597,7 @@ nav{position:sticky;top:0;z-index:60;}
 /* ---------- Percentage-based trade rows ---------- */
 .pct-trade-row{margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);}
 .pct-trade-row label{display:block;font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px;}
-.pct-btns{display:flex;gap:6px;align-items:center;}
+.pct-btns{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
 .pct-btns .btn-sm{flex:0 0 auto;}
 .pct-btns input{
   width:52px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);
@@ -645,3 +645,42 @@ nav{position:sticky;top:0;z-index:60;}
   margin:6px auto 14px;animation:filledPop .4s cubic-bezier(.2,1.4,.4,1);
 }
 @keyframes filledPop{0%{transform:scale(.3);opacity:0;}100%{transform:scale(1);opacity:1;}}
+
+/* ---------- Mobile pass: elements added later in the build that never got phone-width treatment ---------- */
+@media(max-width:600px){
+  /* Freeroll callout strip — was min-width:150px + wrap, which produced an
+     uneven 2-then-1 layout on phone widths. Full-width stacked instead. */
+  .freeroll-callout-strip{flex-direction:column;}
+  .freeroll-callout-item{min-width:0;}
+
+  /* Weekly freeroll banner — text block's min-width:260px left almost no
+     room beside it on a phone, forcing an awkward near-empty wrap. Stack
+     cleanly instead, button full-width. */
+  .weekly-freeroll-banner{flex-direction:column;align-items:stretch;text-align:center;}
+  .weekly-freeroll-banner-text{min-width:0;flex-direction:column;text-align:center;}
+  .weekly-freeroll-banner-text b, .weekly-freeroll-banner-text span{text-align:center;}
+  #weeklyFreerollCta{width:100%;}
+
+  /* Trade modal header — symbol picker, price, and portfolio total were
+     wrapping unpredictably with the margin-left:auto push. Stack instead. */
+  .trade-modal-header{flex-direction:column;align-items:flex-start;gap:6px;}
+  .trade-portfolio-total{margin-left:0;}
+  .symbol-picker{width:100%;}
+
+  /* Entry group tree — a fixed 52px side label next to a row that can
+     itself wrap onto several lines looked visually off-center on narrow
+     screens. Stack the label above the row instead. */
+  .entry-group-item{flex-direction:column;align-items:stretch;gap:4px;}
+  .entry-number-tag{width:auto;}
+
+  /* Position summary + trade mode toggle inside the redesigned trade
+     modal's right column — give buttons room to wrap instead of squeezing. */
+  .trade-mode-toggle{flex-wrap:wrap;}
+  .position-summary-row{flex-wrap:wrap;}
+
+  /* Onboarding popup and entry review card — full-width instead of
+     fighting the fixed max-width against phone padding. */
+  #onboardingModal .trade-modal-card,
+  #entryReviewModal .trade-modal-card,
+  #tradeSettingsModal .trade-modal-card{max-width:calc(100vw - 32px);}
+}

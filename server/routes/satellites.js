@@ -48,6 +48,15 @@ function serializePendingTier(tier, now, myAccountId) {
         .get(myAccountId, tier.categoryId, tier.priceLevel).n
     : 0;
 
+  // For the free level specifically, "tickets projected" doesn't come from
+  // this room's own pool (which is always $0 by definition) — it comes
+  // from that CATEGORY's own separate freeroll fund. Reading the real
+  // number here instead of leaving it hardcoded at 0.
+  const freerollPrizesAvailable =
+    tier.priceLevel === "free"
+      ? (db.prepare("SELECT prizes_available FROM freeroll_fund WHERE category_id = ?").get(tier.categoryId)?.prizes_available ?? 0)
+      : 0;
+
   return {
     id: null,
     tierId: tier.categoryId,
@@ -64,7 +73,7 @@ function serializePendingTier(tier, now, myAccountId) {
     locksAt: null,
     entrantCount: 0,
     poolGross: 0,
-    ticketsProjected: 0,
+    ticketsProjected: freerollPrizesAvailable,
     remainderProjected: 0,
     joined: myPendingCount > 0,
     myEntryCount: myPendingCount,
@@ -80,6 +89,15 @@ function serializeSatellite(s, myAccountId) {
   const playerPool = grossPool * 0.85;
   const ticketsProjected = Math.floor(playerPool / s.ticket_cost);
   const remainderProjected = s.status === "open" ? playerPool - ticketsProjected * s.ticket_cost : s.remainder_stonk;
+
+  // Freeroll rooms never fund a prize from their own $0 pool — the real
+  // number lives in that category's own separate freeroll fund instead.
+  // Reading it directly here rather than showing the always-zero
+  // pool-based projection, which was never accurate for these rooms.
+  const freerollPrizesAvailable =
+    s.status === "open" && s.price_level === "free"
+      ? (db.prepare("SELECT prizes_available FROM freeroll_fund WHERE category_id = ?").get(s.tier_id)?.prizes_available ?? 0)
+      : null;
 
   const tierMeta = TIERS.find((t) => t.categoryId === s.tier_id && t.priceLevel === s.price_level);
 
@@ -109,7 +127,7 @@ function serializeSatellite(s, myAccountId) {
     locksAt: s.locks_at,
     entrantCount,
     poolGross: grossPool,
-    ticketsProjected: s.status === "open" ? ticketsProjected : s.tickets_funded,
+    ticketsProjected: freerollPrizesAvailable !== null ? freerollPrizesAvailable : (s.status === "open" ? ticketsProjected : s.tickets_funded),
     ticketsFunded: s.tickets_funded,
     remainderProjected: Math.round(remainderProjected || 0),
     remainderStonk: s.remainder_stonk,
