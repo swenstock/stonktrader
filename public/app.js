@@ -777,6 +777,10 @@ function closeYoureIn() {
 }
 document.getElementById("youreInDoneBtn").addEventListener("click", closeYoureIn);
 document.getElementById("youreInModalBackdrop").addEventListener("click", closeYoureIn);
+document.getElementById("youreInGoToContestsBtn").addEventListener("click", () => {
+  closeYoureIn();
+  switchView("mycontests");
+});
 
 // Runs entries ONE AT A TIME (never in parallel) — parallel requests could
 // all pass the server's "count < max" check simultaneously and race past
