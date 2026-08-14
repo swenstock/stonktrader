@@ -68,7 +68,7 @@
 <div id="appScreen" class="app-screen" style="display:none;">
   <nav>
     <div class="nav-top-row">
-      <div class="nav-spacer"></div>
+      <button class="nav-hamburger" id="navHamburgerBtn" aria-label="Menu">☰</button>
       <div class="logo" id="navLogoHome">STONK <span class="accent">BROKER</span> CHALLENGE</div>
       <div class="nav-right">
         <div class="price-box">
@@ -79,7 +79,8 @@
         <button class="btn btn-outline" id="logoutBtn">Log out</button>
       </div>
     </div>
-    <div class="nav-tabs">
+    <div class="nav-tabs" id="navTabs">
+      <button class="nav-tabs-close" id="navTabsClose">✕ Close</button>
       <button class="nav-tab active" data-view="lobby">Lobby</button>
       <button class="nav-tab" data-view="mycontests">My Contests</button>
       <button class="nav-tab" data-view="leaderboards">Leaderboards</button>
@@ -89,6 +90,7 @@
       <button class="nav-tab" data-view="referrals">Referrals</button>
     </div>
   </nav>
+  <div class="nav-mobile-backdrop" id="navMobileBackdrop"></div>
 
   <!-- ===== LOBBY ===== -->
   <div id="lobbyView" class="view">
@@ -279,6 +281,7 @@
 
       <div class="panel">
         <h3>Positions <span class="scroll-hint">swipe left for more →</span></h3>
+        <div class="positions-summary-line" id="positionsSummaryLine"></div>
         <table>
           <thead><tr><th>Symbol</th><th>Qty</th><th>Avg Cost</th><th>Price</th><th>% of Portfolio</th><th>P&amp;L</th></tr></thead>
           <tbody id="positionsTable"></tbody>

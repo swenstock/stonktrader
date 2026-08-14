@@ -49,7 +49,10 @@ html{overflow-x:hidden;}
 nav{padding:14px 28px 0;border-bottom:1px solid var(--border);
   background:linear-gradient(180deg, rgba(140,255,0,.03), transparent);}
 .nav-top-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:14px;padding-bottom:14px;}
-.nav-spacer{}
+.nav-hamburger{
+  justify-self:start;background:none;border:1px solid var(--border);border-radius:8px;color:var(--text);
+  font-size:18px;width:38px;height:38px;cursor:pointer;visibility:hidden;
+}
 .logo{justify-self:center;text-align:center;}
 .nav-right{display:flex;align-items:center;gap:12px;justify-self:end;}
 .welcome{font-size:13px;color:var(--text-dim);}
@@ -81,6 +84,10 @@ nav{padding:14px 28px 0;border-bottom:1px solid var(--border);
 
 table{width:100%;border-collapse:collapse;font-size:13px;}
 .scroll-hint{display:none;}
+.positions-summary-line{display:flex;gap:24px;flex-wrap:wrap;margin:-4px 0 14px;font-size:13px;color:var(--text-dim);}
+.positions-summary-line b{color:var(--text);font-size:14px;}
+.positions-summary-line .up{color:var(--green);}
+.positions-summary-line .down{color:var(--red);}
 @media(max-width:640px){
   /* Wide multi-column tables (Positions, Recent Activity, etc.) have
      nowhere to go on a narrow screen once every column needs real room —
@@ -123,6 +130,7 @@ tr.watch-row:hover{background:var(--surface-2);}
 
 /* ---------- Nav tabs & chip balance ---------- */
 .nav-tabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding-bottom:12px;}
+.nav-tabs-close{display:none;}
 .nav-right{flex-wrap:wrap;justify-content:flex-end;}
 .nav-tab{
   background:transparent;border:1px solid transparent;color:var(--text-dim);
@@ -300,7 +308,6 @@ tr.watch-row:hover{background:var(--surface-2);}
 @media(max-width:920px){
   .lobby-hero{grid-template-columns:1fr;}
   .table-grid{grid-template-columns:1fr;}
-  .nav-top-row{grid-template-columns:1fr;justify-items:center;text-align:center;gap:10px;}
   .nav-right{justify-self:center;}
   .stats-strip{grid-template-columns:1fr;}
   .stat-block{border-right:none;border-bottom:1px solid var(--border);}
@@ -309,17 +316,42 @@ tr.watch-row:hover{background:var(--surface-2);}
   .broker-lineup{margin-top:24px;}
 }
 
+@media(max-width:780px){
+  /* Seven nav tabs plus the top row (logo, price, wallet, logout) was
+     genuinely too much to fit without wrapping into a messy multi-row
+     stack. Collapse the tabs into a hamburger dropdown instead — the
+     standard pattern for exactly this problem. Top row stays inline
+     (hamburger left, logo center, price/wallet/logout right) rather than
+     stacking, so the whole nav takes far less vertical space overall. */
+  .nav-top-row{grid-template-columns:auto 1fr auto;gap:8px;}
+  .nav-hamburger{visibility:visible;justify-self:start;}
+  .logo{font-size:13px;}
+  .nav-right{gap:6px;}
+  .price-box{padding:5px 8px;}
+  .price-box-label{display:none;}
+  .price-box-value{font-size:11px;}
+  .btn-outline#connectWalletBtn{padding:7px 9px;font-size:10px;}
+  #logoutBtn{padding:7px 9px;font-size:10px;}
+
+  .nav-tabs{
+    display:none;position:fixed;top:0;left:0;bottom:0;width:78vw;max-width:300px;z-index:200;
+    background:var(--bg);border-right:1px solid var(--border);flex-direction:column;align-items:stretch;
+    padding:70px 16px 20px;gap:4px;overflow-y:auto;
+  }
+  .nav-tabs.open{display:flex;}
+  .nav-tab{width:100%;text-align:left;}
+  .nav-tabs-close{
+    display:block;background:none;border:1px solid var(--border);border-radius:8px;color:var(--text-dim);
+    padding:8px 12px;margin-bottom:10px;cursor:pointer;font-family:'Sora',sans-serif;text-align:left;
+  }
+  .nav-mobile-backdrop{
+    display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:199;
+  }
+  .nav-mobile-backdrop.open{display:block;}
+}
+
 @media(max-width:480px){
   nav{padding:12px 16px;gap:10px;}
-  .nav-right{gap:6px;}
-  .price-box{padding:5px 10px;}
-  .price-box-label{font-size:8.5px;}
-  .price-box-value{font-size:12px;}
-  .btn-outline#connectWalletBtn{padding:8px 10px;font-size:10.5px;}
-  #logoutBtn{padding:8px 10px;font-size:10.5px;}
-  .logo{font-size:14px;}
-  .nav-tabs{gap:4px;}
-  .nav-tab{padding:7px 12px;font-size:12px;}
 }
 
 /* ---------- Daily session grid ---------- */

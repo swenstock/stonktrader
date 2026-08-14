@@ -316,10 +316,28 @@ document.getElementById("connectWalletBtn").addEventListener("click", () => {
 
 // ---------------- Nav ----------------
 document.querySelectorAll(".nav-tab").forEach((btn) => {
-  btn.addEventListener("click", () => switchView(btn.dataset.view));
+  btn.addEventListener("click", () => {
+    switchView(btn.dataset.view);
+    closeMobileNav(); // auto-close the dropdown after picking a page — no reason to leave it open
+  });
 });
 
-document.getElementById("navLogoHome").addEventListener("click", () => switchView("lobby"));
+document.getElementById("navLogoHome").addEventListener("click", () => {
+  switchView("lobby");
+  closeMobileNav();
+});
+
+function openMobileNav() {
+  document.getElementById("navTabs").classList.add("open");
+  document.getElementById("navMobileBackdrop").classList.add("open");
+}
+function closeMobileNav() {
+  document.getElementById("navTabs").classList.remove("open");
+  document.getElementById("navMobileBackdrop").classList.remove("open");
+}
+document.getElementById("navHamburgerBtn")?.addEventListener("click", openMobileNav);
+document.getElementById("navTabsClose")?.addEventListener("click", closeMobileNav);
+document.getElementById("navMobileBackdrop")?.addEventListener("click", closeMobileNav);
 
 function switchView(view) {
   document.querySelectorAll(".nav-tab").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
@@ -1917,6 +1935,20 @@ async function refreshCurrentPortfolio() {
     // handles clicks on .position-row regardless of how many times this
     // table gets re-rendered, so there's no window where a freshly-rendered
     // row is briefly missing its own listener.
+
+    const summaryEl = document.getElementById("positionsSummaryLine");
+    if (summaryEl) {
+      // Total P&L here is the sum of unrealized P&L across currently-held
+      // positions specifically — what's actually shown in the table below,
+      // not the account's all-time realized+unrealized figure (that's the
+      // separate stat at the top of the page).
+      const totalPositionsPL = p.positions.reduce((sum, pos) => sum + pos.unrealizedPL, 0);
+      const plCls = totalPositionsPL >= 0 ? "up" : "down";
+      summaryEl.innerHTML = `
+        <span>Total P&amp;L: <b class="mono ${plCls}">${totalPositionsPL >= 0 ? "+" : ""}$${totalPositionsPL.toFixed(2)}</b></span>
+        <span>Account Value: <b class="mono">$${p.totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}</b></span>
+      `;
+    }
 
     renderAllocationDonut(p);
     renderPositionSummary();
