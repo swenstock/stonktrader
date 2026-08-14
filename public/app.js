@@ -1351,7 +1351,7 @@ function renderPositionSummary() {
   const pct = latestPortfolioData.totalValue > 0 ? (pos.value / latestPortfolioData.totalValue) * 100 : 0;
   el.innerHTML = `
     ${degenBadge}
-    <div class="position-summary-row"><span>${selectedSymbol} position</span><b class="mono">${pos.quantity} shares</b></div>
+    <div class="position-summary-row"><span>${selectedSymbol} position</span><b class="mono">${fmtQty(pos.quantity)} shares</b></div>
     <div class="position-summary-row"><span>Avg cost</span><b class="mono">$${pos.avgCost.toFixed(2)}</b></div>
     <div class="position-summary-row"><span>P&amp;L</span><b class="mono ${cls}">${pos.unrealizedPL >= 0 ? "+" : ""}$${pos.unrealizedPL.toFixed(2)}</b></div>
     <div class="position-summary-row"><span>% of portfolio</span><b class="mono">${pct.toFixed(1)}%</b></div>
@@ -1638,6 +1638,17 @@ document.getElementById("tradeSettingsBackdrop")?.addEventListener("click", clos
 document.getElementById("settingsReviewToggle")?.addEventListener("change", (e) => setTradePref("skipTradeReview", !e.target.checked));
 document.getElementById("settingsFilledToggle")?.addEventListener("change", (e) => setTradePref("skipOrderFilled", !e.target.checked));
 
+// Shares are stored as full-precision floats (a $100 buy at $453.99 gives
+// you 0.22026916892442564... shares, not a round number) — fine for
+// accounting, unusable directly in a table. Round to 4 decimals and strip
+// trailing zeros so "22.0269..." becomes "22.0269" and "100.0000" becomes
+// "100", not a 15-digit number chewing up the whole row.
+function fmtQty(q) {
+  const n = Number(q);
+  if (!isFinite(n)) return String(q);
+  return n.toFixed(4).replace(/\.?0+$/, "");
+}
+
 function initiateTrade(side, explicitQuantity, maxAllotment) {
   if (!currentPortfolioId) return;
   const msg = document.getElementById("tradeMsg");
@@ -1659,7 +1670,7 @@ function initiateTrade(side, explicitQuantity, maxAllotment) {
   document.getElementById("reviewAction").textContent = side === "buy" ? "Buy" : "Sell";
   document.getElementById("reviewAction").style.color = side === "buy" ? "var(--green)" : "var(--red)";
   document.getElementById("reviewSymbol").textContent = selectedSymbol;
-  document.getElementById("reviewShares").textContent = maxAllotment ? "~" + quantity.toFixed(4).replace(/\.?0+$/, "") : quantity.toFixed(4).replace(/\.?0+$/, "");
+  document.getElementById("reviewShares").textContent = maxAllotment ? "~" + fmtQty(quantity) : fmtQty(quantity);
   document.getElementById("reviewPrice").textContent = q ? `${q.currency} ${estPrice.toFixed(2)}` : "—";
   document.getElementById("reviewTotal").textContent = maxAllotment
     ? `~$${(quantity * estPrice).toLocaleString(undefined, { minimumFractionDigits: 2 })} (exact amount confirmed at execution)`
@@ -1690,7 +1701,7 @@ async function executeTrade() {
         maxAllotment: pendingTrade.maxAllotment,
       }),
     });
-    const qtyDisplay = (result.quantity.toFixed ? result.quantity.toFixed(4) : result.quantity).toString().replace(/\.?0+$/, "");
+    const qtyDisplay = fmtQty(result.quantity);
     const summary = `${result.side === "buy" ? "Bought" : "Sold"} ${qtyDisplay} ${result.symbol} @ $${result.price.toFixed(2)}`;
     pendingTrade = null;
     refreshCurrentPortfolio();
@@ -1736,7 +1747,7 @@ function currentAllotmentInfo() {
 function updatePctHints() {
   const { availableAllotment, existingQty } = currentAllotmentInfo();
   const el = document.getElementById("pctReferenceLine");
-  if (el) el.textContent = `~$${availableAllotment.toFixed(2)} left to allocate  ·  ${existingQty.toFixed(4)} shares held`;
+  if (el) el.textContent = `~$${availableAllotment.toFixed(2)} left to allocate  ·  ${fmtQty(existingQty)} shares held`;
 }
 
 function buyPercentOfAllotment(pct) {
@@ -1866,7 +1877,7 @@ async function refreshCurrentPortfolio() {
         .map((pos) => {
           const cls = pos.unrealizedPL >= 0 ? "up" : "down";
           const pctOfPortfolio = p.totalValue > 0 ? (pos.value / p.totalValue) * 100 : 0;
-          return `<tr class="watch-row position-row" data-symbol="${pos.symbol}"><td class="mono">${pos.symbol}</td><td>${pos.quantity}</td><td>$${pos.avgCost.toFixed(2)}</td><td>$${pos.price.toFixed(2)}</td><td class="mono">${pctOfPortfolio.toFixed(1)}%</td><td class="${cls}">${pos.unrealizedPL >= 0 ? "+" : ""}$${pos.unrealizedPL.toFixed(2)}</td></tr>`;
+          return `<tr class="watch-row position-row" data-symbol="${pos.symbol}"><td class="mono">${pos.symbol}</td><td class="mono">${fmtQty(pos.quantity)}</td><td>$${pos.avgCost.toFixed(2)}</td><td>$${pos.price.toFixed(2)}</td><td class="mono">${pctOfPortfolio.toFixed(1)}%</td><td class="${cls}">${pos.unrealizedPL >= 0 ? "+" : ""}$${pos.unrealizedPL.toFixed(2)}</td></tr>`;
         })
         .join("") || `<tr><td colspan="6" style="color:var(--text-dim);">No positions yet — buy something!</td></tr>`;
     // Delegated listener (attached once, outside this function — see below)
@@ -1889,7 +1900,7 @@ async function refreshCurrentPortfolio() {
         .slice(0, 20)
         .map(
           (t) =>
-            `<tr><td class="mono" style="font-size:11px;">${new Date(t.timestamp).toLocaleString()}</td><td class="${t.side === "buy" ? "up" : "down"}">${t.side.toUpperCase()}</td><td class="mono">${t.symbol}</td><td>${t.quantity}</td><td>$${t.price.toFixed(2)}</td></tr>`
+            `<tr><td class="mono" style="font-size:11px;">${new Date(t.timestamp).toLocaleString()}</td><td class="${t.side === "buy" ? "up" : "down"}">${t.side.toUpperCase()}</td><td class="mono">${t.symbol}</td><td class="mono">${fmtQty(t.quantity)}</td><td>$${t.price.toFixed(2)}</td></tr>`
         )
         .join("") || `<tr><td colspan="5" style="color:var(--text-dim);">No orders yet.</td></tr>`;
 

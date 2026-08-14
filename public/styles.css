@@ -80,6 +80,16 @@ nav{padding:14px 28px 0;border-bottom:1px solid var(--border);
 .market-filter button.active{background:var(--gold);color:#0A1400;border-color:var(--gold);}
 
 table{width:100%;border-collapse:collapse;font-size:13px;}
+@media(max-width:640px){
+  /* Wide multi-column tables (Positions, Recent Activity, etc.) have
+     nowhere to go on a narrow screen once every column needs real room —
+     body has overflow-x:hidden globally, so without this the table just
+     gets crushed or clipped instead of staying readable. The table itself
+     becomes a scrollable block; internal thead/tbody/tr/td keep their
+     normal table display values, so row/column layout inside stays intact. */
+  table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch;width:auto;max-width:100%;}
+  td, th{white-space:nowrap;}
+}
 th{text-align:left;color:var(--text-dim);font-weight:500;font-size:10.5px;text-transform:uppercase;
   letter-spacing:.05em;padding-bottom:8px;border-bottom:1px solid var(--border);}
 td{padding:9px 0;border-bottom:1px solid var(--border);font-family:'IBM Plex Mono',monospace;}
