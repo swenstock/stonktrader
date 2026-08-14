@@ -1,7 +1,7 @@
 const db = require("./db");
 const { getQuote } = require("./dataProvider");
 const { createPortfolio } = require("./portfolioValue");
-const { TIERS, FREEROLL_FUND_THRESHOLD } = require("./tierConfig");
+const { TIERS, FREEROLL_PRIZE_CONFIG } = require("./tierConfig");
 
 const MAX_ALLOCATION_PCT = 10; // matches the 10% max-initial-position trading rule, expressed 0-100
 const MAIN_EVENT_MAX_ENTRIES = 10; // must match CONFIG.maxEntriesPerAccount in contestScheduler.js — duplicated
@@ -95,13 +95,14 @@ function applyPendingSatelliteAllocations(satellite) {
     ).run(satellite.id, pa.account_id, portfolioId, satellite.entry_fee); // satellite.entry_fee = poolFee already
 
     if (tier && tier.surcharge > 0) {
-      db.prepare("UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk + ? WHERE id = 1").run(tier.surcharge);
-      const fund = db.prepare("SELECT * FROM freeroll_fund WHERE id = 1").get();
-      if (fund.accumulated_stonk >= FREEROLL_FUND_THRESHOLD) {
+      db.prepare("UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk + ? WHERE category_id = ?").run(tier.surcharge, tier.categoryId);
+      const fund = db.prepare("SELECT * FROM freeroll_fund WHERE category_id = ?").get(tier.categoryId);
+      const threshold = FREEROLL_PRIZE_CONFIG[tier.categoryId].threshold;
+      if (fund.accumulated_stonk >= threshold) {
         db.prepare(
-          `UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk - ?, tickets_available = tickets_available + 1,
-           total_tickets_funded_lifetime = total_tickets_funded_lifetime + 1 WHERE id = 1`
-        ).run(FREEROLL_FUND_THRESHOLD);
+          `UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk - ?, prizes_available = prizes_available + 1,
+           total_prizes_funded_lifetime = total_prizes_funded_lifetime + 1 WHERE category_id = ?`
+        ).run(threshold, tier.categoryId);
       }
     }
 

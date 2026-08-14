@@ -278,18 +278,22 @@ CREATE TABLE IF NOT EXISTS ticket_listings (
 CREATE INDEX IF NOT EXISTS idx_ticket_listings_status ON ticket_listings(status);
 CREATE INDEX IF NOT EXISTS idx_ticket_listings_seller ON ticket_listings(seller_account_id);
 
--- Single-row ledger tracking the freeroll surcharge fund. Every paid
--- satellite entry adds FREEROLL_SURCHARGE (50 STONK) here, untouched by the
--- normal rake split. Every time accumulated_stonk crosses 3,000, one
--- freeroll ticket becomes available (tickets_available increments,
--- accumulated_stonk decrements by 3000) — see satelliteScheduler.js.
+-- Per-category ledger tracking each category's OWN freeroll surcharge
+-- fund. Every paid entry in a category adds FREEROLL_SURCHARGE (50 STONK)
+-- to THAT category's row, untouched by the normal rake split. Every time
+-- a category's accumulated_stonk crosses its own threshold (see
+-- FREEROLL_PRIZE_CONFIG in tierConfig.js — 3,000 for Weekly's Main Event
+-- ticket, ~30 for everyone else's Runner-tier entry), one prize becomes
+-- available and the threshold amount is deducted. Separate pools per
+-- category — NOT one shared pool — so a fast-cycling category like Hourly
+-- can't starve Weekly's much bigger, much rarer prize, and vice versa.
 CREATE TABLE IF NOT EXISTS freeroll_fund (
-  id INTEGER PRIMARY KEY CHECK (id = 1),
+  category_id TEXT PRIMARY KEY,
   accumulated_stonk INTEGER NOT NULL DEFAULT 0,
-  tickets_available INTEGER NOT NULL DEFAULT 0,
-  total_tickets_funded_lifetime INTEGER NOT NULL DEFAULT 0
+  prizes_available INTEGER NOT NULL DEFAULT 0,
+  total_prizes_funded_lifetime INTEGER NOT NULL DEFAULT 0
 );
-INSERT OR IGNORE INTO freeroll_fund (id, accumulated_stonk, tickets_available, total_tickets_funded_lifetime) VALUES (1, 0, 0, 0);
+INSERT OR IGNORE INTO freeroll_fund (category_id) VALUES ('weekly_qualifier'), ('full_day'), ('morning'), ('afternoon'), ('hourly');
 `);
 
 module.exports = db;

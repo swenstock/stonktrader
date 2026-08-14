@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require("../db");
 const requireAuth = require("../middleware/requireAuth");
 const { createPortfolio } = require("../portfolioValue");
-const { TIERS, CATEGORIES, FREEROLL_FUND_THRESHOLD } = require("../satelliteScheduler");
+const { TIERS, CATEGORIES, FREEROLL_PRIZE_CONFIG } = require("../satelliteScheduler");
 const { currentStonkUsdPriceMicros } = require("../contestScheduler");
 const { isWeekday, etCalendarDate, etDateTime, currentWeekWindow } = require("../timeHelpers");
 
@@ -205,13 +205,14 @@ router.post("/:id/enter", requireAuth, (req, res) => {
   ).run(satellite.id, account.id, portfolioId, tier.poolFee);
 
   if (tier.surcharge > 0) {
-    db.prepare("UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk + ? WHERE id = 1").run(tier.surcharge);
-    const fund = db.prepare("SELECT * FROM freeroll_fund WHERE id = 1").get();
-    if (fund.accumulated_stonk >= FREEROLL_FUND_THRESHOLD) {
+    db.prepare("UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk + ? WHERE category_id = ?").run(tier.surcharge, tier.categoryId);
+    const fund = db.prepare("SELECT * FROM freeroll_fund WHERE category_id = ?").get(tier.categoryId);
+    const threshold = FREEROLL_PRIZE_CONFIG[tier.categoryId].threshold;
+    if (fund.accumulated_stonk >= threshold) {
       db.prepare(
-        `UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk - ?, tickets_available = tickets_available + 1,
-         total_tickets_funded_lifetime = total_tickets_funded_lifetime + 1 WHERE id = 1`
-      ).run(FREEROLL_FUND_THRESHOLD);
+        `UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk - ?, prizes_available = prizes_available + 1,
+         total_prizes_funded_lifetime = total_prizes_funded_lifetime + 1 WHERE category_id = ?`
+      ).run(threshold, tier.categoryId);
     }
   }
   db.exec("COMMIT");

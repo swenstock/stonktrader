@@ -16,7 +16,7 @@ const { computeLadder } = require("./prizeLadder");
 const { etDateTime, etCalendarDate, isWeekday, currentWeekWindow } = require("./timeHelpers");
 const mainEvent = require("./contestScheduler");
 const { applyPendingSatelliteAllocations } = require("./allocationEngine");
-const { CATEGORIES, PRICE_LEVEL_NAMES, TIERS, FREEROLL_SURCHARGE, FREEROLL_FUND_THRESHOLD } = require("./tierConfig");
+const { CATEGORIES, PRICE_LEVEL_NAMES, TIERS, FREEROLL_SURCHARGE, FREEROLL_PRIZE_CONFIG } = require("./tierConfig");
 
 const RAKE = { total: 0.15, platform: 0.10, affiliate: 0.05 };
 const TICKET_COST = 3000;
@@ -40,10 +40,17 @@ function dailyWindow(tier, now) {
   };
 }
 
+function hourlyWindow(now) {
+  const opensAt = new Date(now);
+  opensAt.setMinutes(0, 0, 0); // snap to the top of the current hour
+  const locksAt = new Date(opensAt.getTime() + 60 * 60000);
+  return { opensAt, locksAt };
+}
+
 function windowFor(tier, now) {
   // TEST_MODE: ignore real market hours entirely — every category (Full
-  // Day, Morning, Afternoon, Weekly) is always available regardless of
-  // real time of day or day of week, cycling on a short fixed duration
+  // Day, Morning, Afternoon, Weekly, Hourly) is always available regardless
+  // of real time of day or day of week, cycling on a short fixed duration
   // instead. Off by default — only for local/staging testing, never set
   // this in a real deployment.
   if (TEST_MODE) {
@@ -52,6 +59,9 @@ function windowFor(tier, now) {
   if (tier.cadence === "weekly") {
     const { weekStart, weekEnd } = currentWeekWindow(now);
     return { opensAt: weekStart, locksAt: weekEnd };
+  }
+  if (tier.cadence === "hourly") {
+    return hourlyWindow(now); // 24/7, every hour on the hour — always something running, any day, any time
   }
   return dailyWindow(tier, now);
 }
@@ -126,15 +136,18 @@ function resolveSatellite(satellite) {
 
   const grossPool = entries.reduce((s, e) => s + e.entry_fee_paid, 0);
 
-  let ticketsFunded, remainder;
+  let ticketsFunded, remainder, freerollPrizeType;
   if (satellite.price_level === "free") {
-    // Freeroll rooms never fund tickets from their own $0 pool — the ticket
-    // (if any) comes from the banked freeroll fund instead, capped at one
+    // Freeroll rooms never fund a prize from their own $0 pool — the prize
+    // (if any) comes from that CATEGORY's own banked freeroll fund instead
+    // (a separate pool per category, not one shared pool), capped at one
     // per resolved freeroll room so a big bank spreads across occurrences
     // rather than dumping everything into a single room.
-    const fund = db.prepare("SELECT * FROM freeroll_fund WHERE id = 1").get();
-    ticketsFunded = fund.tickets_available > 0 ? 1 : 0;
-    remainder = 0; // no STONK consolation prize in a freeroll — you get the ticket or nothing
+    const prizeConfig = FREEROLL_PRIZE_CONFIG[satellite.tier_id];
+    const fund = db.prepare("SELECT * FROM freeroll_fund WHERE category_id = ?").get(satellite.tier_id);
+    ticketsFunded = fund.prizes_available > 0 ? 1 : 0;
+    remainder = 0; // no STONK consolation prize in a freeroll — you get the real prize, a bonus freeroll, or nothing beyond that
+    freerollPrizeType = prizeConfig.prizeType; // 'main_event_ticket' | 'runner_entry'
   } else {
     const result = computeLadder(grossPool * (1 - RAKE.total), satellite.ticket_cost);
     ticketsFunded = result.unitsFunded;
@@ -155,7 +168,7 @@ function resolveSatellite(satellite) {
   db.exec("BEGIN");
 
   if (satellite.price_level === "free" && ticketsFunded === 1) {
-    db.prepare("UPDATE freeroll_fund SET tickets_available = tickets_available - 1 WHERE id = 1").run();
+    db.prepare("UPDATE freeroll_fund SET prizes_available = prizes_available - 1 WHERE category_id = ?").run(satellite.tier_id);
   }
 
   let platformTake = 0;
@@ -174,7 +187,32 @@ function resolveSatellite(satellite) {
     const rank = i + 1;
     let prizeType = "none",
       prizeAmount = null;
-    if (rank <= ticketsFunded) {
+
+    if (satellite.price_level === "free") {
+      // Freeroll rooms only ever have ONE meaningful outcome to hand out,
+      // and only to the #1 finisher — either a real prize (funded from
+      // this category's own bank) or, if the bank was empty, a bonus
+      // freeroll entry into the next occurrence so a legitimate win never
+      // comes away with literally nothing. That bonus is a genuine extra
+      // — it's inserted directly here, bypassing the normal 1-per-occurrence
+      // reservation cap, since it's an awarded prize, not a self-initiated entry.
+      if (rank === 1 && ticketsFunded === 1 && freerollPrizeType === "main_event_ticket") {
+        prizeType = "ticket";
+        db.prepare(
+          "INSERT INTO tickets (account_id, source_satellite_id, value_stonk, status) VALUES (?, ?, ?, 'unredeemed')"
+        ).run(r.accountId, satellite.id, TICKET_COST);
+      } else if (rank === 1 && ticketsFunded === 1 && freerollPrizeType === "runner_entry") {
+        prizeType = "runner_entry";
+        db.prepare(
+          "INSERT INTO pending_allocations (account_id, target_type, target_tier_id, target_price_level, allocations_json) VALUES (?, 'satellite', ?, 'runner', ?)"
+        ).run(r.accountId, satellite.tier_id, JSON.stringify([]));
+      } else if (rank === 1 && ticketsFunded === 0) {
+        prizeType = "bonus_freeroll";
+        db.prepare(
+          "INSERT INTO pending_allocations (account_id, target_type, target_tier_id, target_price_level, allocations_json) VALUES (?, 'satellite', ?, 'free', ?)"
+        ).run(r.accountId, satellite.tier_id, JSON.stringify([]));
+      }
+    } else if (rank <= ticketsFunded) {
       prizeType = "ticket";
       db.prepare(
         "INSERT INTO tickets (account_id, source_satellite_id, value_stonk, status) VALUES (?, ?, ?, 'unredeemed')"
@@ -234,5 +272,5 @@ module.exports = {
   CATEGORIES,
   PRICE_LEVEL_NAMES,
   FREEROLL_SURCHARGE,
-  FREEROLL_FUND_THRESHOLD,
+  FREEROLL_PRIZE_CONFIG,
 };

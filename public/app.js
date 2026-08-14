@@ -330,6 +330,7 @@ const CATEGORY_DESCRIPTIONS = {
   full_day: "Runs the full trading session, 9:30 AM \u2013 4:00 PM ET, every weekday. New contest opens each trading day.",
   morning: "Runs the first half of the trading session, 9:30 AM \u2013 1:00 PM ET, every weekday.",
   afternoon: "Runs the second half of the trading session, 1:00 PM \u2013 4:00 PM ET, every weekday.",
+  hourly: "Runs 24/7 — a fresh contest opens every hour, any day, any time. Always something to play.",
 };
 
 function renderSatelliteCategoryTree() {
@@ -1715,7 +1716,11 @@ function renderPastWinnersArchive(winners) {
             ? "🏆 Activated Stonk Broker"
             : w.prizeType === "ticket"
               ? "🎟️ Main Event Ticket"
-              : `${(w.prizeAmount || 0).toLocaleString()} STONK`;
+              : w.prizeType === "runner_entry"
+                ? "🎯 Free Runner Entry"
+                : w.prizeType === "bonus_freeroll"
+                  ? "🎁 Bonus Freeroll Entry"
+                  : `${(w.prizeAmount || 0).toLocaleString()} STONK`;
         return `<div class="portfolio-row">
         <div class="portfolio-row-main">
           <div class="portfolio-row-label">${w.displayName} <span style="color:var(--text-dim);font-weight:400;">won ${prizeLabel}</span></div>

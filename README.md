@@ -860,6 +860,60 @@ All four label-generation call sites now read from the exact same pattern:
 `` `... (Entry ${existingCount + 1})` `` — confirmed via direct grep across
 every file, not just spot-checked.
 
+## New: Hourly category + generalized freeroll prizes across every category
+
+**New Hourly category** — full tier ladder (Freeroll/Runner/Clerk/Trader/Jr.
+Stonkbroker), runs 24/7, a fresh room opens every hour on the hour,
+regardless of day or real market hours. Solves the specific gap raised:
+someone signing up any day, any time, always has something to play
+immediately — not just Monday for Weekly's freeroll.
+
+**Freeroll prizes are now category-specific, not one-size-fits-all**:
+- Weekly Qualifier → Main Event ticket (exactly as before, unchanged)
+- Full Day / Morning / Afternoon / Hourly → a free entry into **that same
+  category's** Runner tier
+
+**Funding pools became per-category** — `freeroll_fund` went from a single
+global row to one row per category, each with its own threshold matched to
+what its prize actually costs (3,000 STONK for Weekly's ticket, ~30 for
+everyone else's Runner entry). This was a deliberate fix to a real math
+problem: a shared pool would have let fast-cycling categories like Hourly
+starve Weekly's much bigger, much rarer prize.
+
+**Surcharge stays at 50 STONK everywhere** — for Weekly this funds its
+usual ~60-entries-per-ticket rate. For the other four categories, 50 STONK
+comfortably *exceeds* their ~30-STONK Runner prize on a single entry —
+intentional; the surplus banks forward rather than getting spent, meaning
+freerolls reliably get funded rather than usually funding nothing, and the
+banked surplus becomes a lever for bonus prizes or marketing later.
+
+**Empty-pool outcome changed**: previously a freeroll winner with an
+unfunded pool got literally nothing. Now they get a bonus freeroll entry
+into the next occurrence, stacked on top of their normal allowance,
+instead of walking away empty-handed.
+
+**Tested directly, not just by inspection**: confirmed Hourly opens with
+all 5 levels even on a Sunday at 3am; confirmed a paid entry in Hourly
+never touches Full Day's fund (true category isolation); confirmed Weekly's
+prize config is completely unchanged; confirmed a funded non-weekly
+freeroll correctly awards a real Runner-tier reservation (not a ticket);
+confirmed an unfunded freeroll correctly awards the bonus entry instead of
+nothing. Full original regression suite (accounting, multi-entry, ladder
+math) still passes unchanged.
+
+**Also fixed two real bugs found during the build**: the category-hover
+description lookup was missing an entry for Hourly entirely, and the Past
+Winners archive would have displayed "0 STONK" for both new prize types
+(since neither carries a `prizeAmount`) — added proper labels for both.
+
+## Known gap — not built yet
+
+**The onboarding popup flow** (signup → Freeroll CTA → "set up your
+portfolio" prompt → "check the Lobby" prompt) discussed in this same
+conversation is **not built yet**. This round focused entirely on the
+underlying Hourly + freeroll-prize architecture, which needed to be solid
+and well-tested before building a UI flow on top of it. Next up.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)
