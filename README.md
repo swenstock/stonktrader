@@ -1229,6 +1229,65 @@ the Close end-to-end) still passes.
 Updated the callout strip, category descriptions, and the Rules page
 wherever the old "same category's own Runner tier" language appeared.
 
+## Custodian-ready: every STONK movement now flows through one auditable adapter
+
+Preparing to eventually connect a real custodian for real token
+deposits/withdrawals — but critically, **this did not mean rewriting the
+platform**. The tested economic core (ladder math, rake, freeroll fund
+isolation, entry caps) stayed exactly as-is. What changed is *how* STONK
+physically moves through the system.
+
+**Before**: 10 separate places across 8 files ran raw SQL directly against
+`accounts.stonk_balance`, with no shared choke point and no record of *why*
+any balance ever changed — just a mutable running number.
+
+**Now**: every single credit and debit — entry fees, prizes, referral
+commissions, ticket sales — routes through one new file, `custodian.js`.
+It's an explicit five-method interface (`getBalance`, `credit`, `debit`,
+plus `requestDeposit`/`requestWithdrawal`, which throw until a real
+custodian is actually connected). The current implementation
+(`InternalLedgerCustodian`) is pure internal bookkeeping — exactly what
+the platform has always done — just centralized and now logged. When a
+real custodian is ready to connect, that's a new class implementing the
+same five methods; nothing else in the codebase needs to change.
+
+New immutable ledger table (`ledger_entries`) logs every movement with a
+reason, a reference, and a balance snapshot — the real audit trail the
+platform never had. Verified directly: the ledger sum always exactly
+equals the live balance.
+
+**A loud warning is written directly into custodian.js**: never implement
+real wallet/custody logic in this codebase without a security audit and
+real legal review first. This file should only ever be an accounting
+layer calling out to an already-audited third-party payment rail — never
+holding real keys itself.
+
+### Two real bugs found and fixed while doing this, not introduced by it
+
+1. **New signups were getting 100,000 free STONK automatically** —
+   directly contradicting the platform's own "free to join, no grant"
+   design, and exploitable for unlimited free paid-tier entries via
+   throwaway accounts. Fixed both the code default and the schema default.
+
+2. **A genuinely serious, already-live crash bug**: `referral_earnings`
+   could only ever reference a Main Event entry (`contest_entry_id` was a
+   required foreign key), but the referral payout function was *already*
+   being called for satellite entries too. Any referred trader's satellite
+   contest resolving would throw an uncaught foreign-key violation —
+   this wasn't a missing feature, it was a live crash waiting on normal
+   usage. Reproduced the exact scenario in a real test (referred user
+   enters and resolves a satellite contest), confirmed it threw before the
+   fix, fixed the schema (added a proper nullable `satellite_entry_id`
+   column) and the function, reran the same test to confirm it now
+   completes cleanly and pays the correct commission.
+
+Full existing regression suite (accounting, Race to the Close, freeroll
+redirects) all still pass unchanged against the refactored code.
+
+**Schema changed** (`ledger_entries` table added, `referral_earnings`
+restructured, `accounts.stonk_balance` default fixed) — fresh sign-up
+needed after this deploy.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

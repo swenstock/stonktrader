@@ -40,10 +40,31 @@ CREATE INDEX IF NOT EXISTS idx_users_referral_code ON users(referral_code);
 CREATE TABLE IF NOT EXISTS accounts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  stonk_balance REAL NOT NULL DEFAULT 100000,
+  stonk_balance REAL NOT NULL DEFAULT 0,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_accounts_user ON accounts(user_id);
+
+-- Immutable ledger of every STONK movement, ever. The accounts.stonk_balance
+-- column is still the fast-path current balance, but THIS table is the real
+-- source of truth and audit trail -- every credit and debit, why it happened,
+-- and what the balance was immediately after. Never updated or deleted, only
+-- inserted. This is the natural foundation for connecting a real custodian
+-- later: real deposits/withdrawals become just another reason value, and the
+-- existing reconciliation logic (sum of all entries = current balance)
+-- doesn't change at all.
+CREATE TABLE IF NOT EXISTS ledger_entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  amount REAL NOT NULL, -- positive = credit, negative = debit
+  reason TEXT NOT NULL, -- 'satellite_entry' | 'contest_entry' | 'satellite_prize' | 'contest_prize' | 'referral_earning' | 'ticket_sale' | 'ticket_purchase' | 'freeroll_fund_award' | etc.
+  reference_type TEXT, -- 'satellite' | 'contest' | 'ticket' | 'referral' | null
+  reference_id INTEGER, -- id of the satellite/contest/ticket/etc. this entry relates to, if any
+  balance_after REAL NOT NULL, -- account's stonk_balance immediately after this entry — makes every row independently auditable, no need to replay history to spot-check one
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_ledger_account ON ledger_entries(account_id);
+CREATE INDEX IF NOT EXISTS idx_ledger_reason ON ledger_entries(reason);
 
 -- One portfolio per contest/satellite ENTRY, not one per account. This is
 -- the core change: entering the Morning session and the Weekly Qualifier
@@ -144,7 +165,8 @@ CREATE TABLE IF NOT EXISTS referral_earnings (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   referrer_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   referred_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  contest_entry_id INTEGER NOT NULL REFERENCES contest_entries(id) ON DELETE CASCADE,
+  contest_entry_id INTEGER REFERENCES contest_entries(id) ON DELETE CASCADE,
+  satellite_entry_id INTEGER REFERENCES satellite_entries(id) ON DELETE CASCADE,
   amount REAL NOT NULL,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );

@@ -11,6 +11,7 @@
 // KNOWN GAP: trades aren't actually frozen outside these windows yet.
 
 const db = require("./db");
+const custodian = require("./custodian");
 const { totalValueForPortfolios } = require("./portfolioValue");
 const { computeLadder } = require("./prizeLadder");
 const { etDateTime, etCalendarDate, easternParts, isWeekday, currentWeekWindow } = require("./timeHelpers");
@@ -189,7 +190,7 @@ function resolveSatellite(satellite) {
   let affiliatePaidTotal = 0;
   for (const e of entries) {
     platformTake += Math.round(e.entry_fee_paid * RAKE.platform);
-    const paid = mainEvent.payAffiliateCommission(e);
+    const paid = mainEvent.payAffiliateCommission(e, "satellite");
     if (paid > 0) {
       affiliatePaidTotal += paid;
     } else {
@@ -248,10 +249,7 @@ function resolveSatellite(satellite) {
     } else if (rank === ticketsFunded + 1 && remainder > 0) {
       prizeType = "stonk";
       prizeAmount = remainder;
-      db.prepare("UPDATE accounts SET stonk_balance = stonk_balance + ? WHERE id = ?").run(
-        remainder,
-        r.accountId
-      );
+      custodian.credit(r.accountId, remainder, "satellite_prize_stonk", { referenceType: "satellite", referenceId: satellite.id });
     }
     db.prepare(
       "INSERT INTO satellite_results (satellite_id, account_id, rank, pl, prize_type, prize_amount) VALUES (?, ?, ?, ?, ?, ?)"

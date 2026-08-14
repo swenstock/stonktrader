@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
+const custodian = require("../custodian");
 const requireAuth = require("../middleware/requireAuth");
 
 const PLATFORM_FEE_PCT = 0.05; // taken from the seller's proceeds on a successful sale
@@ -110,14 +111,8 @@ router.post("/:id/buy", requireAuth, (req, res) => {
   const sellerProceeds = listing.ask_price - fee;
 
   db.exec("BEGIN");
-  db.prepare("UPDATE accounts SET stonk_balance = stonk_balance - ? WHERE id = ?").run(
-    listing.ask_price,
-    buyer.id
-  );
-  db.prepare("UPDATE accounts SET stonk_balance = stonk_balance + ? WHERE id = ?").run(
-    sellerProceeds,
-    listing.seller_account_id
-  );
+  custodian.debit(buyer.id, listing.ask_price, "ticket_purchase", { referenceType: "ticket", referenceId: listing.ticket_id });
+  custodian.credit(listing.seller_account_id, sellerProceeds, "ticket_sale", { referenceType: "ticket", referenceId: listing.ticket_id });
   db.prepare("UPDATE tickets SET account_id = ?, status = 'unredeemed' WHERE id = ?").run(
     buyer.id,
     listing.ticket_id

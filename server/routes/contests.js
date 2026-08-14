@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
+const custodian = require("../custodian");
 const requireAuth = require("../middleware/requireAuth");
 const { CONFIG, currentWeekWindow, isWeekday, currentStonkUsdPriceMicros } = require("../contestScheduler");
 
@@ -138,10 +139,7 @@ router.post("/:id/enter", requireAuth, (req, res) => {
 
   const portfolioId = createPortfolio(account.id, label);
   db.exec("BEGIN");
-  db.prepare("UPDATE accounts SET stonk_balance = stonk_balance - ? WHERE id = ?").run(
-    contest.entry_fee,
-    account.id
-  );
+  custodian.debit(account.id, contest.entry_fee, "contest_entry", { referenceType: "contest", referenceId: contest.id });
   db.prepare(
     "INSERT INTO contest_entries (contest_id, account_id, portfolio_id, entry_fee_paid) VALUES (?, ?, ?, ?)"
   ).run(contest.id, account.id, portfolioId, contest.entry_fee);

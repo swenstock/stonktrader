@@ -4,7 +4,7 @@ const db = require("../db");
 const crypto = require("crypto");
 const { hashPassword, verifyPassword, sign } = require("../auth");
 
-const STARTING_STONK = Number(process.env.STARTING_STONK || 100000);
+const STARTING_STONK = Number(process.env.STARTING_STONK || 0); // "free to join" means free — no STONK grant on signup, matches the documented design. Was defaulting to 100000, which silently let anyone farm unlimited free paid-tier entries via throwaway accounts.
 
 function generateReferralCode() {
   return crypto.randomBytes(4).toString("hex").slice(0, 6).toUpperCase();

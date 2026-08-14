@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../db");
+const custodian = require("../custodian");
 const requireAuth = require("../middleware/requireAuth");
 const { createPortfolio } = require("../portfolioValue");
 const { TIERS, CATEGORIES, FREEROLL_PRIZE_CONFIG } = require("../satelliteScheduler");
@@ -264,7 +265,7 @@ router.post("/:id/enter", requireAuth, (req, res) => {
   const portfolioId = createPortfolio(account.id, label);
 
   db.exec("BEGIN");
-  db.prepare("UPDATE accounts SET stonk_balance = stonk_balance - ? WHERE id = ?").run(tier.entryFee, account.id);
+  custodian.debit(account.id, tier.entryFee, "satellite_entry", { referenceType: "satellite", referenceId: satellite.id });
   // Charge the TOTAL (base + surcharge), but only the BASE counts toward
   // this room's own pool — matches satellite.entry_fee, which was stored
   // as poolFee at creation time.

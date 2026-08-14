@@ -14,6 +14,7 @@
 // trades can be placed 24/7 regardless of session windows.
 
 const db = require("./db");
+const custodian = require("./custodian");
 const { totalValueForPortfolios } = require("./portfolioValue");
 const { computeLadder } = require("./prizeLadder");
 const { isWeekday, currentWeekWindow } = require("./timeHelpers");
@@ -82,10 +83,7 @@ function resolveContest(contest) {
     db.exec("BEGIN");
     for (const e of entries) {
       if (!e.paid_with_ticket_id) {
-        db.prepare("UPDATE accounts SET stonk_balance = stonk_balance + ? WHERE id = ?").run(
-          e.entry_fee_paid,
-          e.account_id
-        );
+        custodian.credit(e.account_id, e.entry_fee_paid, "contest_refund", { referenceType: "contest", referenceId: contest.id });
       } else {
         db.prepare(
           "UPDATE tickets SET status = 'unredeemed', applied_to_contest_id = NULL, applied_at = NULL WHERE id = ?"
@@ -149,10 +147,7 @@ function resolveContest(contest) {
     } else if (rank === brokersFunded + 1 && remainder > 0) {
       prizeType = "stonk";
       prizeAmount = remainder;
-      db.prepare("UPDATE accounts SET stonk_balance = stonk_balance + ? WHERE id = ?").run(
-        remainder,
-        r.accountId
-      );
+      custodian.credit(r.accountId, remainder, "contest_prize_stonk", { referenceType: "contest", referenceId: contest.id });
     }
     db.prepare(
       "INSERT INTO contest_results (contest_id, account_id, rank, pl, prize_type, prize_amount) VALUES (?, ?, ?, ?, ?, ?)"
@@ -194,7 +189,17 @@ function currentStonkUsdPriceMicros() {
   return Math.round(price * 1e6);
 }
 
-function payAffiliateCommission(entry) {
+// entryType distinguishes which table `entry` came from — REQUIRED, not
+// optional, because this function is called from both contestScheduler.js
+// (contest_entries rows) and satelliteScheduler.js (satellite_entries
+// rows), and the two need to write to different foreign key columns.
+// Before this fix, EVERY call from satelliteScheduler.js would throw an
+// uncaught foreign-key violation the moment a referred trader's satellite
+// entry resolved — referral_earnings.contest_entry_id could only ever
+// reference contest_entries, never satellite_entries, so inserting a
+// satellite entry's id there violated the constraint every time. This
+// wasn't a "missing feature", it was a live crash waiting on real usage.
+function payAffiliateCommission(entry, entryType = "contest") {
   const account = db.prepare("SELECT user_id FROM accounts WHERE id = ?").get(entry.account_id);
   const user = db.prepare("SELECT referred_by_user_id FROM users WHERE id = ?").get(account.user_id);
   if (!user?.referred_by_user_id) return 0;
@@ -206,13 +211,19 @@ function payAffiliateCommission(entry) {
   const commission = Math.round(entry.entry_fee_paid * CONFIG.rakeAffiliate);
   if (commission <= 0) return 0;
 
-  db.prepare("UPDATE accounts SET stonk_balance = stonk_balance + ? WHERE id = ?").run(
-    commission,
-    referrerAccount.id
-  );
-  db.prepare(
-    "INSERT INTO referral_earnings (referrer_user_id, referred_user_id, contest_entry_id, amount) VALUES (?, ?, ?, ?)"
-  ).run(user.referred_by_user_id, account.user_id, entry.id, commission);
+  custodian.credit(referrerAccount.id, commission, "referral_earning", {
+    referenceType: entryType,
+    referenceId: entry.id,
+  });
+  if (entryType === "satellite") {
+    db.prepare(
+      "INSERT INTO referral_earnings (referrer_user_id, referred_user_id, satellite_entry_id, amount) VALUES (?, ?, ?, ?)"
+    ).run(user.referred_by_user_id, account.user_id, entry.id, commission);
+  } else {
+    db.prepare(
+      "INSERT INTO referral_earnings (referrer_user_id, referred_user_id, contest_entry_id, amount) VALUES (?, ?, ?, ?)"
+    ).run(user.referred_by_user_id, account.user_id, entry.id, commission);
+  }
   return commission;
 }
 

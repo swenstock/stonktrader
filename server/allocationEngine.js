@@ -1,4 +1,5 @@
 const db = require("./db");
+const custodian = require("./custodian");
 const { getQuote } = require("./dataProvider");
 const { createPortfolio } = require("./portfolioValue");
 const { TIERS, FREEROLL_PRIZE_CONFIG } = require("./tierConfig");
@@ -94,7 +95,7 @@ function applyPendingSatelliteAllocations(satellite) {
     const label = `${satellite.name} · ${new Date().toLocaleDateString()} (Entry ${existingCount + 1})`;
     const portfolioId = createPortfolio(pa.account_id, label);
     db.exec("BEGIN");
-    db.prepare("UPDATE accounts SET stonk_balance = stonk_balance - ? WHERE id = ?").run(totalFee, pa.account_id);
+    custodian.debit(pa.account_id, totalFee, "satellite_entry", { referenceType: "satellite", referenceId: satellite.id });
     db.prepare(
       "INSERT INTO satellite_entries (satellite_id, account_id, portfolio_id, entry_fee_paid) VALUES (?, ?, ?, ?)"
     ).run(satellite.id, pa.account_id, portfolioId, satellite.entry_fee); // satellite.entry_fee = poolFee already
@@ -163,10 +164,7 @@ function applyPendingContestAllocations(contest) {
         "UPDATE tickets SET status = 'applied', applied_to_contest_id = ?, applied_at = ? WHERE id = ?"
       ).run(contest.id, new Date().toISOString(), ticket.id);
     } else {
-      db.prepare("UPDATE accounts SET stonk_balance = stonk_balance - ? WHERE id = ?").run(
-        contest.entry_fee,
-        pa.account_id
-      );
+      custodian.debit(pa.account_id, contest.entry_fee, "contest_entry", { referenceType: "contest", referenceId: contest.id });
       db.prepare(
         "INSERT INTO contest_entries (contest_id, account_id, portfolio_id, entry_fee_paid) VALUES (?, ?, ?, ?)"
       ).run(contest.id, pa.account_id, portfolioId, contest.entry_fee);
