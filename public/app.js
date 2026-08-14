@@ -733,23 +733,14 @@ function groupEntriesByRoom(portfolios, allocations) {
 let expandedGroupKeys = new Set();
 
 function renderEntryGroup(group) {
-  if (group.items.length === 1) {
-    const item = group.items[0];
-    return item.kind === "portfolio" ? portfolioRowHtml(item.data) : allocationRowHtml(item.data);
-  }
-
-  // More than one entry in the same room — always collapse into one line,
-  // regardless of whether any are still unconfigured. Nothing gets "lost"
-  // here because the summary line itself says how many still need setup —
-  // that's enough to flag it without sprawling every entry across the
-  // page. Click to expand and configure each one individually.
+  // Always collapsed behind a click, always the same byline format,
+  // regardless of how many entries are in this room — even a single
+  // entry. Total consistency: every row in this list looks and behaves
+  // exactly the same way, whether it's 1 entry or 10.
   const isUnconfigured = (item) => item.kind === "pending" && item.data.allocations.length === 0;
   const needsSetupCount = group.items.filter(isUnconfigured).length;
   const configuredCount = group.items.length - needsSetupCount;
-  const summary =
-    needsSetupCount > 0
-      ? `${group.items.length} entered · ${configuredCount} portfolio${configuredCount === 1 ? "" : "s"} created`
-      : `${group.items.length} entries — click to view each`;
+  const summary = `${group.items.length} entered · ${configuredCount} portfolio${configuredCount === 1 ? "" : "s"} created — click to view each`;
 
   // Preserve whatever expand/collapse state this exact group was in before
   // this re-render — without this, every action anywhere on the page
