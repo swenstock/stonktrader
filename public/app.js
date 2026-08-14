@@ -733,54 +733,48 @@ function groupEntriesByRoom(portfolios, allocations) {
 let expandedGroupKeys = new Set();
 
 function renderEntryGroup(group) {
-  // Unconfigured = a pending reservation with zero picks saved yet — these
-  // stay individually visible always, so they can never get buried and
-  // forgotten. Configured = has real picks, or is an already-open real
-  // portfolio — these collapse into a tree if there's more than one.
-  const isUnconfigured = (item) => item.kind === "pending" && item.data.allocations.length === 0;
-  const unconfigured = group.items.filter(isUnconfigured);
-  const configured = group.items.filter((item) => !isUnconfigured(item));
-
-  const unconfiguredHtml = unconfigured
-    .map((item) => `<div class="entry-group-item unconfigured-entry">${allocationRowHtml(item.data)}</div>`)
-    .join("");
-
-  let configuredHtml = "";
-  if (configured.length === 1) {
-    const item = configured[0];
-    configuredHtml = item.kind === "portfolio" ? portfolioRowHtml(item.data) : allocationRowHtml(item.data);
-  } else if (configured.length > 1) {
-    // Preserve whatever expand/collapse state this exact group was in
-    // before this re-render — without this, every action anywhere on the
-    // page (scheduling an order, cancelling, anything) forces a full
-    // re-render that silently snaps every tree back to collapsed,
-    // interrupting anyone mid-way through working across several entries.
-    const isExpanded = expandedGroupKeys.has(group.key);
-    configuredHtml = `<div class="entry-group">
-      <div class="portfolio-row entry-group-summary" data-group-key="${group.key}">
-        <div class="portfolio-row-main">
-          <div class="portfolio-row-label" style="text-transform:capitalize;">${group.label}</div>
-          <div class="portfolio-row-sub mono">${configured.length} configured entries — click to view each</div>
-        </div>
-        <span class="table-badge expand-caret">${isExpanded ? "▴ collapse" : "▾ expand"}</span>
-      </div>
-      <div class="entry-group-items" data-group-items="${group.key}" style="display:${isExpanded ? "block" : "none"};">
-        ${configured
-          .map(
-            // Each item's own label already carries its real, permanent
-            // "(Entry N)" number (assigned once, at creation) — showing a
-            // SECOND number here (based on array position, which can
-            // differ from the real one, and shifts around as entries
-            // resolve/change) was the actual source of the confusion, not
-            // a rendering bug. One number per entry, from one source.
-            (item) => `<div class="entry-group-item">${item.kind === "portfolio" ? portfolioRowHtml(item.data) : allocationRowHtml(item.data)}</div>`
-          )
-          .join("")}
-      </div>
-    </div>`;
+  if (group.items.length === 1) {
+    const item = group.items[0];
+    return item.kind === "portfolio" ? portfolioRowHtml(item.data) : allocationRowHtml(item.data);
   }
 
-  return unconfiguredHtml + configuredHtml;
+  // More than one entry in the same room — always collapse into one line,
+  // regardless of whether any are still unconfigured. Nothing gets "lost"
+  // here because the summary line itself says how many still need setup —
+  // that's enough to flag it without sprawling every entry across the
+  // page. Click to expand and configure each one individually.
+  const isUnconfigured = (item) => item.kind === "pending" && item.data.allocations.length === 0;
+  const needsSetupCount = group.items.filter(isUnconfigured).length;
+  const configuredCount = group.items.length - needsSetupCount;
+  const summary =
+    needsSetupCount > 0
+      ? `${group.items.length} entered · ${configuredCount} portfolio${configuredCount === 1 ? "" : "s"} created`
+      : `${group.items.length} entries — click to view each`;
+
+  // Preserve whatever expand/collapse state this exact group was in before
+  // this re-render — without this, every action anywhere on the page
+  // forces a full re-render that silently snaps every tree back closed,
+  // interrupting anyone mid-way through working across several entries.
+  const isExpanded = expandedGroupKeys.has(group.key);
+  return `<div class="entry-group">
+    <div class="portfolio-row entry-group-summary ${needsSetupCount > 0 ? "needs-setup" : ""}" data-group-key="${group.key}">
+      <div class="portfolio-row-main">
+        <div class="portfolio-row-label" style="text-transform:capitalize;">${group.label}</div>
+        <div class="portfolio-row-sub mono">${summary}</div>
+      </div>
+      <span class="table-badge expand-caret">${isExpanded ? "▴ collapse" : "▾ expand"}</span>
+    </div>
+    <div class="entry-group-items" data-group-items="${group.key}" style="display:${isExpanded ? "block" : "none"};">
+      ${group.items
+        .map(
+          // Each item's own label already carries its real, permanent
+          // "(Entry N)" number (assigned once, at creation) — no second
+          // numbering scheme layered on top here.
+          (item) => `<div class="entry-group-item">${item.kind === "portfolio" ? portfolioRowHtml(item.data) : allocationRowHtml(item.data)}</div>`
+        )
+        .join("")}
+    </div>
+  </div>`;
 }
 
 async function cancelScheduledOrder(id) {

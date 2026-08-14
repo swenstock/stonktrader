@@ -401,6 +401,8 @@ tr.watch-row:hover{background:var(--surface-2);}
 .editable-alloc-row:hover{border-color:var(--gold);}
 .entry-group{margin-bottom:10px;}
 .entry-group-summary{margin-bottom:0;border-radius:10px 10px 0 0;}
+.entry-group-summary.needs-setup{border-color:#5A431A;background:rgba(140,255,0,.03);}
+.entry-group-summary.needs-setup .portfolio-row-sub{color:var(--gold);}
 .entry-group-items{background:var(--surface-2);border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;padding:10px;}
 .entry-group-item{margin-bottom:8px;display:flex;align-items:center;gap:8px;}
 .entry-group-item:last-child{margin-bottom:0;}
