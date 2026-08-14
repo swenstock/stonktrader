@@ -7,7 +7,7 @@ const MAX_ALLOCATION_PCT = 10; // matches the 10% max-initial-position trading r
 const MAIN_EVENT_MAX_ENTRIES = 10; // must match CONFIG.maxEntriesPerAccount in contestScheduler.js — duplicated
 // here (not imported) specifically to avoid a circular require: contestScheduler.js already imports this file.
 
-function validateAllocations(allocations) {
+function validateAllocations(allocations, isDegenHours = false) {
   if (!Array.isArray(allocations)) {
     return "Allocations must be an array";
   }
@@ -23,9 +23,14 @@ function validateAllocations(allocations) {
     }
     if (seen.has(a.symbol)) return `${a.symbol} appears more than once`;
     seen.add(a.symbol);
-    if (a.percent > MAX_ALLOCATION_PCT) {
+    // Degen Hours is the one deliberate exception to the 10% rule — same
+    // exception already enforced on the live trade route in
+    // routes/portfolios.js, just applied here too so pre-registering picks
+    // for Degen Hours doesn't get rejected before the room even opens.
+    if (!isDegenHours && a.percent > MAX_ALLOCATION_PCT) {
       return `${a.symbol}: ${a.percent}% exceeds the 10% max position size rule`;
     }
+    if (a.percent > 100) return `${a.symbol}: ${a.percent}% isn't a valid percentage`;
     if (!getQuote(a.symbol)) return `Unknown symbol: ${a.symbol}`;
     total += a.percent;
   }
@@ -70,7 +75,7 @@ function applyPendingSatelliteAllocations(satellite) {
       .prepare("SELECT COUNT(*) as n FROM satellite_entries WHERE satellite_id = ? AND account_id = ?")
       .get(satellite.id, pa.account_id).n;
 
-    if (tier && existingCount >= tier.maxEntriesPerAccount) {
+    if (tier && tier.maxEntriesPerAccount != null && existingCount >= tier.maxEntriesPerAccount) {
       db.prepare("UPDATE pending_allocations SET status='failed', fail_reason=? WHERE id=?").run(
         "Already at the max entries for this room",
         pa.id

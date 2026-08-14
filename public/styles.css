@@ -520,6 +520,11 @@ tr.watch-row:hover{background:var(--surface-2);}
 }
 .trade-portfolio-total{margin-left:auto;font-size:12.5px;color:var(--text-dim);}
 .trade-modal-columns{display:grid;grid-template-columns:1.3fr 1fr;gap:20px;margin-top:12px;}
+.trade-chart-container{height:260px;}
+.trade-btns-sticky{
+  position:sticky;bottom:0;background:var(--surface);padding-top:10px;margin-top:12px;
+  border-top:1px solid var(--border);z-index:2;
+}
 @media(max-width:720px){.trade-modal-columns{grid-template-columns:1fr;}}
 .trade-modal-order-col{display:flex;flex-direction:column;gap:10px;}
 
@@ -696,6 +701,15 @@ nav{position:sticky;top:0;z-index:60;}
      modal's right column — give buttons room to wrap instead of squeezing. */
   .trade-mode-toggle{flex-wrap:wrap;}
   .position-summary-row{flex-wrap:wrap;}
+
+  /* The chart's fixed 260px height, stacked above everything else once
+     the two-column layout collapses to one, was pushing the actual
+     Buy/Sell buttons below the fold — needing a scroll just to reach the
+     core action. Shrink the chart specifically on phones (still plenty
+     tall to read), and reclaim the wasted backdrop space above the modal
+     by letting it use nearly the full screen height instead of 88vh. */
+  .trade-chart-container{height:170px;}
+  #tradeModal .trade-modal-card{max-height:96vh;}
 
   /* Onboarding popup and entry review card — full-width instead of
      fighting the fixed max-width against phone padding. */

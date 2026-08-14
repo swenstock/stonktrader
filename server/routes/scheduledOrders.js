@@ -5,6 +5,19 @@ const requireAuth = require("../middleware/requireAuth");
 const { validateAllocations } = require("../allocationEngine");
 const { nextMarketOpen } = require("../timeHelpers");
 
+// Duplicated from routes/portfolios.js (not exported there — route files
+// don't normally import each other) — same check, same exception.
+function isDegenHoursPortfolio(portfolioId) {
+  const satelliteEntry = db
+    .prepare(
+      `SELECT satellites.tier_id FROM satellite_entries
+       JOIN satellites ON satellites.id = satellite_entries.satellite_id
+       WHERE satellite_entries.portfolio_id = ?`
+    )
+    .get(portfolioId);
+  return satelliteEntry?.tier_id === "hourly";
+}
+
 router.get("/", requireAuth, (req, res) => {
   const rows = db
     .prepare(
@@ -34,7 +47,7 @@ router.post("/", requireAuth, (req, res) => {
     return res.status(404).json({ error: "Portfolio not found" });
   }
 
-  const err = validateAllocations(allocations);
+  const err = validateAllocations(allocations, isDegenHoursPortfolio(portfolioId));
   if (err) return res.status(400).json({ error: err });
 
   // Only one pending scheduled order per portfolio — latest set wins.

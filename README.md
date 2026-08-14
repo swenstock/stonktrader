@@ -1105,6 +1105,59 @@ specifically. All funded genuinely by entry fees across every paid Weekly
 Qualifier tier — a real, growing number, not a gimmick. Verified directly
 that the lifetime counter accumulates correctly as prizes get awarded.
 
+## Final wrap-up round
+
+**Weekly's real hours fixed** — was computing midnight Monday to 11:59pm
+Friday; now correctly 9:30am ET Monday (opening bell) to 4:00pm ET Friday
+(closing bell). Fixed at the source (`currentWeekWindow`), so both the
+Main Event and Weekly Qualifier — which deliberately share this window —
+are both correct now, not just the copy describing them.
+
+**Degen Hours** (renamed from Hourly, display-only — internal id stays
+`hourly` since it's a foreign key across three tables):
+- Freeroll reverted back to every hour (undoing the every-other-hour
+  cadence from a few rounds back)
+- Paid tiers now genuinely unlimited entries — found and fixed **three
+  separate spots** that would have silently broken with a `null` "no cap"
+  sentinel (a `>=` comparison coercing `null` to `0`, a `??` fallback that
+  would've overridden an explicit `null` back to 10, a subtraction that
+  would've gone negative)
+- Registration stays open the entire hour, cutting off 5 minutes before close
+
+**Registration timing overhaul**: Full Day/Morning/Afternoon/Weekly PAID
+tiers now close registration the moment the session starts — reserve
+ahead or miss it. Every freeroll, any category, remains the deliberate
+exception and stays open the whole session, including Weekly's. Verified
+all seven scenarios directly.
+
+**Found and fixed a genuinely deeper bug during the holistic review**: the
+10% position cap has THREE separate enforcement points across the
+codebase (live trading, pre-registering picks, and scheduled-order
+execution) — the live-trading one already had the Degen Hours exception,
+but **the other two didn't**. This meant pre-registering a >10% allocation
+for Degen Hours, or scheduling one to fire at market open, would have been
+silently rejected — directly undermining the whole point of Degen Hours
+for anyone using either of those two paths instead of trading live. Fixed
+both, verified directly with a real allocation that's rejected everywhere
+except Degen Hours, exactly as intended.
+
+**Also fixed 2 real syntax breaks introduced mid-edit** during this round
+— caught both immediately via syntax-check-after-every-edit, not left for
+later discovery.
+
+Full regression suite (accounting, ladder math, this round's new rules)
+all pass. Rules page updated with a new entry explaining the registration
+window change, and the Degen Hours block expanded with the unlimited-
+rebuys detail, kept playful throughout.
+
+### Known, pre-existing limitations (not new gaps, worth restating)
+- Wallet connection is explicitly simulated (see the code comment) — no
+  real wallet integration exists
+- Market data is still fully simulated, never connected to a real feed
+- Render's free tier resets the DB on redeploy — no persistent production
+  storage yet
+- Admin metrics dashboard was scoped early on but never built
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

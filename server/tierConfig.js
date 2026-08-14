@@ -10,7 +10,7 @@ const CATEGORIES = [
   { id: "full_day", name: "Full Day", icon: "🔔", cadence: "daily", openHour: 9.5, lockHour: 16 },
   { id: "morning", name: "Morning", icon: "☀️", cadence: "daily", openHour: 9.5, lockHour: 13 },
   { id: "afternoon", name: "Afternoon", icon: "🔥", cadence: "daily", openHour: 13, lockHour: 16 },
-  { id: "hourly", name: "Hourly", icon: "⚡", cadence: "hourly" }, // runs 24/7, every hour on the hour — always something to play, regardless of when someone signs up
+  { id: "hourly", name: "Degen Hours", icon: "⚡", cadence: "hourly" }, // internal id stays "hourly" — it's a foreign key across satellites/pending_allocations/freeroll_fund, renaming it would mean migrating real data for zero user-facing benefit
 ];
 
 // Base tier price is 100/300/750, then every paid room gets the flat +50
@@ -71,7 +71,7 @@ const TIERS = CATEGORIES.flatMap((cat) => {
       entryFee: poolFee + surcharge,
       poolFee,
       surcharge,
-      maxEntriesPerAccount: level === "free" ? 1 : 10,
+      maxEntriesPerAccount: level === "free" ? 1 : cat.id === "hourly" ? null : 10, // null = genuinely unlimited — Degen Hours paid levels only, per its own no-holds-barred rules
       cadence: cat.cadence,
       openHour: cat.openHour,
       lockHour: cat.lockHour,

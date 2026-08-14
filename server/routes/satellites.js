@@ -134,7 +134,7 @@ function serializeSatellite(s, myAccountId) {
     remainderDisplayName: s.remainder_display_name,
     joined: myEntryCount > 0,
     myEntryCount,
-    maxEntriesPerAccount: tierMeta?.maxEntriesPerAccount ?? 10,
+    maxEntriesPerAccount: tierMeta ? tierMeta.maxEntriesPerAccount : 10,
     myPortfolioId: myFirstEntry ? myFirstEntry.portfolio_id : null,
   };
 }
@@ -193,10 +193,31 @@ router.post("/:id/enter", requireAuth, (req, res) => {
   const tier = TIERS.find((t) => t.categoryId === satellite.tier_id && t.priceLevel === satellite.price_level);
   if (!tier) return res.status(500).json({ error: "Unknown tier configuration" });
 
+  // Registration windows, by design, differ by category:
+  //   Degen Hours (any level) — enter anytime the room's open, right up
+  //     until the last 5 minutes. No holds barred means no holds barred.
+  //   Every freeroll, any category — stays open the whole session (this
+  //     is deliberately the "always something to jump into" entry point,
+  //     including Weekly's, which otherwise closes at the opening bell).
+  //   Everything else (Full Day/Morning/Afternoon/Weekly PAID tiers) —
+  //     registration closes the moment the session actually begins.
+  //     Reserve a spot beforehand via the pending-allocation flow instead;
+  //     once it's running, no new entries.
+  const isDegenHours = satellite.tier_id === "hourly";
+  const isFreeroll = satellite.price_level === "free";
+  if (isDegenHours) {
+    const locksAt = new Date(satellite.locks_at).getTime();
+    if (Date.now() >= locksAt - 5 * 60000) {
+      return res.status(400).json({ error: "Degen Hours entry closes 5 minutes before the hour ends — this one's cutting it too close." });
+    }
+  } else if (!isFreeroll) {
+    return res.status(400).json({ error: "Registration for this contest closed the moment it opened — reserve your spot next time before it starts." });
+  }
+
   const existingCount = db
     .prepare("SELECT COUNT(*) as n FROM satellite_entries WHERE satellite_id = ? AND account_id = ?")
     .get(satellite.id, req.account.id).n;
-  if (existingCount >= tier.maxEntriesPerAccount) {
+  if (tier.maxEntriesPerAccount != null && existingCount >= tier.maxEntriesPerAccount) {
     return res.status(400).json({
       error:
         tier.maxEntriesPerAccount === 1

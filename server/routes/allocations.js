@@ -51,7 +51,7 @@ router.post("/", requireAuth, (req, res) => {
     maxAllowed = MAIN_EVENT_CONFIG.maxEntriesPerAccount;
   }
 
-  const err = validateAllocations(allocations);
+  const err = validateAllocations(allocations, finalTierId === "hourly");
   if (err) return res.status(400).json({ error: err });
 
   const existingCount = db
@@ -62,7 +62,7 @@ router.post("/", requireAuth, (req, res) => {
     )
     .get(req.account.id, targetType, finalTierId, finalPriceLevel).n;
 
-  if (existingCount >= maxAllowed) {
+  if (maxAllowed != null && existingCount >= maxAllowed) {
     return res.status(400).json({ error: `You've reached the max of ${maxAllowed} entries for this room` });
   }
 
@@ -83,7 +83,7 @@ router.put("/:id", requireAuth, (req, res) => {
   if (!row || row.account_id !== req.account.id) return res.status(404).json({ error: "Not found" });
   if (row.status !== "pending") return res.status(400).json({ error: "Only pending reservations can be adjusted" });
 
-  const err = validateAllocations(allocations);
+  const err = validateAllocations(allocations, row.target_tier_id === "hourly");
   if (err) return res.status(400).json({ error: err });
 
   db.prepare("UPDATE pending_allocations SET allocations_json = ? WHERE id = ?").run(

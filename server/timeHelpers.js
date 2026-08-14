@@ -41,10 +41,13 @@ function currentWeekWindow(now = new Date()) {
 
   const mondayGuessUTC = new Date(Date.UTC(y, m - 1, d - daysSinceMonday, 12, 0, 0));
   const mp = easternParts(mondayGuessUTC);
-  const monday = etDateTime(Number(mp.year), Number(mp.month), Number(mp.day), 0, 0, 0);
+  // Opens at the real opening bell (9:30am ET Monday), not midnight — this
+  // is a genuine trading week, not a calendar week.
+  const monday = etDateTime(Number(mp.year), Number(mp.month), Number(mp.day), 9, 30, 0);
   const fridayGuessUTC = new Date(monday.getTime() + 4 * 24 * 60 * 60 * 1000);
   const fp = easternParts(fridayGuessUTC);
-  const friday = etDateTime(Number(fp.year), Number(fp.month), Number(fp.day), 23, 59, 59);
+  // Closes at the real closing bell (4:00pm ET Friday), not end-of-day.
+  const friday = etDateTime(Number(fp.year), Number(fp.month), Number(fp.day), 16, 0, 0);
 
   return { weekStart: monday, weekEnd: friday };
 }

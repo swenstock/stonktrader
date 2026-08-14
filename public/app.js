@@ -132,9 +132,9 @@ const ONBOARDING_CONTENT = {
   },
   to_hourly: {
     icon: "⚡",
-    title: "Trade now, free — try Hourly",
-    body: "It's open right now and resolves within the hour. Win it and you get a ticket into that hour's Runner-level satellite. You'll get a fresh shot like this every other hourly session, all day, every day.",
-    cta: "Enter my free Hourly contest",
+    title: "Trade now, free — try Degen Hours",
+    body: "It's open right now and resolves within the hour. Win it and you get a ticket into that hour's Runner-level satellite. You'll get a fresh shot like this every single hour, all day, every day.",
+    cta: "Enter my free Degen Hours contest",
     action: () => {
       switchView("lobby");
       const hourlyCat = satellitesCache.categories?.find((c) => c.id === "hourly");
@@ -146,7 +146,7 @@ const ONBOARDING_CONTENT = {
   },
   portfolio_hourly: {
     icon: "✅",
-    title: "You're in your Hourly contest too!",
+    title: "You're in your Degen Hours contest too!",
     body: "Same deal — set up this portfolio too, and you've got two free results coming today.",
     cta: "Go to My Contests",
     action: () => switchView("mycontests"),
@@ -214,8 +214,9 @@ function advanceOnboarding(fromStep, toStep) {
 }
 
 function beginWaitingForReady(roomLocksAt) {
-  // Freeroll now runs every OTHER hour — a 1-hour gap between this room's
-  // real resolution and the next freeroll opportunity opening.
+  // A roughly 1-hour buffer after this room resolves before nagging about
+  // paid tiers — long enough to feel like a natural pause, not a hard tie
+  // to any specific category's exact cadence.
   const resolvesAt = roomLocksAt ? new Date(roomLocksAt).getTime() : Date.now();
   localStorage.setItem("onboardingReadyEligibleAt", String(resolvesAt));
   localStorage.setItem("onboardingReadyExpiresAt", String(resolvesAt + 60 * 60000));
@@ -523,11 +524,11 @@ function renderTierFilterBar() {
 }
 
 const CATEGORY_DESCRIPTIONS = {
-  weekly_qualifier: "Runs Monday 12:00am ET through Friday close — the SAME window as the Main Event. Win a contest here and you're straight into the Main Event for free.",
+  weekly_qualifier: "Runs 9:30am ET Monday (opening bell) through 4:00pm ET Friday (closing bell) — the SAME window as the Main Event. Win a contest here and you're straight into the Main Event for free.",
   full_day: "Runs the full trading session, 9:30 AM \u2013 4:00 PM ET, every weekday. New contest opens each trading day. Win the free tier and you get a ticket into that day's Runner-level satellite.",
   morning: "Runs the first half of the trading session, 9:30 AM \u2013 1:00 PM ET, every weekday. Win the free tier and you get a ticket into that day's Runner-level satellite.",
   afternoon: "Runs the second half of the trading session, 1:00 PM \u2013 4:00 PM ET, every weekday. Win the free tier and you get a ticket into that day's Runner-level satellite.",
-  hourly: "🔥 Degen Hours — paid tiers run 24/7, every hour, no 10% position cap here. The free tier runs every OTHER hour — win it and you get a ticket into that hour's Runner-level satellite.",
+  hourly: "🔥 Degen Hours — no 10% position cap, ever. Runs 24/7, every single hour, every level including the free roll — win it and you get a ticket into that hour's Runner-level satellite.",
 };
 
 function renderSatelliteCategoryTree() {
@@ -584,7 +585,7 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
     .map((lvl) => {
       const isPending = lvl.status === "pending";
       const isLocked = lvl.status === "resolved";
-      const atMax = lvl.myEntryCount >= lvl.maxEntriesPerAccount;
+      const atMax = lvl.maxEntriesPerAccount != null && lvl.myEntryCount >= lvl.maxEntriesPerAccount;
       const chipState = atMax ? "in" : isPending ? "pending" : isLocked ? "locked" : "";
       const countdown = isPending
         ? `<span class="countdown-text" data-ends="${lvl.opensAt}">${fmtCountdown(lvl.opensAt)}</span>`
@@ -610,18 +611,25 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
       // Pending rooms show a real Enter/Join button too — clicking reserves
       // your spot right away (100% cash, no picks yet). Set up the actual
       // portfolio anytime before that room opens, from My Contests.
-      const clickAction = atMax || isLocked ? "" : isPending ? "reserve-room-btn" : "join-sat-row-btn";
-      const disabled = atMax || isLocked;
+      // Registration for Daily/Weekly PAID tiers closes the moment the
+      // session actually starts — matches the backend's /enter rule.
+      // Freerolls (any category) and Degen Hours (any level) are the
+      // deliberate exceptions and stay enterable all session long.
+      const registrationClosed = !isPending && lvl.priceLevel !== "free" && cat.id !== "hourly";
+      const clickAction = atMax || isLocked || registrationClosed ? "" : isPending ? "reserve-room-btn" : "join-sat-row-btn";
+      const disabled = atMax || isLocked || registrationClosed;
       const hoverStats = !isPending
-        ? isFreerollChip
-          ? `${lvl.entrantCount} traders · win a ${prizeNoun}, no wallet needed`
-          : `${lvl.entrantCount} traders · ${lvl.poolGross.toLocaleString()} STONK collected · projected: ${lvl.ticketsProjected || 0} ${prizeNoun}${(lvl.ticketsProjected || 0) === 1 ? "" : "s"} + ${(lvl.remainderProjected || 0).toLocaleString()} STONK remainder`
+        ? registrationClosed
+          ? "Registration closed the moment this session started — catch it before it opens next time."
+          : isFreerollChip
+            ? `${lvl.entrantCount} traders · win a ${prizeNoun}, no wallet needed`
+            : `${lvl.entrantCount} traders · ${lvl.poolGross.toLocaleString()} STONK collected · projected: ${lvl.ticketsProjected || 0} ${prizeNoun}${(lvl.ticketsProjected || 0) === 1 ? "" : "s"} + ${(lvl.remainderProjected || 0).toLocaleString()} STONK remainder`
         : `Opens ${new Date(lvl.opensAt).toLocaleString()}`;
       return `<button class="stake-chip ${chipState} ${clickAction}" ${disabled ? "disabled" : ""} title="${hoverStats}" data-id="${lvl.id}" data-tier="${lvl.tierId}" data-level="${lvl.priceLevel}">
         <span class="stake-tier-name">${lvl.priceLevelName || lvl.priceLevel}</span>
         <span class="stake-fee">${feeLabel} <span class="stake-fee-usd">(${usdLabel})</span></span>
-        <span class="stake-sub">${statusLine}</span>
-        ${lvl.myEntryCount > 0 ? `<span class="stake-entry-counter">You've entered ${lvl.myEntryCount}/${lvl.maxEntriesPerAccount} time${lvl.myEntryCount === 1 ? "" : "s"}</span>` : ""}
+        <span class="stake-sub">${registrationClosed ? "Registration closed" : statusLine}</span>
+        ${lvl.myEntryCount > 0 ? `<span class="stake-entry-counter">You've entered ${lvl.myEntryCount}${lvl.maxEntriesPerAccount != null ? `/${lvl.maxEntriesPerAccount}` : ""} time${lvl.myEntryCount === 1 ? "" : "s"}</span>` : ""}
         ${ticketLine}
         ${!disabled ? `<span class="stake-alloc-hint">${isPending ? "Enter Contest (reserve)" : "Enter Contest"} ›</span>` : ""}
       </button>`;
@@ -639,13 +647,13 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
     btn.addEventListener("click", () => {
       const lvl = cat.levels.find((l) => l.id == btn.dataset.id);
       if (!lvl) return;
-      const remaining = lvl.maxEntriesPerAccount - lvl.myEntryCount;
+      const remaining = lvl.maxEntriesPerAccount != null ? lvl.maxEntriesPerAccount - lvl.myEntryCount : 25; // unlimited backend-side; 25 is just a sane practical cap for the bulk-buy dropdown itself
       showEntryReview({
         badge: "ENTER SATELLITE",
         title: lvl.name,
         category: cat.name,
         tier: lvl.priceLevelName || lvl.priceLevel,
-        entryNumber: `${lvl.myEntryCount + 1} of ${lvl.maxEntriesPerAccount}`,
+        entryNumber: lvl.maxEntriesPerAccount != null ? `${lvl.myEntryCount + 1} of ${lvl.maxEntriesPerAccount}` : `#${lvl.myEntryCount + 1} (unlimited)`,
         feeLabel: "Entry fee",
         feeText: lvl.entryFee === 0 ? "FREE — no wallet needed" : `${lvl.entryFee.toLocaleString()} STONK (~$${lvl.entryFeeUsd?.toFixed(2) ?? "0.00"})`,
         feeEach: lvl.entryFee,
@@ -662,13 +670,13 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
     btn.addEventListener("click", () => {
       const lvl = cat.levels.find((l) => l.tierId === btn.dataset.tier && l.priceLevel === btn.dataset.level);
       if (!lvl) return;
-      const remaining = lvl.maxEntriesPerAccount - lvl.myEntryCount;
+      const remaining = lvl.maxEntriesPerAccount != null ? lvl.maxEntriesPerAccount - lvl.myEntryCount : 25; // unlimited backend-side; 25 is just a sane practical cap for the bulk-buy dropdown itself
       showEntryReview({
         badge: "RESERVE YOUR SPOT",
         title: lvl.name,
         category: cat.name,
         tier: lvl.priceLevelName || lvl.priceLevel,
-        entryNumber: `${lvl.myEntryCount + 1} of ${lvl.maxEntriesPerAccount}`,
+        entryNumber: lvl.maxEntriesPerAccount != null ? `${lvl.myEntryCount + 1} of ${lvl.maxEntriesPerAccount}` : `#${lvl.myEntryCount + 1} (unlimited)`,
         feeLabel: "Entry fee (charged on open)",
         feeText: lvl.entryFee === 0 ? "FREE — no wallet needed" : `${lvl.entryFee.toLocaleString()} STONK (~$${lvl.entryFeeUsd?.toFixed(2) ?? "0.00"})`,
         feeEach: lvl.entryFee,
@@ -1531,12 +1539,13 @@ function selectSymbol(sym) {
 }
 
 function initChart() {
-  document.getElementById("chartContainer").innerHTML = "";
-  chart = LightweightCharts.createChart(document.getElementById("chartContainer"), {
+  const container = document.getElementById("chartContainer");
+  container.innerHTML = "";
+  chart = LightweightCharts.createChart(container, {
     layout: { background: { color: "transparent" }, textColor: "#7FA36E" },
     grid: { vertLines: { color: "#2A3A24" }, horzLines: { color: "#2A3A24" } },
     timeScale: { timeVisible: true, secondsVisible: true },
-    height: 260,
+    height: container.clientHeight || 260, // follows whatever the CSS class (.trade-chart-container) resolves to at this screen size — single source of truth, no hardcoded mismatch between JS and CSS
   });
   if (chartMode === "candles") {
     series = chart.addCandlestickSeries({

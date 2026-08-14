@@ -11,6 +11,21 @@ const { totalValueForPortfolio } = require("./portfolioValue");
 
 const MAX_ALLOCATION_PCT = 10; // must match allocationEngine.js / routes/portfolios.js
 
+// Duplicated from routes/portfolios.js (not exported there) — same check,
+// same exception. Without this, a scheduled order for a Degen Hours
+// portfolio would get incorrectly rejected at execution time for
+// exceeding a cap that doesn't apply there.
+function isDegenHoursPortfolio(portfolioId) {
+  const satelliteEntry = db
+    .prepare(
+      `SELECT satellites.tier_id FROM satellite_entries
+       JOIN satellites ON satellites.id = satellite_entries.satellite_id
+       WHERE satellite_entries.portfolio_id = ?`
+    )
+    .get(portfolioId);
+  return satelliteEntry?.tier_id === "hourly";
+}
+
 function contestStatusForPortfolio(portfolioId) {
   const ce = db
     .prepare(
@@ -34,12 +49,13 @@ function contestStatusForPortfolio(portfolioId) {
 function revalidateAgainstLivePortfolio(portfolioId, allocations, baseValue) {
   const positions = db.prepare("SELECT * FROM positions WHERE portfolio_id = ? AND quantity > 0").all(portfolioId);
   const costBasisBySymbol = Object.fromEntries(positions.map((p) => [p.symbol, p.avg_cost * p.quantity]));
+  const isDegenHours = isDegenHoursPortfolio(portfolioId);
 
   let totalNewCost = 0;
   for (const a of allocations) {
     const existing = costBasisBySymbol[a.symbol] || 0;
     const newCost = baseValue * (a.percent / 100);
-    if (existing + newCost > baseValue * (MAX_ALLOCATION_PCT / 100) + 0.01) {
+    if (!isDegenHours && existing + newCost > baseValue * (MAX_ALLOCATION_PCT / 100) + 0.01) {
       return `${a.symbol} would exceed the ${MAX_ALLOCATION_PCT}% max position size given what's already held`;
     }
     totalNewCost += newCost;
