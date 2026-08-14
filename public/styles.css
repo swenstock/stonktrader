@@ -187,9 +187,6 @@ tr.watch-row:hover{background:var(--surface-2);}
 .weekly-freeroll-icon{font-size:32px;flex-shrink:0;}
 .weekly-freeroll-banner-text b{display:block;font-size:15px;margin-bottom:3px;}
 .weekly-freeroll-banner-text span{display:block;font-size:12.5px;color:var(--text-dim);}
-.weekly-freeroll-stats{display:flex;gap:18px;flex-wrap:wrap;margin-top:8px;}
-.weekly-freeroll-stats span{display:inline;font-size:11.5px;color:var(--text-dim);}
-.weekly-freeroll-stats b{color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:13px;}
 .hero-cta-row{display:flex;align-items:center;gap:16px;margin-bottom:22px;flex-wrap:wrap;}
 .satellite-price-note{
   font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--text-dim);letter-spacing:.05em;
@@ -310,13 +307,6 @@ tr.watch-row:hover{background:var(--surface-2);}
   .lobby-hero{grid-template-columns:1fr;}
   .table-grid{grid-template-columns:1fr;}
   .nav-right{justify-self:center;}
-  .stats-strip{grid-template-columns:1fr 1fr;}
-  .stat-block{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:14px 12px;gap:8px;}
-  .stat-block:nth-child(2n){border-right:none;}
-  .stat-block:nth-last-child(-n+2){border-bottom:none;}
-  .stat-icon{font-size:17px;}
-  .stat-value{font-size:15px;}
-  .stat-label{font-size:9px;}
   .pixel-headline{font-size:19px;}
   .broker-lineup{margin-top:24px;}
 }
@@ -735,6 +725,37 @@ tr.watch-row:hover{background:var(--surface-2);}
 
 /* ---------- Mobile pass: elements added later in the build that never got phone-width treatment ---------- */
 @media(max-width:600px){
+  /* Reusable horizontal-scroll pattern: instead of letting a row of small
+     items wrap to multiple lines (eating vertical space), let it scroll
+     sideways in one compact line — the standard mobile pattern for stat
+     rows, tag lists, and filter chips (Twitter/X profile stats, etc).
+     Hidden scrollbar keeps it visually clean; still fully swipeable. */
+  .h-scroll{
+    display:flex;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scrollbar-width:none;-ms-overflow-style:none;
+  }
+  .h-scroll::-webkit-scrollbar{display:none;}
+  .h-scroll > *{flex-shrink:0;}
+
+  /* Stats strip — was a 2x2 grid (still two full rows tall). One
+     horizontally-scrollable row instead — same info, half the height,
+     and this is low-priority glanceable info that shouldn't need two
+     full rows of vertical space regardless. */
+  .stats-strip{display:flex;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;border-radius:12px;}
+  .stats-strip::-webkit-scrollbar{display:none;}
+  .stat-block{flex:0 0 auto;min-width:150px;border-right:1px solid var(--border);border-bottom:none;padding:10px 14px;gap:8px;}
+  .stat-block:last-child{border-right:none;}
+  .stat-icon{font-size:16px;}
+  .stat-value{font-size:14px;}
+  .stat-label{font-size:8.5px;}
+
+  /* Tier filter chips (Freeroll/Runner/Clerk/Trader/Jr.Stonkbroker/All) —
+     was wrapping to 2 rows on phones. One scrollable row instead. */
+  .tier-filter-bar{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding:0 16px;}
+  .tier-filter-bar::-webkit-scrollbar{display:none;}
+  .tier-filter-btn{flex-shrink:0;}
+  .tier-filter-label{flex-shrink:0;}
+
   /* Broker prize showcase — the two flanking decorative "trader" images
      were overflowing/getting cut off at the screen edges on narrow
      phones, and the whole thing was a large vertical chunk of space for
@@ -762,6 +783,15 @@ tr.watch-row:hover{background:var(--surface-2);}
   .portfolio-row{padding:12px 14px;margin-bottom:8px;gap:10px;}
   .portfolio-row-label{font-size:13px;}
   .portfolio-row-sub{font-size:11px;}
+
+  /* Weekly Freeroll banner — tighter padding/margin on mobile, it's the
+     very first thing after the Main Event card and shouldn't itself add
+     to the "too much before anything's tappable" problem. */
+  .weekly-freeroll-banner{padding:14px 16px;margin:0 auto 16px;}
+
+  /* section-head repeats before every major section — tighter margins
+     on mobile compound into real saved scroll across the whole page. */
+  .section-head{margin:18px auto 10px;padding:0 16px;}
 
   /* Freeroll callout strip — was min-width:150px + wrap, which produced an
      uneven 2-then-1 layout on phone widths. Full-width stacked instead. */

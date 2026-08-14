@@ -890,10 +890,16 @@ function renderWeeklyFreerollPrompt() {
 
   // This is funded entirely by entry fees across every paid Weekly
   // Qualifier tier, all-time — a real, growing number, not a gimmick.
-  const statsRow = `<div class="weekly-freeroll-stats">
-    <span><b>${(freerollLevel.entrantCount || 0).toLocaleString()}</b> traders in this week's contest</span>
-    <span><b>${freerollLevel.ticketsProjected || 0}</b> Main Event ticket${(freerollLevel.ticketsProjected || 0) === 1 ? "" : "s"} banked right now</span>
-    <span><b>${(freerollLevel.lifetimeAwarded || 0).toLocaleString()}</b> free Main Event ticket${(freerollLevel.lifetimeAwarded || 0) === 1 ? "" : "s"} awarded all-time</span>
+  // Inline-styled deliberately, not relying on the .weekly-freeroll-stats
+  // class alone — this was rendering as 3 giant stacked hero blocks on
+  // mobile instead of one compact line, a real waste of space for
+  // secondary glanceable info sitting right below the primary CTA.
+  const statRowStyle = "display:flex;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:14px;margin-top:8px;font-size:11px;line-height:1.4;color:var(--text-dim);";
+  const statValStyle = "color:var(--gold);font-family:'IBM Plex Mono',monospace;font-weight:700;white-space:nowrap;";
+  const statsRow = `<div style="${statRowStyle}">
+    <span style="white-space:nowrap;flex-shrink:0;"><b style="${statValStyle}">${(freerollLevel.entrantCount || 0).toLocaleString()}</b> traders this week</span>
+    <span style="white-space:nowrap;flex-shrink:0;"><b style="${statValStyle}">${freerollLevel.ticketsProjected || 0}</b> ticket${(freerollLevel.ticketsProjected || 0) === 1 ? "" : "s"} banked now</span>
+    <span style="white-space:nowrap;flex-shrink:0;"><b style="${statValStyle}">${(freerollLevel.lifetimeAwarded || 0).toLocaleString()}</b> awarded all-time</span>
   </div>`;
 
   const atMax = freerollLevel.myEntryCount >= freerollLevel.maxEntriesPerAccount;
