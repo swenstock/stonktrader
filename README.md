@@ -967,6 +967,35 @@ value. Full regression suite still passes.
 column) — fresh sign-up needed after this deploy, same as any other
 schema change.
 
+## Hourly freeroll now runs every OTHER hour, paid tiers unchanged
+
+The Freeroll level of Hourly now opens only on even ET hours (12am, 2am,
+4am...) — anchored to midnight ET as the daily reference point, computed
+from the actual ET-local hour rather than UTC (ET's offset from UTC is
+always an odd number, so checking parity on raw UTC hours would have
+flipped which hours count as "even"). Every other level (Runner, Clerk,
+Trader, Jr. Stonkbroker) is unaffected — still opens every single hour,
+24/7, exactly as before.
+
+Verified directly: at an odd ET hour, exactly 4 of Hourly's 5 levels are
+open (paid only); one hour later, at the next even ET hour, all 5 are open
+including Freeroll.
+
+## Onboarding's "ready for more" prompt is now properly delayed
+
+Previously fired within seconds of finishing portfolio setup. Now it
+waits for a real window: **after** the trader's freeroll actually resolves
+but **before** their next hourly freeroll opportunity opens — a genuine
+1-hour gap, now that Hourly's freeroll runs every other hour. Anchored to
+the *actual* room's real lock time (or, for a reserved-but-not-yet-open
+room, an estimate of open time + 1hr), not a guess.
+
+Checked on every page load and every 60 seconds while the tab stays open,
+so it fires reliably whether the trader closes the tab and comes back
+later or leaves it open through the window. If they don't return during
+the eligible window at all, the sequence ends quietly rather than showing
+a stale prompt days later.
+
 ## Suggested next steps
 
 ### Note for real-money integration (not built yet, just a stated requirement)

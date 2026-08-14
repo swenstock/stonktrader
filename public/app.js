@@ -158,10 +158,51 @@ document.getElementById("onboardingSkipBtn").addEventListener("click", () => {
 // Advances the sequence only if the trader is actually still IN it —
 // existing users, or anyone who already finished/skipped, never see these
 // again regardless of what they do in the app afterward.
-function advanceOnboarding(fromStep, toStep) {
+// Advances the sequence only if the trader is actually still IN it —
+// existing users, or anyone who already finished/skipped, never see these
+// again regardless of what they do in the app afterward.
+//
+// The welcome -> portfolio step still shows immediately. But portfolio ->
+// ready is different by design: rather than nagging them about the $1
+// tiers the moment they finish their first trade, it holds off until
+// there's a real gap to fill — specifically the window AFTER their first
+// (every-other-hour) freeroll resolves but BEFORE their next one opens,
+// anchored to that room's actual real lock time, not a guess.
+function advanceOnboarding(fromStep, toStep, roomLocksAt) {
   if (localStorage.getItem("onboardingStep") !== fromStep) return;
+
+  if (toStep === "portfolio" && roomLocksAt) {
+    // Freeroll now runs every OTHER hour — a 1-hour gap between this
+    // room's real resolution and the next freeroll opportunity opening.
+    const resolvesAt = new Date(roomLocksAt).getTime();
+    localStorage.setItem("onboardingReadyEligibleAt", String(resolvesAt));
+    localStorage.setItem("onboardingReadyExpiresAt", String(resolvesAt + 60 * 60000));
+  }
+
   localStorage.setItem("onboardingStep", toStep);
-  showOnboardingPopup(toStep);
+  if (toStep === "waiting_for_ready") {
+    checkDelayedOnboardingPrompt(); // in case the eligible window already started by the time they finished setup
+  } else {
+    showOnboardingPopup(toStep);
+  }
+}
+
+// Checked on every boot() (i.e. whenever the trader loads or returns to
+// the app) — fires the "ready for more" prompt only inside its real
+// eligible window, not the instant portfolio setup finishes.
+function checkDelayedOnboardingPrompt() {
+  if (localStorage.getItem("onboardingStep") !== "waiting_for_ready") return;
+  const eligibleAt = Number(localStorage.getItem("onboardingReadyEligibleAt") || 0);
+  const expiresAt = Number(localStorage.getItem("onboardingReadyExpiresAt") || 0);
+  const now = Date.now();
+  if (now >= eligibleAt && now < expiresAt) {
+    localStorage.setItem("onboardingStep", "ready");
+    showOnboardingPopup("ready");
+  } else if (now >= expiresAt) {
+    // Missed the window (didn't open the app in time) — end the sequence
+    // quietly rather than show a stale "starting soon" prompt days later.
+    localStorage.setItem("onboardingStep", "dismissed");
+  }
 }
 
 function showApp(isNewSignup) {
@@ -229,10 +270,12 @@ async function boot() {
   refreshContests();
   refreshReferrals();
   refreshStbPrice();
+  checkDelayedOnboardingPrompt();
   setInterval(refreshPortfoliosBalance, 5000);
   setInterval(refreshContests, 5000);
   setInterval(tickCountdowns, 1000);
   setInterval(refreshStbPrice, 15000);
+  setInterval(checkDelayedOnboardingPrompt, 60000); // check every minute in case the tab stays open through the eligible window
 }
 
 async function refreshStbPrice() {
@@ -295,6 +338,7 @@ async function refreshContests() {
       if (freshCat) showSatelliteDrilldown(freshCat, false);
     }
     renderWeeklyRoom();
+    renderWeeklyFreerollPrompt();
   } catch (err) {
     console.error(err);
   }
@@ -513,7 +557,7 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
         feeEach: lvl.entryFee,
         maxQty: remaining,
         note: `${lvl.entrantCount} traders already in this contest. ${lvl.ticketsProjected || 0} ticket(s) currently funded.`,
-        onConfirm: (qty) => joinSatellite(lvl.id, qty, lvl.priceLevel === "free"),
+        onConfirm: (qty) => joinSatellite(lvl.id, qty, lvl.priceLevel === "free", lvl.locksAt),
       });
     });
   });
@@ -533,7 +577,7 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
         feeEach: lvl.entryFee,
         maxQty: remaining,
         note: "This contest hasn't opened yet — reserving locks your spot now. Set up your picks anytime before it opens, from My Contests.",
-        onConfirm: (qty) => reserveRoom(btn.dataset.tier, btn.dataset.level, qty, btn.dataset.level === "free"),
+        onConfirm: (qty) => reserveRoom(btn.dataset.tier, btn.dataset.level, qty, btn.dataset.level === "free", lvl.opensAt),
       });
     });
   });
@@ -612,7 +656,7 @@ document.getElementById("youreInModalBackdrop").addEventListener("click", closeY
 // all pass the server's "count < max" check simultaneously and race past
 // the cap. Sequential + awaited keeps the max-10 (or max-1 for freeroll)
 // limit airtight no matter how many are requested at once.
-async function joinSatellite(satelliteId, qty = 1, isFreeroll = false) {
+async function joinSatellite(satelliteId, qty = 1, isFreeroll = false, roomLocksAt = null) {
   let succeeded = 0;
   try {
     for (let i = 0; i < qty; i++) {
@@ -625,7 +669,7 @@ async function joinSatellite(satelliteId, qty = 1, isFreeroll = false) {
       succeeded === 1 ? "You're in!" : `You're in — ${succeeded} entries!`,
       "Head to My Contests to trade — each entry's own $100,000 portfolio is ready for you."
     );
-    if (isFreeroll) advanceOnboarding("welcome", "portfolio");
+    if (isFreeroll) advanceOnboarding("welcome", "portfolio", roomLocksAt);
   } catch (err) {
     await refreshContests();
     refreshPortfoliosBalance();
@@ -636,7 +680,7 @@ async function joinSatellite(satelliteId, qty = 1, isFreeroll = false) {
 // Reserving a room that hasn't opened yet — creates an empty (100% cash)
 // pending allocation. No picks required now; set up the actual portfolio
 // anytime before the room opens, from My Contests.
-async function reserveRoom(tierId, priceLevel, qty = 1, isFreeroll = false) {
+async function reserveRoom(tierId, priceLevel, qty = 1, isFreeroll = false, roomOpensAt = null) {
   let succeeded = 0;
   try {
     for (let i = 0; i < qty; i++) {
@@ -652,7 +696,13 @@ async function reserveRoom(tierId, priceLevel, qty = 1, isFreeroll = false) {
       succeeded === 1 ? "You're in!" : `You're in — ${succeeded} spots reserved!`,
       "Set up each portfolio anytime before this contest opens — it'll auto-fill with your picks the instant it does."
     );
-    if (isFreeroll) advanceOnboarding("welcome", "portfolio");
+    if (isFreeroll) {
+      // Room hasn't opened yet, so there's no real locksAt to use — every
+      // room here runs a fixed 1-hour session, so estimate resolution as
+      // opensAt + 1hr.
+      const estimatedLocksAt = roomOpensAt ? new Date(new Date(roomOpensAt).getTime() + 60 * 60000).toISOString() : null;
+      advanceOnboarding("welcome", "portfolio", estimatedLocksAt);
+    }
   } catch (err) {
     await refreshContests();
     await refreshMyContests();
@@ -676,6 +726,57 @@ function triggerBrokerUnlock(newCount) {
   document.body.appendChild(overlay);
   setTimeout(() => overlay.classList.add("unlock-out"), 2400);
   setTimeout(() => overlay.remove(), 3000);
+}
+
+// Prominent Lobby callout specifically for the Weekly Freeroll — the free
+// path straight to a Main Event ticket. Two states: not entered yet (big
+// CTA to enter right here), or already entered (nudge to My Contests to
+// finish setting up picks — kept simple here, My Contests already owns
+// the detailed configured/unconfigured tracking, no need to duplicate it).
+function renderWeeklyFreerollPrompt() {
+  const el = document.getElementById("weeklyFreerollPrompt");
+  if (!el) return;
+  const weeklyCat = satellitesCache.categories?.find((c) => c.id === "weekly_qualifier");
+  const freerollLevel = weeklyCat?.levels.find((l) => l.priceLevel === "free");
+  if (!freerollLevel) {
+    el.style.display = "none";
+    return;
+  }
+
+  const atMax = freerollLevel.myEntryCount >= freerollLevel.maxEntriesPerAccount;
+  if (atMax) {
+    el.innerHTML = `<div class="weekly-freeroll-banner entered">
+      <div class="weekly-freeroll-banner-text">
+        <span class="weekly-freeroll-icon">🎟️</span>
+        <div>
+          <b>You're in this week's free Weekly contest!</b>
+          <span>Win it and you get a real Main Event ticket. Finish setting up your portfolio.</span>
+        </div>
+      </div>
+      <button class="btn btn-gold" id="weeklyFreerollCta">Go to My Contests</button>
+    </div>`;
+    document.getElementById("weeklyFreerollCta").addEventListener("click", () => switchView("mycontests"));
+  } else {
+    const isPending = freerollLevel.status === "pending";
+    el.innerHTML = `<div class="weekly-freeroll-banner">
+      <div class="weekly-freeroll-banner-text">
+        <span class="weekly-freeroll-icon">🎟️</span>
+        <div>
+          <b>Your free Weekly contest is ${isPending ? "coming up" : "open right now"} — win a real Main Event ticket, 100% free.</b>
+          <span>No wallet needed. Set up your portfolio and you're straight in the running.</span>
+        </div>
+      </div>
+      <button class="btn btn-gold" id="weeklyFreerollCta">${isPending ? "Reserve my free spot" : "Enter free now"}</button>
+    </div>`;
+    document.getElementById("weeklyFreerollCta").addEventListener("click", () => {
+      if (isPending) {
+        reserveRoom("weekly_qualifier", "free", 1, true, freerollLevel.opensAt);
+      } else {
+        joinSatellite(freerollLevel.id, 1, true, freerollLevel.locksAt);
+      }
+    });
+  }
+  el.style.display = "block";
 }
 
 function renderWeeklyRoom() {
@@ -1466,7 +1567,7 @@ async function executeTrade() {
     const summary = `${result.side === "buy" ? "Bought" : "Sold"} ${qtyDisplay} ${result.symbol} @ $${result.price.toFixed(2)}`;
     pendingTrade = null;
     refreshCurrentPortfolio();
-    if (result.side === "buy") setTimeout(() => advanceOnboarding("portfolio", "ready"), 2500);
+    if (result.side === "buy") setTimeout(() => advanceOnboarding("portfolio", "waiting_for_ready"), 2500);
 
     if (getTradePref("skipOrderFilled")) {
       showTradeModalState("main");
@@ -1997,7 +2098,7 @@ document.getElementById("submitAllocationBtn").addEventListener("click", async (
     msg.style.color = "var(--green)";
     refreshContests();
     refreshMyContests();
-    if (allocations.length > 0) setTimeout(() => advanceOnboarding("portfolio", "ready"), 1600);
+    if (allocations.length > 0) setTimeout(() => advanceOnboarding("portfolio", "waiting_for_ready"), 1600);
     setTimeout(closeAllocationModal, 1400);
   } catch (err) {
     msg.style.color = "var(--red)";

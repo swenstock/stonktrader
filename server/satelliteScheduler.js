@@ -13,7 +13,7 @@
 const db = require("./db");
 const { totalValueForPortfolios } = require("./portfolioValue");
 const { computeLadder } = require("./prizeLadder");
-const { etDateTime, etCalendarDate, isWeekday, currentWeekWindow } = require("./timeHelpers");
+const { etDateTime, etCalendarDate, easternParts, isWeekday, currentWeekWindow } = require("./timeHelpers");
 const mainEvent = require("./contestScheduler");
 const { applyPendingSatelliteAllocations } = require("./allocationEngine");
 const { CATEGORIES, PRICE_LEVEL_NAMES, TIERS, FREEROLL_SURCHARGE, FREEROLL_PRIZE_CONFIG } = require("./tierConfig");
@@ -47,6 +47,22 @@ function hourlyWindow(now) {
   return { opensAt, locksAt };
 }
 
+// The Freeroll level of Hourly runs every OTHER hour, not every hour like
+// the paid levels — anchored to even hours in ET (12am, 2am, 4am... "the
+// hour they start each day" = midnight ET), so it's a fixed, predictable
+// daily grid rather than drifting. Computed from the ET-LOCAL hour, not
+// UTC — ET's offset from UTC is always an odd number (-4 or -5), so
+// checking even/odd on the raw UTC hour would flip which hours actually
+// count as "even" in ET.
+function hourlyFreerollWindow(now) {
+  const etHour = Number(easternParts(now).hour);
+  const evenHour = etHour % 2 === 0 ? etHour : etHour - 1;
+  const { year, month, day } = etCalendarDate(now);
+  const opensAt = etDateTime(year, month, day, evenHour, 0, 0);
+  const locksAt = new Date(opensAt.getTime() + 60 * 60000); // the room itself still only lasts 1 hour — the GAP before the next one is what doubles
+  return { opensAt, locksAt };
+}
+
 function windowFor(tier, now) {
   // TEST_MODE: ignore real market hours entirely — every category (Full
   // Day, Morning, Afternoon, Weekly, Hourly) is always available regardless
@@ -61,6 +77,7 @@ function windowFor(tier, now) {
     return { opensAt: weekStart, locksAt: weekEnd };
   }
   if (tier.cadence === "hourly") {
+    if (tier.priceLevel === "free") return hourlyFreerollWindow(now); // every OTHER hour — paid levels below stay every hour
     return hourlyWindow(now); // 24/7, every hour on the hour — always something running, any day, any time
   }
   return dailyWindow(tier, now);
