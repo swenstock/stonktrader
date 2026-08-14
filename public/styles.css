@@ -219,7 +219,7 @@ tr.watch-row:hover{background:var(--surface-2);}
 /* Stats strip */
 .stats-strip{
   max-width:1200px;margin:28px auto 0;padding:0 28px;
-  display:grid;grid-template-columns:repeat(3,1fr);
+  display:grid;grid-template-columns:repeat(4,1fr);
   border:1px solid var(--border);border-radius:12px;overflow:hidden;
 }
 .stat-block{
@@ -310,9 +310,13 @@ tr.watch-row:hover{background:var(--surface-2);}
   .lobby-hero{grid-template-columns:1fr;}
   .table-grid{grid-template-columns:1fr;}
   .nav-right{justify-self:center;}
-  .stats-strip{grid-template-columns:1fr;}
-  .stat-block{border-right:none;border-bottom:1px solid var(--border);}
-  .stat-block:last-child{border-bottom:none;}
+  .stats-strip{grid-template-columns:1fr 1fr;}
+  .stat-block{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:14px 12px;gap:8px;}
+  .stat-block:nth-child(2n){border-right:none;}
+  .stat-block:nth-last-child(-n+2){border-bottom:none;}
+  .stat-icon{font-size:17px;}
+  .stat-value{font-size:15px;}
+  .stat-label{font-size:9px;}
   .pixel-headline{font-size:19px;}
   .broker-lineup{margin-top:24px;}
 }
@@ -610,6 +614,11 @@ tr.watch-row:hover{background:var(--surface-2);}
 .watchlist-quickadd-btn:hover{border-color:var(--gold);}
 .watchlist-added-tag{color:var(--green);font-size:10.5px;font-weight:700;white-space:nowrap;}
 .cat-description{font-size:11.5px;color:var(--text-dim);margin-top:4px;line-height:1.4;max-width:520px;}
+@media(max-width:600px){
+  .cat-description{
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+}
 .allocation-trigger-panel{padding:0;}
 .allocation-trigger-btn{
   width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;color:var(--text);
@@ -726,6 +735,34 @@ tr.watch-row:hover{background:var(--surface-2);}
 
 /* ---------- Mobile pass: elements added later in the build that never got phone-width treatment ---------- */
 @media(max-width:600px){
+  /* Broker prize showcase — the two flanking decorative "trader" images
+     were overflowing/getting cut off at the screen edges on narrow
+     phones, and the whole thing was a large vertical chunk of space for
+     a one-time visual flourish. They're already faded to 55% opacity
+     specifically because they're not essential info — cut them entirely
+     on narrow screens rather than risk overflow for zero informational
+     value, and shrink the actual prize image too. */
+  .broker-lineup{gap:0;}
+  .trader-mini{display:none;}
+  .prize-frame{width:78px;}
+  .prize-pedestal{padding:12px 10px 10px;}
+  .prize-label{font-size:9px;}
+  .prize-caption{font-size:8.5px;}
+
+  /* Main Event section — 32/48px of pure top/bottom padding, generous on
+     desktop by design, excessive on a phone where every scroll matters.
+     Card's own padding tightened too. */
+  .main-event-section{padding:20px 16px 28px;}
+  .table-card{padding:16px;}
+  .main-event-section .section-head h2{font-size:20px;}
+
+  /* portfolio-row is reused everywhere (category cards, tier drilldowns,
+     My Contests entries) — even a modest per-row tightening compounds
+     into real saved scroll length across a page with many of them. */
+  .portfolio-row{padding:12px 14px;margin-bottom:8px;gap:10px;}
+  .portfolio-row-label{font-size:13px;}
+  .portfolio-row-sub{font-size:11px;}
+
   /* Freeroll callout strip — was min-width:150px + wrap, which produced an
      uneven 2-then-1 layout on phone widths. Full-width stacked instead. */
   .freeroll-callout-strip{flex-direction:column;}

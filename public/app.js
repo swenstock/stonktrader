@@ -556,14 +556,13 @@ function renderSatelliteCategoryTree() {
     .map((cat, i) => {
       const visibleLevels = cat.levels.filter((l) => tierFilter.has(l.priceLevel));
       const openCount = visibleLevels.filter((l) => l.status === "open").length;
-      const hasFree = visibleLevels.some((l) => l.priceLevel === "free");
       const tierPreview = visibleLevels
         .map((l) => `${l.priceLevelName || l.priceLevel} ${l.entryFee === 0 ? "FREE" : l.entryFee.toLocaleString()}`)
         .join(" · ");
       if (visibleLevels.length === 0) return "";
       return `<div class="portfolio-row">
         <div class="portfolio-row-main">
-          <div class="portfolio-row-label">${cat.icon} ${cat.name} <span class="cat-tier-preview mono">${tierPreview}</span> ${hasFree ? '<span class="table-badge" style="margin-left:6px;">Free tier available</span>' : ""}</div>
+          <div class="portfolio-row-label">${cat.icon} ${cat.name} <span class="cat-tier-preview mono">${tierPreview}</span></div>
           <div class="portfolio-row-sub mono">${openCount} of ${visibleLevels.length} contests open now</div>
           ${CATEGORY_DESCRIPTIONS[cat.id] ? `<div class="cat-description">${CATEGORY_DESCRIPTIONS[cat.id]}</div>` : ""}
         </div>
@@ -2092,18 +2091,19 @@ function showLiveDrilldown(cat) {
       const isOpen = lvl.status === "open";
       const isPending = lvl.status === "pending";
       const isFreeroll = lvl.priceLevel === "free";
-      const payout = isOpen
-        ? isFreeroll
-          ? lvl.ticketsProjected > 0
-            ? `A ${prizeNoun} is banked and up for grabs`
-            : `No ${prizeNoun} banked yet — still a great free rep`
-          : lvl.ticketsProjected > 0
-            ? `${lvl.ticketsProjected} ${prizeNoun}${lvl.ticketsProjected === 1 ? "" : "s"} funded + ${lvl.remainderProjected.toLocaleString()} STONK to next`
-            : `${lvl.remainderProjected.toLocaleString()} STONK pooled toward first ${prizeNoun}`
-        : isPending
+      const ticketCost = lvl.ticketCost || 3000;
+      let sub;
+      if (!isOpen) {
+        sub = isPending
           ? `<span class="countdown-text" data-ends="${lvl.opensAt}">${fmtCountdown(lvl.opensAt)}</span> until it opens`
           : "Locked";
-      const sub = isOpen ? `${lvl.entrantCount} entries · ${lvl.poolGross.toLocaleString()} STONK pooled · ${payout}` : payout;
+      } else if (isFreeroll) {
+        sub = `${lvl.entrantCount} entries · ${lvl.ticketsProjected > 0 ? `a ${prizeNoun} is banked and up for grabs` : `no ${prizeNoun} banked yet — still a great free rep`}`;
+      } else if (lvl.ticketsProjected > 0) {
+        sub = `${lvl.entrantCount} entries · ${lvl.ticketsProjected} ${prizeNoun}${lvl.ticketsProjected === 1 ? "" : "s"} funded + ${lvl.remainderProjected.toLocaleString()} STONK to next`;
+      } else {
+        sub = `${lvl.entrantCount} entries · ${lvl.remainderProjected.toLocaleString()} of ${ticketCost.toLocaleString()} STONK toward first ${prizeNoun}`;
+      }
       return `<div class="portfolio-row">
         <div class="portfolio-row-main">
           <div class="portfolio-row-label">${lvl.priceLevelName || lvl.priceLevel} — ${lvl.entryFee.toLocaleString()} STONK <span style="font-weight:400;color:var(--text-dim);">(~$${lvl.entryFeeUsd?.toFixed(2) ?? "0.00"})</span></div>
