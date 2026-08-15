@@ -108,11 +108,24 @@ const ONBOARDING_CONTENT = {
     title: "You're playing for a real Main Event ticket",
     body: "Your free Weekly contest is a genuine, no-risk shot at winning your way straight into the Main Event — no wallet, no risk, just an account. Let's get you in.",
     cta: "Enter my free Weekly contest",
-    action: () => {
+    action: async () => {
       switchView("lobby");
-      const weeklyCat = satellitesCache.categories?.find((c) => c.id === "weekly_qualifier");
+      // boot() (which populates satellitesCache) isn't awaited before this
+      // popup can show — on a slow connection, tapping this button before
+      // that fetch resolves used to silently do nothing at all: no error,
+      // no progression, the whole sequence just permanently stuck at
+      // "welcome" with zero indication anything had gone wrong. Wait for
+      // real data instead of giving up immediately.
+      let weeklyCat = satellitesCache.categories?.find((c) => c.id === "weekly_qualifier");
+      for (let attempt = 0; !weeklyCat && attempt < 20; attempt++) {
+        await new Promise((r) => setTimeout(r, 250));
+        weeklyCat = satellitesCache.categories?.find((c) => c.id === "weekly_qualifier");
+      }
       const freerollLevel = weeklyCat?.levels.find((l) => l.priceLevel === "free");
-      if (!freerollLevel) return;
+      if (!freerollLevel) {
+        alert("Couldn't load the Weekly contest right now — check the Lobby and tap in manually, or reload and try again.");
+        return;
+      }
       if (freerollLevel.status === "pending") {
         reserveRoom("weekly_qualifier", "free", 1, "welcome", freerollLevel.opensAt);
       } else {
