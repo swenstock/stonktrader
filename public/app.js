@@ -769,6 +769,23 @@ function renderSatelliteCategoryTree() {
       const openCount = openLevels.length;
       if (visibleLevels.length === 0) return "";
 
+      // Compact price range across whatever tiers are currently visible
+      // (respects the Freeroll/Runner/Clerk/etc filter above) — "Free –
+      // 800 STONK (~$27.68)", or "30 – 800 STONK (~$1.04–27.68)" for a
+      // category with no free tier, like Race to the Close.
+      const sortedByFee = [...visibleLevels].sort((a, b) => a.entryFee - b.entryFee);
+      const cheapest = sortedByFee[0];
+      const priciest = sortedByFee[sortedByFee.length - 1];
+      const cheapLabel = cheapest.entryFee === 0 ? "Free" : `${cheapest.entryFee.toLocaleString()} STONK`;
+      const priceRangeHtml =
+        cheapest.entryFee === priciest.entryFee
+          ? `<span class="cat-tree-price">${cheapLabel}${cheapest.entryFee > 0 ? ` (~$${cheapest.entryFeeUsd.toFixed(2)})` : ""}</span>`
+          : `<span class="cat-tree-price">${cheapLabel} – ${priciest.entryFee.toLocaleString()} STONK ${
+              cheapest.entryFee === 0
+                ? `(~$${priciest.entryFeeUsd.toFixed(2)})`
+                : `(~$${cheapest.entryFeeUsd.toFixed(2)}–${priciest.entryFeeUsd.toFixed(2)})`
+            }</span>`;
+
       // Short-cycle categories get a live, urgent countdown instead of a
       // static "X open now" — a ticking clock is exactly what makes Degen
       // Hours and Race to the Close feel like they're actually happening
@@ -780,7 +797,10 @@ function renderSatelliteCategoryTree() {
 
       return `<button class="cat-tree-row" data-idx="${i}">
         <span class="cat-tree-icon">${cat.icon}</span>
-        <span class="cat-tree-name">${cat.name}</span>
+        <span class="cat-tree-name-wrap">
+          <span class="cat-tree-name">${cat.name}</span>
+          ${priceRangeHtml}
+        </span>
         ${statusHtml}
         <span class="cat-tree-chevron">›</span>
       </button>`;
