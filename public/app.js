@@ -1340,10 +1340,27 @@ function groupEntriesByRoom(portfolios, allocations) {
   });
 
   allocations
-    .filter((a) => a.status !== "cancelled")
+    // 'cancelled': the trader backed out, nothing to show.
+    // 'applied': this already succeeded and became a real portfolio entry
+    // — which is already shown separately, in the portfolios group above.
+    // Showing the pending_allocation record here TOO made one real event
+    // look like two separate entries, which is exactly the confusing
+    // "did I get duplicated?" appearance this was producing.
+    .filter((a) => a.status !== "cancelled" && a.status !== "applied")
     .forEach((a) => {
       const key = `pending:${a.targetType}:${a.targetTierId}:${a.targetPriceLevel}`;
-      const label = a.targetType === "contest" ? "Main Event" : `${a.targetTierId.replace("_", " ")} — ${a.targetPriceLevel}`;
+      let label;
+      if (a.targetType === "contest") {
+        label = "Main Event";
+      } else {
+        // Look up the real category + tier name the backend already
+        // computed (e.g. "Degen Hours — Freeroll"), instead of crudely
+        // mangling the internal tier_id string — "hourly" was showing up
+        // literally as "Hourly", not the actual "Degen Hours" branding.
+        const cat = satellitesCache.categories?.find((c) => c.id === a.targetTierId);
+        const lvl = cat?.levels.find((l) => l.priceLevel === a.targetPriceLevel);
+        label = lvl?.name || `${cat?.name || a.targetTierId.replace("_", " ")} — ${a.targetPriceLevel}`;
+      }
       if (!groups[key]) groups[key] = { label, items: [] };
       groups[key].items.push({ kind: "pending", data: a });
     });
