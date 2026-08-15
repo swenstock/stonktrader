@@ -33,7 +33,9 @@ async function api(path, opts = {}) {
         location.reload();
       }
     }
-    throw new Error(data.error || `Request failed (${res.status})`);
+    const err = new Error(data.error || `Request failed (${res.status})`);
+    err.code = data.code; // undefined for errors that don't set one — safe to check, never breaks existing .message-only callers
+    throw err;
   }
   return data;
 }
@@ -1046,6 +1048,29 @@ async function joinSatellite(satelliteId, qty = 1, onboardingFromStep = null, ro
   } catch (err) {
     await refreshContests();
     refreshPortfoliosBalance();
+    if (err.code === "ENTRY_CUTOFF_REACHED" && succeeded === 0) {
+      // Genuinely too late for this exact room — rather than dead-end
+      // here, find the SAME tier/level's next occurrence and reserve it
+      // immediately. For Degen Hours that's next hour (soon, still
+      // exciting); for Race to the Close, tomorrow — either way, a real
+      // next step instead of just an error to read and forget.
+      const levelInfo = satellitesCache.categories
+        .flatMap((c) => c.levels.map((l) => ({ ...l, catId: c.id, catName: c.name })))
+        .find((l) => l.id === satelliteId);
+      if (levelInfo && (levelInfo.catId === "hourly" || levelInfo.catId === "race_to_close")) {
+        try {
+          await reserveRoom(levelInfo.catId, levelInfo.priceLevel, qty, onboardingFromStep, null);
+          showYoureIn(
+            "Reserved for the next one instead!",
+            `${err.message} You're already locked in for the next occurrence — it'll fire automatically the moment that room opens.`
+          );
+          return;
+        } catch (fallbackErr) {
+          alert(`${err.message} Tried to reserve you for the next one automatically, but that failed too: ${fallbackErr.message}`);
+          return;
+        }
+      }
+    }
     alert(succeeded > 0 ? `Got ${succeeded} in before hitting: ${err.message}` : err.message);
   }
 }

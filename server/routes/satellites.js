@@ -236,6 +236,7 @@ router.post("/:id/enter", requireAuth, (req, res) => {
     const cutoffMinutes = isDegenHours ? 5 : 2;
     if (Date.now() >= locksAt - cutoffMinutes * 60000) {
       return res.status(400).json({
+        code: "ENTRY_CUTOFF_REACHED",
         error: isDegenHours
           ? "Degen Hours entry closes 5 minutes before the hour ends — this one's cutting it too close."
           : "Race to the Close entry closes in the final 2 minutes — even the finale has to actually finish.",
