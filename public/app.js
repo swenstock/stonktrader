@@ -465,8 +465,13 @@ function initTestClock() {
 
 async function refreshTestClockStatus() {
   try {
+    const beforeMs = Date.now();
     const status = await api("/test-clock");
     testClockModeActive = status.testModeActive;
+    // Small approximation from the network round trip between beforeMs and
+    // the response landing — negligible against countdowns measured in
+    // minutes/hours.
+    serverTimeOffsetMs = status.overridden ? new Date(status.currentNow).getTime() - beforeMs : 0;
     const btn = document.getElementById("testClockBtn");
     btn.style.display = status.testModeActive ? "flex" : "none";
     document.getElementById("testClockBtnLabel").textContent = status.overridden ? "Time set" : "Test Clock";
@@ -711,8 +716,16 @@ function renderLiveStatsBar() {
   }
 }
 
+// (server's effective "now" minus our real wall-clock "now") at the last
+// status poll — zero in normal operation. Since the server clock now
+// flows forward in real time just like Date.now() does (just anchored to
+// a different starting point when overridden), this constant offset
+// stays accurate between polls without needing to be recomputed every
+// second — both clocks advance at the same rate.
+let serverTimeOffsetMs = 0;
+
 function fmtCountdown(target) {
-  const diff = new Date(target).getTime() - Date.now();
+  const diff = new Date(target).getTime() - (Date.now() + serverTimeOffsetMs);
   if (diff <= 0) return "closing…";
   const d = Math.floor(diff / 86400000);
   const h = Math.floor((diff % 86400000) / 3600000);
