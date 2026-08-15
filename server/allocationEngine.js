@@ -106,7 +106,7 @@ function applyPendingSatelliteAllocations(satellite) {
     const label = `${satellite.name} · ${new Date().toLocaleDateString()} (Entry ${existingCount + 1})`;
     const portfolioId = createPortfolio(pa.account_id, label);
     db.exec("BEGIN");
-    if (!isWonPrize) {
+    if (!isWonPrize && totalFee > 0) {
       custodian.debit(pa.account_id, totalFee, "satellite_entry", { referenceType: "satellite", referenceId: satellite.id });
     }
     db.prepare(

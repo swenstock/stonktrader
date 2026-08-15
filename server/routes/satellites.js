@@ -266,7 +266,14 @@ router.post("/:id/enter", requireAuth, (req, res) => {
   const portfolioId = createPortfolio(account.id, label);
 
   db.exec("BEGIN");
-  custodian.debit(account.id, tier.entryFee, "satellite_entry", { referenceType: "satellite", referenceId: satellite.id });
+  // Free tiers charge nothing — custodian.debit() correctly refuses a
+  // zero amount as a hard validation rule, so this guard is required, not
+  // optional. Skipping it here (as this code did until now) meant every
+  // single free-tier entry threw an uncaught 500 the moment someone tried
+  // to enter — the platform's core "free to join" hook was fully broken.
+  if (tier.entryFee > 0) {
+    custodian.debit(account.id, tier.entryFee, "satellite_entry", { referenceType: "satellite", referenceId: satellite.id });
+  }
   // Charge the TOTAL (base + surcharge), but only the BASE counts toward
   // this room's own pool — matches satellite.entry_fee, which was stored
   // as poolFee at creation time.
