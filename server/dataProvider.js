@@ -95,6 +95,28 @@ function tick() {
 const tickInterval = setInterval(tick, 2000);
 tickInterval.unref?.(); // don't keep the process alive just for this timer
 
+// Real company domains, one per symbol — powers the logo shown next to
+// each ticker (via Clearbit's public logo API, https://logo.clearbit.com/
+// {domain}, no key required). Kept here rather than duplicated in the
+// frontend, since this is fundamentally company metadata, same category
+// as `name`.
+const LOGO_DOMAINS = {
+  AAPL: "apple.com", MSFT: "microsoft.com", NVDA: "nvidia.com", TSLA: "tesla.com",
+  AMZN: "amazon.com", GOOGL: "abc.xyz", HOOD: "robinhood.com", COIN: "coinbase.com",
+  JPM: "jpmorganchase.com", WMT: "walmart.com", META: "meta.com", NFLX: "netflix.com",
+  ORCL: "oracle.com", ADBE: "adobe.com", CRM: "salesforce.com", INTC: "intel.com",
+  AMD: "amd.com", QCOM: "qualcomm.com", CSCO: "cisco.com", IBM: "ibm.com",
+  UBER: "uber.com", PYPL: "paypal.com", SNOW: "snowflake.com", PLTR: "palantir.com",
+  BAC: "bankofamerica.com", WFC: "wellsfargo.com", GS: "goldmansachs.com", MS: "morganstanley.com",
+  V: "visa.com", MA: "mastercard.com", AXP: "americanexpress.com", JNJ: "jnj.com",
+  PFE: "pfizer.com", UNH: "unitedhealthgroup.com", ABBV: "abbvie.com", MRK: "merck.com",
+  LLY: "lilly.com", KO: "coca-cola.com", PEP: "pepsico.com", MCD: "mcdonalds.com",
+  SBUX: "starbucks.com", NKE: "nike.com", DIS: "disney.com", COST: "costco.com",
+  TGT: "target.com", HD: "homedepot.com", LOW: "lowes.com", XOM: "exxonmobil.com",
+  CVX: "chevron.com", BA: "boeing.com", CAT: "caterpillar.com", GE: "ge.com",
+  F: "ford.com", GM: "gm.com", T: "att.com", VZ: "verizon.com",
+};
+
 function listSymbols() {
   return Object.values(state).map((s) => ({
     symbol: s.symbol,
@@ -102,6 +124,7 @@ function listSymbols() {
     exchange: s.exchange,
     currency: s.currency,
     marketCap: s.marketCap,
+    logoUrl: LOGO_DOMAINS[s.symbol] ? `https://logo.clearbit.com/${LOGO_DOMAINS[s.symbol]}` : null,
   }));
 }
 

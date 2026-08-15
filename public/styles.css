@@ -347,12 +347,13 @@ tr.watch-row:hover{background:var(--surface-2);}
   .nav-top-row{grid-template-columns:1fr auto;gap:8px;}
   .nav-hamburger{display:none;}
   .logo{font-size:13px;justify-self:start;}
-  .nav-right{gap:6px;}
-  .price-box{padding:5px 8px;}
+  .nav-right{gap:6px;flex-direction:column;align-items:flex-end;}
+  .price-box{padding:5px 8px;text-align:center;width:112px;box-sizing:border-box;}
   .price-box-label{display:none;}
   .price-box-value{font-size:11px;}
-  .btn-outline#connectWalletBtn{padding:7px 9px;font-size:10px;}
-  #logoutBtn{padding:7px 9px;font-size:10px;}
+  .btn-outline#connectWalletBtn, #logoutBtn{
+    padding:7px 9px;font-size:10px;width:112px;text-align:center;
+  }
 
   .nav-tabs{
     display:none;position:fixed;top:0;left:0;bottom:0;width:78vw;max-width:300px;z-index:200;
@@ -642,6 +643,9 @@ tr.watch-row:hover{background:var(--surface-2);}
 }
 .watchlist-quickadd-btn:hover{border-color:var(--gold);}
 .watchlist-added-tag{color:var(--green);font-size:10.5px;font-weight:700;white-space:nowrap;}
+.symbol-cell-with-logo{display:flex;align-items:center;gap:8px;}
+.stock-logo{width:22px;height:22px;border-radius:5px;object-fit:contain;background:#fff;flex-shrink:0;}
+.symbol-cell-name{display:block;font-family:'Sora',sans-serif;font-size:10px;color:var(--text-dim);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;}
 .cat-description{font-size:11.5px;color:var(--text-dim);margin-top:4px;line-height:1.4;max-width:520px;}
 @media(max-width:600px){
   .cat-description{
@@ -697,10 +701,12 @@ tr.watch-row:hover{background:var(--surface-2);}
 
 /* ---------- Allocation modal rows ---------- */
 .alloc-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-.alloc-row select.alloc-symbol{
+.alloc-row input.alloc-symbol{
   flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--border);color:var(--text);
   border-radius:7px;padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;
+  text-transform:uppercase;
 }
+.alloc-row input.alloc-symbol::placeholder{text-transform:none;color:var(--text-dim);}
 .alloc-row input.alloc-percent{
   width:60px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);
   border-radius:7px;padding:8px 10px;font-family:'IBM Plex Mono',monospace;font-size:13px;
@@ -727,7 +733,8 @@ tr.watch-row:hover{background:var(--surface-2);}
 }
 
 /* ---------- Brokerage-style trade view additions ---------- */
-.day-range{font-size:11.5px;color:var(--text-dim);margin:-8px 0 10px;}
+.day-range{font-size:11.5px;color:var(--text-dim);margin:-8px 0 4px;}
+.quick-analysis{font-size:11px;color:var(--gold);margin:0 0 10px;}
 .chart-mode-toggle{display:flex;gap:6px;margin-bottom:8px;}
 .chart-mode-btn{
   background:var(--surface-2);border:1px solid var(--border);color:var(--text-dim);

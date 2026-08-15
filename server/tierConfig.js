@@ -17,7 +17,7 @@ const CATEGORIES = [
   // either a direct paid buy-in, or a free ticket won from a Degen Hours
   // freeroll earlier that same day (see FREEROLL_PRIZE_CONFIG.hourly's
   // redirect, in satelliteScheduler.js resolveSatellite).
-  { id: "race_to_close", name: "Race to the Close", icon: "🏁", cadence: "daily", openHour: 15.5, lockHour: 16, levels: ["runner", "low", "mid", "high"] },
+  { id: "race_to_close", name: "Degen Race to the Close", icon: "🏁", cadence: "daily", openHour: 15.5, lockHour: 16, levels: ["runner", "low", "mid", "high"] },
 ];
 
 // Base tier price is 100/300/750, then every paid room gets the flat +50

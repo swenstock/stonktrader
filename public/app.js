@@ -426,15 +426,17 @@ async function refreshPortfoliosBalance() {
 
 // ---------------- Lobby: satellites + Main Event ----------------
 let contestsCache = { current: null, nextOpensAt: null, config: {}, history: [] };
+let myPendingMainEvent = [];
 let satellitesCache = { categories: [], history: [] };
 let ticketsCache = { unredeemedCount: 0, tickets: [] };
 
 async function refreshContests() {
   try {
-    [contestsCache, satellitesCache, ticketsCache] = await Promise.all([
+    [contestsCache, satellitesCache, ticketsCache, myPendingMainEvent] = await Promise.all([
       api("/contests"),
       api("/satellites"),
       token ? api("/tickets") : Promise.resolve({ unredeemedCount: 0, tickets: [] }),
+      token ? api("/allocations") : Promise.resolve([]),
     ]);
     renderLiveStatsBar();
     renderSatelliteCategoryTree();
@@ -822,6 +824,27 @@ async function joinSatellite(satelliteId, qty = 1, onboardingFromStep = null, ro
 // Reserving a room that hasn't opened yet — creates an empty (100% cash)
 // pending allocation. No picks required now; set up the actual portfolio
 // anytime before the room opens, from My Contests.
+async function reserveMainEvent(qty = 1) {
+  let succeeded = 0;
+  try {
+    for (let i = 0; i < qty; i++) {
+      await api("/allocations", {
+        method: "POST",
+        body: JSON.stringify({ targetType: "contest", allocations: [] }),
+      });
+      succeeded++;
+    }
+    await refreshContests();
+    showYoureIn(
+      succeeded === 1 ? "You're in!" : `You're in — ${succeeded} spots reserved!`,
+      "Set up your portfolio anytime before Monday's opening bell — it'll auto-fill with your picks the instant the Main Event opens."
+    );
+  } catch (err) {
+    await refreshContests();
+    alert(succeeded > 0 ? `Reserved ${succeeded} before hitting: ${err.message}` : err.message);
+  }
+}
+
 async function reserveRoom(tierId, priceLevel, qty = 1, onboardingFromStep = null, roomOpensAt = null) {
   let succeeded = 0;
   try {
@@ -950,10 +973,20 @@ function renderWeeklyRoom() {
     const opens = contestsCache.nextOpensAt
       ? `<b class="countdown-text" data-ends="${contestsCache.nextOpensAt}">${fmtCountdown(contestsCache.nextOpensAt)}</b>`
       : "shortly";
+    const pendingCount = myPendingMainEvent.filter((a) => a.targetType === "contest" && a.status === "pending").length;
+    const feeLabel = contestsCache.config?.entryFee ? `${contestsCache.config.entryFee.toLocaleString()} STONK` : "";
+    const cta =
+      pendingCount > 0
+        ? `<div class="mono" style="color:var(--green);font-size:12.5px;margin-top:10px;">✓ ${pendingCount} spot${pendingCount === 1 ? "" : "s"} reserved — set up your portfolio in My Contests before opening bell.</div>
+           <button class="btn btn-gold" id="mainEventGoToContestsBtn" style="width:100%;margin-top:10px;">Go to My Contests</button>`
+        : `<button class="btn btn-gold" id="reserveMainEventBtn" style="width:100%;margin-top:14px;">Enter now — reserve for ${feeLabel} · fires at opening bell</button>`;
     el.innerHTML = `<div class="table-card weekly-card">
       <div class="table-name">Floor closed for the weekend</div>
       <p style="color:var(--text-dim);font-size:13.5px;">Markets are shut, so the Main Event is too. Next one opens Monday — ${opens}.</p>
+      ${cta}
     </div>`;
+    document.getElementById("reserveMainEventBtn")?.addEventListener("click", () => reserveMainEvent());
+    document.getElementById("mainEventGoToContestsBtn")?.addEventListener("click", () => switchView("mycontests"));
     return;
   }
 
@@ -1364,6 +1397,7 @@ function switchTradeSymbol(sym) {
   if (q) {
     document.getElementById("chartPriceLabel").textContent = `${q.currency} ${q.price.toFixed(2)}`;
     updateDayRange(q);
+    updateQuickAnalysis(sym, q);
   }
   renderPositionSummary();
   renderPortfolioTotalInModal();
@@ -1404,6 +1438,27 @@ function updateDayRange(q) {
   const el = document.getElementById("dayRangeLabel");
   if (!el || q.sessionLow == null || q.sessionHigh == null) return;
   el.textContent = `Day range: ${q.currency} ${q.sessionLow.toFixed(2)} – ${q.sessionHigh.toFixed(2)}`;
+}
+
+// A simple, honest read on real available data — market cap tier and
+// where today's price sits in the day's range — not fabricated
+// fundamentals or analyst opinions we don't actually have.
+function updateQuickAnalysis(symbol, q) {
+  const el = document.getElementById("quickAnalysisLabel");
+  if (!el) return;
+  const meta = (window.__symbols || []).find((s) => s.symbol === symbol);
+  const parts = [];
+  if (meta?.marketCap) {
+    const capB = meta.marketCap / 1e9;
+    const tier = capB >= 200 ? "Mega-cap" : capB >= 10 ? "Large-cap" : "Mid-cap";
+    parts.push(`${tier} · $${capB >= 1000 ? (capB / 1000).toFixed(2) + "T" : capB.toFixed(0) + "B"} market cap`);
+  }
+  if (q && q.sessionLow != null && q.sessionHigh != null && q.sessionHigh > q.sessionLow) {
+    const posInRange = (q.price - q.sessionLow) / (q.sessionHigh - q.sessionLow);
+    const tilt = posInRange > 0.66 ? "near session highs" : posInRange < 0.33 ? "near session lows" : "mid-range today";
+    parts.push(tilt);
+  }
+  el.textContent = parts.join(" · ");
 }
 
 function showTradeModalState(state) {
@@ -1465,7 +1520,11 @@ function renderMyWatchlist() {
         const chg = q ? q.changePct : 0;
         const cls = chg >= 0 ? "up" : "down";
         return `<tr class="watch-row" data-symbol="${sym}">
-          <td class="mono">${sym}</td><td>${meta ? meta.exchange : ""}</td>
+          <td class="mono symbol-cell-with-logo">
+            ${meta?.logoUrl ? `<img src="${meta.logoUrl}" class="stock-logo" alt="" onerror="this.style.display='none'">` : ""}
+            <span><b>${sym}</b><span class="symbol-cell-name">${meta?.name || ""}</span></span>
+          </td>
+          <td>${meta ? meta.exchange : ""}</td>
           <td class="mono price-cell" data-symbol="${sym}">${q ? q.currency : ""} ${price}</td>
           <td class="${cls}">${chg >= 0 ? "+" : ""}${chg}%</td>
           <td><button class="watchlist-remove-btn" data-symbol="${sym}" title="Remove from watchlist">✕</button></td>
@@ -1527,7 +1586,11 @@ function renderWatchlist() {
       const cls = chg >= 0 ? "up" : "down";
       const alreadyAdded = myWatchlist.includes(s.symbol);
       return `<tr class="watch-row" data-symbol="${s.symbol}">
-        <td class="mono">${s.symbol}</td><td>${s.exchange}</td><td class="mono price-cell" data-symbol="${s.symbol}">${q ? q.currency : ""} ${price}</td>
+        <td class="mono symbol-cell-with-logo">
+          ${s.logoUrl ? `<img src="${s.logoUrl}" class="stock-logo" alt="" onerror="this.style.display='none'">` : ""}
+          <span><b>${s.symbol}</b><span class="symbol-cell-name">${s.name || ""}</span></span>
+        </td>
+        <td>${s.exchange}</td><td class="mono price-cell" data-symbol="${s.symbol}">${q ? q.currency : ""} ${price}</td>
         <td class="${cls}">${chg >= 0 ? "+" : ""}${chg}%</td>
         <td>${alreadyAdded ? `<span class="watchlist-added-tag">✓ Added</span>` : `<button class="watchlist-quickadd-btn" data-symbol="${s.symbol}">+ Watchlist</button>`}</td>
       </tr>`;
@@ -1635,6 +1698,7 @@ function pushChartPoint(q) {
       setTimeout(() => label.classList.remove(dir), 500);
     }
     updateDayRange(q);
+    updateQuickAnalysis(selectedSymbol, q);
   }
   if (q.symbol === selectedSymbol && series) {
     if (chartMode === "candles") {
@@ -2268,37 +2332,54 @@ function populateAllocTargetSelect() {
   sel.innerHTML = options.join("");
 }
 
-function addAllocRow(symbol = "", percent = "", containerId = "allocationRows", totalId = "allocTotalPct", idPrefix = "allocRow") {
+function addAllocRow(symbol = "", percent = null, containerId = "allocationRows", totalId = "allocTotalPct", idPrefix = "allocRow") {
   allocRowCount++;
   const id = `${idPrefix}${allocRowCount}`;
-  const symbolOptions = (window.__symbols || [])
-    .map((s) => `<option value="${s.symbol}" ${s.symbol === symbol ? "selected" : ""}>${s.symbol}</option>`)
-    .join("");
+  ensureSymbolDatalist();
 
-  // Smart default: fill with as much as makes sense — up to the 10% cap,
-  // capped further by whatever room is left before hitting 100% total —
-  // rather than always defaulting to a flat 5% the user has to fix.
+  // percent === null means "no value was explicitly given, so this is
+  // presumably a manually-added row — compute a sensible default (up to
+  // the 10% cap, capped further by whatever room is left) so the trader
+  // doesn't have to do the math by hand." Anything else, including 0 or
+  // "", is respected exactly as given — used for the initial 10 empty
+  // rows on modal open, which must show nothing pre-chosen, ever.
   let defaultPct = percent;
-  if (!defaultPct) {
+  if (defaultPct === null) {
     const currentTotal = [...document.querySelectorAll(`#${containerId} .alloc-percent`)].reduce(
       (s, r) => s + (parseFloat(r.value) || 0),
       0
     );
     defaultPct = Math.max(0.1, Math.min(10, Math.round((100 - currentTotal) * 10) / 10));
   }
+  const pctInputValue = defaultPct ? defaultPct : ""; // 0 or "" renders as a genuinely blank input, not a literal "0"
 
   const row = document.createElement("div");
   row.className = "alloc-row";
   row.id = id;
   row.innerHTML = `
-    <select class="alloc-symbol">${symbolOptions}</select>
-    <input type="number" class="alloc-percent" min="0.1" max="10" step="0.1" value="${defaultPct}">
+    <input type="text" class="alloc-symbol mono" list="allocSymbolDatalist" value="${symbol}" placeholder="Type a ticker…" autocomplete="off" spellcheck="false">
+    <input type="number" class="alloc-percent" min="0.1" max="10" step="0.1" placeholder="%" value="${pctInputValue}">
     <span style="font-size:12px;color:var(--text-dim);">%</span>
     <button class="alloc-row-remove" type="button" onclick="document.getElementById('${id}').remove(); updateAllocTotal('${containerId}','${totalId}');">✕</button>
   `;
   document.getElementById(containerId).appendChild(row);
+  row.querySelector(".alloc-symbol").addEventListener("change", (e) => {
+    e.target.value = e.target.value.toUpperCase().trim();
+  });
   row.querySelector(".alloc-percent").addEventListener("input", () => updateAllocTotal(containerId, totalId));
   updateAllocTotal(containerId, totalId);
+}
+
+// One shared <datalist> built once, reused by every symbol input across
+// both the allocation modal and the scheduled-order modal — native HTML
+// autocomplete: type to filter live, or just pick from the suggestions,
+// no framework needed for either interaction.
+function ensureSymbolDatalist() {
+  if (document.getElementById("allocSymbolDatalist")) return;
+  const dl = document.createElement("datalist");
+  dl.id = "allocSymbolDatalist";
+  dl.innerHTML = (window.__symbols || []).map((s) => `<option value="${s.symbol}">${s.symbol} — ${s.name || ""}</option>`).join("");
+  document.body.appendChild(dl);
 }
 
 function updateAllocTotal(containerId = "allocationRows", totalId = "allocTotalPct") {
@@ -2315,10 +2396,13 @@ function openAllocationModal(presetValue) {
   if (presetValue) document.getElementById("allocTargetSelect").value = presetValue;
   document.getElementById("allocationRows").innerHTML = "";
   allocRowCount = 0;
-  const symbols = window.__symbols || [];
-  const rowCount = Math.min(10, symbols.length || 10);
-  for (let i = 0; i < rowCount; i++) {
-    addAllocRow(symbols[i]?.symbol || "", 10);
+  // Genuinely empty by default — no symbol selected, no percentage filled
+  // in. Nothing here should look like a real decision was already made
+  // for the trader; every pick has to be theirs, deliberately. 10 empty
+  // rows to start (matching the 10% max-per-position rule — a full
+  // spread would use all 10), "+ Add" available if they want more.
+  for (let i = 0; i < 10; i++) {
+    addAllocRow("", 0);
   }
   document.getElementById("allocationMsg").textContent = "";
   document.getElementById("allocationModalIntro").textContent =
@@ -2378,10 +2462,8 @@ function openScheduledOrderModal(portfolioId, label) {
   if (existing && existing.allocations.length > 0) {
     existing.allocations.forEach((a) => addAllocRow(a.symbol, a.percent, "scheduledOrderRows", "scheduledTotalPct", "schedRow"));
   } else {
-    const symbols = window.__symbols || [];
-    const rowCount = Math.min(10, symbols.length || 10);
-    for (let i = 0; i < rowCount; i++) {
-      addAllocRow(symbols[i]?.symbol || "", 10, "scheduledOrderRows", "scheduledTotalPct", "schedRow");
+    for (let i = 0; i < 10; i++) {
+      addAllocRow("", 0, "scheduledOrderRows", "scheduledTotalPct", "schedRow");
     }
   }
   document.getElementById("scheduledOrderMsg").textContent = "";
@@ -2393,7 +2475,7 @@ function closeScheduledOrderModal() {
 document.getElementById("scheduledOrderModalClose").addEventListener("click", closeScheduledOrderModal);
 document.getElementById("scheduledOrderModalBackdrop").addEventListener("click", closeScheduledOrderModal);
 document.getElementById("addScheduledRowBtn").addEventListener("click", () =>
-  addAllocRow("", "", "scheduledOrderRows", "scheduledTotalPct", "schedRow")
+  addAllocRow("", null, "scheduledOrderRows", "scheduledTotalPct", "schedRow")
 );
 
 document.getElementById("submitScheduledOrderBtn").addEventListener("click", async () => {
