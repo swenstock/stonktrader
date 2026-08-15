@@ -420,6 +420,52 @@ async function boot() {
   setInterval(tickCountdowns, 1000);
   setInterval(refreshStbPrice, 15000);
   setInterval(checkDelayedOnboardingPrompt, 60000); // check every minute in case the tab stays open through the eligible window
+  setInterval(checkUpcomingFreerollReminders, 60000);
+// Reminds a logged-in trader 15 minutes before any category's free roll
+// opens, if they haven't already reserved/entered it. Checked every 60s —
+// plenty precise for a 15-minute warning. Deduped per specific occurrence
+// (category + exact opensAt) so the same slot never nags twice in one
+// session, even though it's re-evaluated every minute.
+const remindedFreerollOccurrences = new Set();
+function checkUpcomingFreerollReminders() {
+  if (!token) return;
+  const categories = satellitesCache.categories || [];
+  const now = Date.now();
+  for (const cat of categories) {
+    const freeLevel = cat.levels.find((l) => l.priceLevel === "free");
+    if (!freeLevel || freeLevel.status !== "pending" || !freeLevel.opensAt) continue;
+    if (freeLevel.myEntryCount > 0) continue; // already reserved this one, no need to nag
+    const minutesUntil = (new Date(freeLevel.opensAt).getTime() - now) / 60000;
+    const occurrenceKey = `${cat.id}:${freeLevel.opensAt}`;
+    if (minutesUntil > 0 && minutesUntil <= 15 && !remindedFreerollOccurrences.has(occurrenceKey)) {
+      remindedFreerollOccurrences.add(occurrenceKey);
+      showFreerollReminderToast(cat, freeLevel);
+      break; // one at a time — if several are due in the same minute, the rest catch up on the next check
+    }
+  }
+}
+function showFreerollReminderToast(cat, freeLevel) {
+  const el = document.getElementById("freerollReminderToast");
+  const minutes = Math.max(1, Math.round((new Date(freeLevel.opensAt).getTime() - Date.now()) / 60000));
+  document.getElementById("freerollReminderText").innerHTML = `<b>${cat.icon} ${cat.name}</b>'s free roll opens in ~${minutes} min — no wallet needed, win a real prize.`;
+  el.classList.add("open");
+  el.dataset.catIdx = satellitesCache.categories.indexOf(cat);
+  clearTimeout(freerollReminderTimeout);
+  freerollReminderTimeout = setTimeout(() => el.classList.remove("open"), 12000); // auto-dismiss so it never lingers indefinitely if ignored
+}
+let freerollReminderTimeout = null;
+document.getElementById("freerollReminderDismiss")?.addEventListener("click", () => {
+  document.getElementById("freerollReminderToast").classList.remove("open");
+  clearTimeout(freerollReminderTimeout);
+});
+document.getElementById("freerollReminderGoBtn")?.addEventListener("click", () => {
+  const el = document.getElementById("freerollReminderToast");
+  el.classList.remove("open");
+  clearTimeout(freerollReminderTimeout);
+  const cat = satellitesCache.categories[Number(el.dataset.catIdx)];
+  switchView("lobby");
+  if (cat) showSatelliteDrilldown(cat);
+});
 }
 
 async function refreshStbPrice() {
@@ -2487,9 +2533,16 @@ function wireSymbolAutocomplete(input, box) {
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       activeIndex = Math.max(activeIndex - 1, 0);
-    } else if (e.key === "Enter" && activeIndex >= 0) {
+    } else if (e.key === "Enter") {
+      // No arrow-key navigation needed — type a ticker and hit Enter.
+      // Uses whatever's highlighted if the trader arrow-navigated, an
+      // exact typed match if there is one, otherwise the top suggestion —
+      // the standard combobox pattern, no extra click required.
       e.preventDefault();
-      input.value = items[activeIndex].dataset.symbol;
+      const typed = input.value.trim().toUpperCase();
+      const exactMatch = items.find((el) => el.dataset.symbol === typed);
+      const target = activeIndex >= 0 ? items[activeIndex] : exactMatch || items[0];
+      input.value = target.dataset.symbol;
       box.style.display = "none";
       return;
     } else {
@@ -2540,10 +2593,12 @@ document.getElementById("submitAllocationBtn").addEventListener("click", async (
   const msg = document.getElementById("allocationMsg");
   msg.textContent = "";
   const [targetType, tierId, priceLevel] = document.getElementById("allocTargetSelect").value.split(":");
-  const allocations = [...document.querySelectorAll(".alloc-row")].map((row) => ({
-    symbol: row.querySelector(".alloc-symbol").value,
-    percent: parseFloat(row.querySelector(".alloc-percent").value) || 0,
-  }));
+  const allocations = [...document.querySelectorAll(".alloc-row")]
+    .map((row) => ({
+      symbol: row.querySelector(".alloc-symbol").value.trim().toUpperCase(),
+      percent: parseFloat(row.querySelector(".alloc-percent").value) || 0,
+    }))
+    .filter((a) => a.symbol && a.percent > 0); // rows left blank (no symbol typed, or 0%) were never really "filled in" — only send what the trader actually entered
 
   try {
     if (editingAllocationId) {
@@ -2599,10 +2654,12 @@ document.getElementById("addScheduledRowBtn").addEventListener("click", () =>
 document.getElementById("submitScheduledOrderBtn").addEventListener("click", async () => {
   const msg = document.getElementById("scheduledOrderMsg");
   msg.textContent = "";
-  const allocations = [...document.querySelectorAll("#scheduledOrderRows .alloc-row")].map((row) => ({
-    symbol: row.querySelector(".alloc-symbol").value,
-    percent: parseFloat(row.querySelector(".alloc-percent").value) || 0,
-  }));
+  const allocations = [...document.querySelectorAll("#scheduledOrderRows .alloc-row")]
+    .map((row) => ({
+      symbol: row.querySelector(".alloc-symbol").value.trim().toUpperCase(),
+      percent: parseFloat(row.querySelector(".alloc-percent").value) || 0,
+    }))
+    .filter((a) => a.symbol && a.percent > 0);
   try {
     const result = await api("/scheduled-orders", {
       method: "POST",
