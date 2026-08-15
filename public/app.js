@@ -144,7 +144,7 @@ const ONBOARDING_CONTENT = {
     title: "Quick rundown before you set up",
     body: "You're in — here's how the whole thing actually works, so nothing catches you off guard.\n\nEvery contest gives you a fresh $100,000 paper portfolio. Trade real stocks, real prices, zero real risk. Max 10% of it in any one position — that's the whole game: picking and sizing well, not one YOLO bet.\n\nFree rolls, everywhere: Degen Hours pays out every market hour, Full Day/Morning/Afternoon once a day each, and Weekly — what you just entered — once a week. Win any of them and you get a real prize: Weekly's winner gets an actual Main Event ticket. The others win a ticket into that category's Runner tier, one step up.\n\nThe Main Event is the big one — real Stonk Broker NFTs, funded by everyone's entry fees. Win a satellite, get a ticket, and you're in for free. Rules and How It Works are always one tap away in the nav if you want the full detail on any of this later.",
     cta: "Got it — set up my portfolio",
-    action: () => switchView("mycontests"),
+    action: () => advanceOnboarding("rules", "portfolio"),
   },
   portfolio: {
     icon: "✅",
@@ -763,12 +763,23 @@ function renderSatelliteCategoryTree() {
   el.innerHTML = satellitesCache.categories
     .map((cat, i) => {
       const visibleLevels = cat.levels.filter((l) => tierFilter.has(l.priceLevel));
-      const openCount = visibleLevels.filter((l) => l.status === "open").length;
+      const openLevels = visibleLevels.filter((l) => l.status === "open");
+      const openCount = openLevels.length;
       if (visibleLevels.length === 0) return "";
+
+      // Short-cycle categories get a live, urgent countdown instead of a
+      // static "X open now" — a ticking clock is exactly what makes Degen
+      // Hours and Race to the Close feel like they're actually happening
+      // right now, not just a line item sitting in a list.
+      const isUrgentCategory = (cat.id === "hourly" || cat.id === "race_to_close") && openCount > 0;
+      const statusHtml = isUrgentCategory
+        ? `<span class="cat-tree-status cat-tree-countdown"><span class="cat-tree-pulse">●</span> <span class="countdown-text" data-ends="${openLevels[0].locksAt}">${fmtCountdown(openLevels[0].locksAt)}</span></span>`
+        : `<span class="cat-tree-status ${openCount > 0 ? "up" : ""}">${openCount > 0 ? `${openCount} open now` : `${visibleLevels.length} tiers`}</span>`;
+
       return `<button class="cat-tree-row" data-idx="${i}">
         <span class="cat-tree-icon">${cat.icon}</span>
         <span class="cat-tree-name">${cat.name}</span>
-        <span class="cat-tree-status ${openCount > 0 ? "up" : ""}">${openCount > 0 ? `${openCount} open now` : `${visibleLevels.length} tiers`}</span>
+        ${statusHtml}
         <span class="cat-tree-chevron">›</span>
       </button>`;
     })
