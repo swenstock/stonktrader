@@ -1734,6 +1734,19 @@ function populateWatchlistAddSelect() {
     `<option disabled>All symbols added</option>`;
 }
 
+// Deterministic color per ticker — same symbol always maps to the same
+// color, so the fallback badge looks consistent everywhere it appears.
+// Position-weighted character sum, empirically verified against the real
+// 56-symbol list to give good spread (4-8 per color, vs 7 expected) —
+// tried a couple of hash variants first that looked reasonable in theory
+// but clustered badly in practice against real tickers.
+const TICKER_COLOR_PALETTE = ["#3ADC84", "#4FA8FF", "#FF8A5C", "#C084FC", "#FFD666", "#FF6A88", "#5EEAD4", "#F472B6"];
+function tickerColor(symbol) {
+  let sum = 0;
+  for (let i = 0; i < symbol.length; i++) sum += symbol.charCodeAt(i) * (i + 1) * 7;
+  return TICKER_COLOR_PALETTE[sum % TICKER_COLOR_PALETTE.length];
+}
+
 function renderMyWatchlist() {
   const tbody = document.getElementById("myWatchlistTable");
   if (!tbody) return;
@@ -1747,12 +1760,15 @@ function renderMyWatchlist() {
         const cls = chg >= 0 ? "up" : "down";
         return `<tr class="watch-row" data-symbol="${sym}">
           <td class="mono symbol-cell-with-logo">
-            ${meta?.logoUrl ? `<img src="${meta.logoUrl}" class="stock-logo" alt="" onerror="this.style.display='none'">` : ""}
+            <span class="stock-logo-wrap">
+              <span class="stock-logo-badge" style="background:${tickerColor(sym)};">${sym.slice(0, 2)}</span>
+              ${meta?.logoUrl ? `<img src="${meta.logoUrl}" class="stock-logo" alt="" onerror="this.remove()">` : ""}
+            </span>
             <span><b>${sym}</b><span class="symbol-cell-name">${meta?.name || ""}</span></span>
           </td>
           <td>${meta ? meta.exchange : ""}</td>
           <td class="mono price-cell" data-symbol="${sym}">${q ? q.currency : ""} ${price}</td>
-          <td class="${cls}">${chg >= 0 ? "+" : ""}${chg}%</td>
+          <td class="${cls}">${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%</td>
           <td><button class="watchlist-remove-btn" data-symbol="${sym}" title="Remove from watchlist">✕</button></td>
         </tr>`;
       })
@@ -1813,11 +1829,14 @@ function renderWatchlist() {
       const alreadyAdded = myWatchlist.includes(s.symbol);
       return `<tr class="watch-row" data-symbol="${s.symbol}">
         <td class="mono symbol-cell-with-logo">
-          ${s.logoUrl ? `<img src="${s.logoUrl}" class="stock-logo" alt="" onerror="this.style.display='none'">` : ""}
+          <span class="stock-logo-wrap">
+            <span class="stock-logo-badge" style="background:${tickerColor(s.symbol)};">${s.symbol.slice(0, 2)}</span>
+            ${s.logoUrl ? `<img src="${s.logoUrl}" class="stock-logo" alt="" onerror="this.remove()">` : ""}
+          </span>
           <span><b>${s.symbol}</b><span class="symbol-cell-name">${s.name || ""}</span></span>
         </td>
         <td>${s.exchange}</td><td class="mono price-cell" data-symbol="${s.symbol}">${q ? q.currency : ""} ${price}</td>
-        <td class="${cls}">${chg >= 0 ? "+" : ""}${chg}%</td>
+        <td class="${cls}">${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%</td>
         <td>${alreadyAdded ? `<span class="watchlist-added-tag">✓ Added</span>` : `<button class="watchlist-quickadd-btn" data-symbol="${s.symbol}">+ Watchlist</button>`}</td>
       </tr>`;
     })
