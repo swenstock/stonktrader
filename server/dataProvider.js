@@ -177,4 +177,32 @@ function getQuote(symbol) {
  * a lot by exchange.
  */
 
-module.exports = { listSymbols, getQuotes, getQuote, SYMBOLS, MIN_MARKET_CAP };
+// ============================================================================
+// DEMO vs LIVE toggle — same pattern as CUSTODIAN_PROVIDER in custodian.js.
+// Defaults to 'demo': the simulated provider above, completely unchanged,
+// zero API keys or data bills, safe to test and show people right now.
+// Set MARKET_DATA_PROVIDER=live once a real vendor is actually wired up
+// (see the Alpaca example above) — until then, selecting it fails loudly
+// and immediately rather than silently serving fake prices labeled as real.
+// This lets demo and live exist side by side without ever needing to keep
+// them in sync — the demo track here never has to change when live work
+// starts, and vice versa.
+// ============================================================================
+const MARKET_DATA_PROVIDER = process.env.MARKET_DATA_PROVIDER || "demo";
+
+let provider;
+if (MARKET_DATA_PROVIDER === "demo") {
+  provider = { listSymbols, getQuotes, getQuote, SYMBOLS, MIN_MARKET_CAP };
+} else if (MARKET_DATA_PROVIDER === "live") {
+  const notImplemented = () => {
+    throw new Error(
+      "MARKET_DATA_PROVIDER=live is set, but no real market data vendor is connected yet. " +
+        "See the Alpaca integration example and notes in this file for what's needed to wire one up."
+    );
+  };
+  provider = { listSymbols: notImplemented, getQuotes: notImplemented, getQuote: notImplemented, SYMBOLS: {}, MIN_MARKET_CAP };
+} else {
+  throw new Error(`Unknown MARKET_DATA_PROVIDER: ${MARKET_DATA_PROVIDER}`);
+}
+
+module.exports = provider;

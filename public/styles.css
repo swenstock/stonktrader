@@ -76,12 +76,6 @@ nav{padding:14px 28px 0;border-bottom:1px solid var(--border);
 .logo{justify-self:center;text-align:center;}
 .nav-right{display:flex;align-items:center;gap:12px;justify-self:end;}
 .welcome{font-size:13px;color:var(--text-dim);}
-.price-box{
-  border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-family:'IBM Plex Mono',monospace;
-  text-align:right;line-height:1.4;display:flex;flex-direction:column;
-}
-.price-box-label{font-size:9.5px;color:var(--text-dim);letter-spacing:.08em;}
-.price-box-value{color:var(--gold);font-size:14px;font-weight:700;}
 .my-balance-box{
   max-width:1200px;margin:0 auto 20px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;
   flex-wrap:wrap;gap:10px;
@@ -235,7 +229,7 @@ tr.watch-row:hover{background:var(--surface-2);}
 /* Stats strip */
 .stats-strip{
   max-width:1200px;margin:28px auto 0;padding:0 28px;
-  display:grid;grid-template-columns:repeat(4,1fr);
+  display:grid;grid-template-columns:repeat(5,1fr);
   border:1px solid var(--border);border-radius:12px;overflow:hidden;
 }
 .stat-block{
@@ -348,9 +342,6 @@ tr.watch-row:hover{background:var(--surface-2);}
   .nav-hamburger{display:none;}
   .logo{font-size:13px;justify-self:start;}
   .nav-right{gap:6px;flex-direction:column;align-items:flex-end;}
-  .price-box{padding:5px 8px;text-align:center;width:112px;box-sizing:border-box;}
-  .price-box-label{display:none;}
-  .price-box-value{font-size:11px;}
   .btn-outline#connectWalletBtn, #logoutBtn{
     padding:7px 9px;font-size:10px;width:112px;text-align:center;
   }
@@ -439,8 +430,9 @@ tr.watch-row:hover{background:var(--surface-2);}
   padding:12px 14px;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:3px;
   transition:border-color .15s ease, background .15s ease;
 }
-.stake-chip:hover:not([disabled]){border-color:var(--gold);}
-.stake-chip:disabled{cursor:default;opacity:.55;}
+.stake-chip:hover:not(.disabled-chip){border-color:var(--gold);}
+.stake-chip.disabled-chip{cursor:default;opacity:.55;}
+.stake-chip:focus-visible{outline:2px solid var(--gold);outline-offset:2px;}
 .stake-chip.in{border-color:var(--green);background:rgba(58,220,132,.06);opacity:1;}
 .stake-chip.pending{opacity:1;border-style:dashed;}
 .stake-chip.pending:hover{border-color:var(--gold);background:rgba(255,182,39,.05);}
@@ -484,7 +476,15 @@ tr.watch-row:hover{background:var(--surface-2);}
   width:100%;background:var(--surface-2);border:1px solid var(--border);color:var(--text);
   border-radius:7px;padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;
 }
-.breakdown-btn{color:var(--text-dim);text-decoration:underline;cursor:pointer;margin-left:4px;}
+.breakdown-btn{
+  display:inline-flex;align-items:center;color:var(--text-dim);text-decoration:underline;cursor:pointer;
+  margin-left:2px;padding:6px 4px;min-height:32px;
+}
+.breakdown-body{display:flex;flex-direction:column;gap:2px;margin-top:6px;}
+.breakdown-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:12.5px;}
+.breakdown-row:last-child{border-bottom:none;font-weight:700;color:var(--gold);}
+.breakdown-row span{color:var(--text-dim);}
+.breakdown-row:last-child span{color:var(--gold);}
 .breakdown-btn:hover{color:var(--gold);}
 .stake-sub{font-size:11px;color:var(--text-dim);}
 .stake-alloc-hint{font-size:10.5px;color:var(--gold);opacity:1;margin-top:4px;font-weight:700;letter-spacing:.02em;}
@@ -527,6 +527,13 @@ tr.watch-row:hover{background:var(--surface-2);}
 /* ---------- How It Works ---------- */
 .howitworks-page{max-width:900px;margin:0 auto;padding:0 28px 60px;display:flex;flex-direction:column;gap:22px;}
 .hiw-block{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px 24px;overflow-wrap:break-word;word-break:break-word;}
+.broker-gallery{display:flex;gap:14px;margin-top:14px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px;}
+.broker-gallery::-webkit-scrollbar{display:none;}
+.broker-gallery-item{
+  flex:0 0 auto;width:64px;height:64px;background:radial-gradient(circle at 50% 35%, rgba(140,255,0,.1), transparent 70%);
+  border:1px solid var(--border);border-radius:10px;padding:6px;
+}
+.broker-gallery-item svg{width:100%;height:100%;image-rendering:pixelated;}
 .hiw-block p{overflow-wrap:break-word;word-break:break-word;}
 .hiw-block .hiw-n{font-family:'IBM Plex Mono',monospace;color:var(--gold);font-size:13px;font-weight:700;margin-bottom:8px;}
 .hiw-block h3{margin:0 0 8px;font-size:17px;}
@@ -646,12 +653,7 @@ tr.watch-row:hover{background:var(--surface-2);}
 .symbol-cell-with-logo{display:flex;align-items:center;gap:8px;}
 .stock-logo{width:22px;height:22px;border-radius:5px;object-fit:contain;background:#fff;flex-shrink:0;}
 .symbol-cell-name{display:block;font-family:'Sora',sans-serif;font-size:10px;color:var(--text-dim);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;}
-.cat-description{font-size:11.5px;color:var(--text-dim);margin-top:4px;line-height:1.4;max-width:520px;}
-@media(max-width:600px){
-  .cat-description{
-    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
-  }
-}
+.cat-description{font-size:12.5px;color:var(--text-dim);line-height:1.5;max-width:520px;}
 .allocation-trigger-panel{padding:0;}
 .allocation-trigger-btn{
   width:100%;display:flex;align-items:center;gap:14px;background:none;border:none;color:var(--text);

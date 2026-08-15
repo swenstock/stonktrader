@@ -103,6 +103,12 @@ function setSession(t, name, isNewSignup) {
 
 // ---------------- First-time onboarding sequence ----------------
 const ONBOARDING_CONTENT = {
+  firstPortfolioRules: {
+    icon: "📋",
+    title: "Before you set up your first portfolio",
+    body: "The actual mechanics, so nothing surprises you:\n\nEach position is a percentage of your $100,000, max 10% per stock. Your rows have to add up to 100% before it'll let you confirm — leftover space just sits in cash, which is fine too.\n\nSet it up before the contest opens and it fires automatically at the opening price the second the bell rings. Once it's live, trade freely — buy, sell, rebalance, any real stock in the feed, as often as you want, right up until the contest resolves.\n\nWhen it resolves, your final portfolio value is your score. Simple as that. You'll see this once — every portfolio after your first works exactly the same way, no popup needed.",
+    cta: "Got it — take me to my portfolio",
+  },
   welcome: {
     icon: "🏆",
     title: "You're playing for a real Main Event ticket",
@@ -180,9 +186,11 @@ const ONBOARDING_CONTENT = {
   },
 };
 
-function showOnboardingPopup(step) {
+let currentOnboardingDismiss = null;
+function showOnboardingPopup(step, onDismiss = null) {
   const content = ONBOARDING_CONTENT[step];
   if (!content) return;
+  currentOnboardingDismiss = onDismiss;
   document.getElementById("onboardingIcon").textContent = content.icon;
   document.getElementById("onboardingTitle").textContent = content.title;
   // The "set up your portfolio" steps need different wording depending on
@@ -201,14 +209,25 @@ function showOnboardingPopup(step) {
   document.getElementById("onboardingCtaBtn").textContent = content.cta;
   document.getElementById("onboardingCtaBtn").onclick = () => {
     closeOnboardingPopup();
-    content.action();
+    if (onDismiss) onDismiss();
+    else content.action();
   };
+  // Skip writes 'dismissed' into the real onboarding sequence's own
+  // tracked state — only meaningful for an actual onboarding step. A
+  // one-off popup like the first-time portfolio rules has nothing to do
+  // with that sequence and must never be able to touch it, especially for
+  // someone who finished onboarding long ago and is just seeing this for
+  // the first time now.
+  document.getElementById("onboardingSkipBtn").style.display = onDismiss ? "none" : "";
   document.getElementById("onboardingModal").style.display = "flex";
 }
 function closeOnboardingPopup() {
   document.getElementById("onboardingModal").style.display = "none";
 }
-document.getElementById("onboardingBackdrop").addEventListener("click", closeOnboardingPopup);
+document.getElementById("onboardingBackdrop").addEventListener("click", () => {
+  closeOnboardingPopup();
+  if (currentOnboardingDismiss) currentOnboardingDismiss();
+});
 document.getElementById("onboardingSkipBtn").addEventListener("click", () => {
   localStorage.setItem("onboardingStep", "dismissed");
   closeOnboardingPopup();
@@ -406,7 +425,7 @@ async function boot() {
 async function refreshStbPrice() {
   try {
     const data = await api("/account/price");
-    const el = document.getElementById("navStbPrice");
+    const el = document.getElementById("heroStbPrice");
     if (el) el.textContent = `$${data.usdPrice.toFixed(4)}`;
   } catch (e) {
     console.error(e);
@@ -603,19 +622,25 @@ function showPrizeBreakdown(lvl) {
   const rake = Math.round(lvl.poolGross * 0.15);
   const playerPool = lvl.poolGross - rake;
   const ticketsCost = (lvl.ticketsProjected || 0) * (lvl.ticketCost || 3000);
-  const lines = [
-    `${lvl.name || lvl.priceLevelName} — Prize Pool Breakdown`,
-    ``,
-    `Entries: ${lvl.entrantCount}`,
-    `Gross pool: ${lvl.poolGross.toLocaleString()} STONK`,
-    `Platform + affiliate rake (15%): -${rake.toLocaleString()} STONK`,
-    `Player pool (85%): ${playerPool.toLocaleString()} STONK`,
-    ``,
-    `Tickets funded: ${lvl.ticketsProjected || 0} × ${(lvl.ticketCost || 3000).toLocaleString()} STONK = ${ticketsCost.toLocaleString()} STONK`,
-    `Remainder to next finisher: ${(lvl.remainderProjected || 0).toLocaleString()} STONK`,
+  const rows = [
+    ["Entries", lvl.entrantCount],
+    ["Gross pool", `${lvl.poolGross.toLocaleString()} STONK`],
+    ["Platform + affiliate rake (15%)", `-${rake.toLocaleString()} STONK`],
+    ["Player pool (85%)", `${playerPool.toLocaleString()} STONK`],
+    ["Tickets funded", `${lvl.ticketsProjected || 0} × ${(lvl.ticketCost || 3000).toLocaleString()} = ${ticketsCost.toLocaleString()} STONK`],
+    ["Remainder to next finisher", `${(lvl.remainderProjected || 0).toLocaleString()} STONK`],
   ];
-  alert(lines.join("\n"));
+  document.getElementById("breakdownTitle").textContent = `${lvl.name || lvl.priceLevelName} — Breakdown`;
+  document.getElementById("breakdownBody").innerHTML = rows
+    .map(([label, value]) => `<div class="breakdown-row"><span>${label}</span><b class="mono">${value}</b></div>`)
+    .join("");
+  document.getElementById("breakdownModal").style.display = "flex";
 }
+function closeBreakdownModal() {
+  document.getElementById("breakdownModal").style.display = "none";
+}
+document.getElementById("breakdownModalClose")?.addEventListener("click", closeBreakdownModal);
+document.getElementById("breakdownModalBackdrop")?.addEventListener("click", closeBreakdownModal);
 
 function showSatelliteDrilldown(cat, scrollTo = true) {
   currentDrilldownCatId = cat.id;
@@ -668,18 +693,27 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
             ? `${lvl.entrantCount} traders · win a ${prizeNoun}, no wallet needed`
             : `${lvl.entrantCount} traders · ${lvl.poolGross.toLocaleString()} STONK collected · projected: ${lvl.ticketsProjected || 0} ${prizeNoun}${(lvl.ticketsProjected || 0) === 1 ? "" : "s"} + ${(lvl.remainderProjected || 0).toLocaleString()} STONK remainder`
         : `Opens ${new Date(lvl.opensAt).toLocaleString()}`;
-      return `<button class="stake-chip ${chipState} ${clickAction}" ${disabled ? "disabled" : ""} title="${hoverStats}" data-id="${lvl.id}" data-tier="${lvl.tierId}" data-level="${lvl.priceLevel}">
+      return `<div class="stake-chip ${chipState} ${clickAction} ${disabled ? "disabled-chip" : ""}" role="button" tabindex="${disabled ? "-1" : "0"}" title="${hoverStats}" data-id="${lvl.id}" data-tier="${lvl.tierId}" data-level="${lvl.priceLevel}">
         <span class="stake-tier-name">${lvl.priceLevelName || lvl.priceLevel}</span>
         <span class="stake-fee">${feeLabel} <span class="stake-fee-usd">(${usdLabel})</span></span>
         <span class="stake-sub">${registrationClosed ? "Registration closed" : statusLine}</span>
         ${lvl.myEntryCount > 0 ? `<span class="stake-entry-counter">You've entered ${lvl.myEntryCount}${lvl.maxEntriesPerAccount != null ? `/${lvl.maxEntriesPerAccount}` : ""} time${lvl.myEntryCount === 1 ? "" : "s"}</span>` : ""}
         ${ticketLine}
         ${!disabled ? `<span class="stake-alloc-hint">${isPending ? "Enter Contest (reserve)" : "Enter Contest"} ›</span>` : ""}
-      </button>`;
+      </div>`;
     })
     .join("");
   el.innerHTML = `<div class="stake-chips">${chips}</div>`;
 
+  el.querySelectorAll(".stake-chip:not(.disabled-chip)").forEach((chip) => {
+    chip.addEventListener("keydown", (e) => {
+      if (e.target.closest(".breakdown-btn")) return; // let the breakdown button handle its own Enter/Space
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        chip.click();
+      }
+    });
+  });
   el.querySelectorAll(".breakdown-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -690,6 +724,7 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
     btn.addEventListener("click", () => {
       const lvl = cat.levels.find((l) => l.id == btn.dataset.id);
       if (!lvl) return;
+      closeLobbyDrilldown(); // never leave this open underneath the entry review + confirmation modals that follow
       const remaining = lvl.maxEntriesPerAccount != null ? lvl.maxEntriesPerAccount - lvl.myEntryCount : 25; // unlimited backend-side; 25 is just a sane practical cap for the bulk-buy dropdown itself
       showEntryReview({
         badge: "ENTER SATELLITE",
@@ -713,6 +748,7 @@ function showSatelliteDrilldown(cat, scrollTo = true) {
     btn.addEventListener("click", () => {
       const lvl = cat.levels.find((l) => l.tierId === btn.dataset.tier && l.priceLevel === btn.dataset.level);
       if (!lvl) return;
+      closeLobbyDrilldown(); // never leave this open underneath the entry review + confirmation modals that follow
       const remaining = lvl.maxEntriesPerAccount != null ? lvl.maxEntriesPerAccount - lvl.myEntryCount : 25; // unlimited backend-side; 25 is just a sane practical cap for the bulk-buy dropdown itself
       showEntryReview({
         badge: "RESERVE YOUR SPOT",
@@ -1374,6 +1410,14 @@ function portfolioRowHtml(p) {
 }
 
 function openTradeView(portfolioId, label) {
+  if (localStorage.getItem("hasSeenPortfolioRules") !== "true") {
+    localStorage.setItem("hasSeenPortfolioRules", "true");
+    showOnboardingPopup("firstPortfolioRules", () => openTradeViewNow(portfolioId, label));
+    return;
+  }
+  openTradeViewNow(portfolioId, label);
+}
+function openTradeViewNow(portfolioId, label) {
   currentPortfolioId = portfolioId;
   document.getElementById("tradeContextLabel").textContent = label;
   switchView("trade");
@@ -2469,13 +2513,14 @@ function openAllocationModal(presetValue) {
   if (presetValue) document.getElementById("allocTargetSelect").value = presetValue;
   document.getElementById("allocationRows").innerHTML = "";
   allocRowCount = 0;
-  // Genuinely empty by default — no symbol selected, no percentage filled
-  // in. Nothing here should look like a real decision was already made
-  // for the trader; every pick has to be theirs, deliberately. 10 empty
-  // rows to start (matching the 10% max-per-position rule — a full
-  // spread would use all 10), "+ Add" available if they want more.
+  // Genuinely empty symbol by default — no stock pre-picked, that decision
+  // has to be the trader's, deliberately. Percent defaults to 10 though —
+  // that's not a "decision," it's just the math (10 rows × 10% = a full
+  // spread), saving everyone the trouble of typing the same number ten
+  // times. 10 empty-symbol rows to start (matching the 10% max-per-position
+  // rule), "+ Add" available if they want more.
   for (let i = 0; i < 10; i++) {
-    addAllocRow("", 0);
+    addAllocRow("", 10);
   }
   document.getElementById("allocationMsg").textContent = "";
   document.getElementById("allocationModalIntro").textContent =
@@ -2536,7 +2581,7 @@ function openScheduledOrderModal(portfolioId, label) {
     existing.allocations.forEach((a) => addAllocRow(a.symbol, a.percent, "scheduledOrderRows", "scheduledTotalPct", "schedRow"));
   } else {
     for (let i = 0; i < 10; i++) {
-      addAllocRow("", 0, "scheduledOrderRows", "scheduledTotalPct", "schedRow");
+      addAllocRow("", 10, "scheduledOrderRows", "scheduledTotalPct", "schedRow");
     }
   }
   document.getElementById("scheduledOrderMsg").textContent = "";

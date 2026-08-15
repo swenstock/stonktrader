@@ -71,10 +71,6 @@
       <button class="nav-hamburger" id="navHamburgerBtn" aria-label="Menu">☰</button>
       <div class="logo" id="navLogoHome">STONK <span class="accent">BROKER</span> CHALLENGE</div>
       <div class="nav-right">
-        <div class="price-box">
-          <span class="price-box-label">STONKBROKER</span>
-          <span class="mono price-box-value" id="navStbPrice">$0.0346</span>
-        </div>
         <button class="btn btn-outline" id="connectWalletBtn">Connect Wallet</button>
         <button class="btn btn-outline" id="logoutBtn">Log out</button>
       </div>
@@ -135,9 +131,21 @@
         <div class="trader-mini">
           <svg viewBox="0 0 16 16" shape-rendering="crispEdges" style="image-rendering:pixelated;">
             <rect width="16" height="16" fill="#0D1218"/>
-            <rect x="3" y="2" width="10" height="4" fill="#F5C99B"/>
-            <rect x="2" y="7" width="12" height="7" fill="#1E2830"/>
-            <rect x="6" y="7" width="4" height="7" fill="#4FA8FF"/>
+            <rect x="5" y="0" width="6" height="1" fill="#3A2A1E"/>
+            <rect x="4" y="1" width="1" height="1" fill="#3A2A1E"/>
+            <rect x="11" y="1" width="1" height="1" fill="#3A2A1E"/>
+            <rect x="4" y="2" width="8" height="1" fill="#2A1A10"/>
+            <rect x="3" y="3" width="10" height="4" fill="#C98B5E"/>
+            <rect x="4" y="3" width="2" height="1" fill="#3A2A1E"/>
+            <rect x="10" y="3" width="2" height="1" fill="#3A2A1E"/>
+            <rect x="5" y="5" width="1" height="1" fill="#1A1A1A"/>
+            <rect x="10" y="5" width="1" height="1" fill="#1A1A1A"/>
+            <rect x="6" y="7" width="4" height="1" fill="#8A5A3A"/>
+            <rect x="2" y="8" width="12" height="6" fill="#152A24"/>
+            <rect x="6" y="8" width="4" height="6" fill="#E9EEF3"/>
+            <rect x="7" y="8" width="2" height="6" fill="#FF6A3D"/>
+            <rect x="1" y="9" width="1" height="4" fill="#3ADC84"/>
+            <rect x="14" y="9" width="1" height="4" fill="#3ADC84"/>
           </svg>
         </div>
         <div class="prize-pedestal">
@@ -168,9 +176,20 @@
         <div class="trader-mini">
           <svg viewBox="0 0 16 16" shape-rendering="crispEdges" style="image-rendering:pixelated;">
             <rect width="16" height="16" fill="#0D1218"/>
-            <rect x="3" y="2" width="10" height="4" fill="#B0B7BE"/>
-            <rect x="2" y="7" width="12" height="7" fill="#1E2830"/>
-            <rect x="6" y="7" width="4" height="7" fill="#FF5C6C"/>
+            <rect x="5" y="0" width="6" height="1" fill="#D9B25C"/>
+            <rect x="4" y="1" width="1" height="1" fill="#D9B25C"/>
+            <rect x="11" y="1" width="1" height="1" fill="#D9B25C"/>
+            <rect x="4" y="2" width="8" height="1" fill="#A88535"/>
+            <rect x="3" y="3" width="10" height="4" fill="#F5C99B"/>
+            <rect x="4" y="3" width="2" height="1" fill="#A88535"/>
+            <rect x="10" y="3" width="2" height="1" fill="#A88535"/>
+            <rect x="4" y="5" width="8" height="1" fill="#1A1A1A"/>
+            <rect x="6" y="7" width="4" height="1" fill="#C98B5E"/>
+            <rect x="2" y="8" width="12" height="6" fill="#3A1420"/>
+            <rect x="6" y="8" width="4" height="6" fill="#E9EEF3"/>
+            <rect x="7" y="8" width="2" height="6" fill="#D9B25C"/>
+            <rect x="1" y="9" width="1" height="4" fill="#3ADC84"/>
+            <rect x="14" y="9" width="1" height="4" fill="#3ADC84"/>
           </svg>
         </div>
       </div>
@@ -203,6 +222,10 @@
       <div class="stat-block">
         <span class="stat-icon">💎</span>
         <div><span class="stat-label">STONKBROKER NFT</span><b class="stat-value mono" id="heroNftQuote" style="font-size:15px;">—</b></div>
+      </div>
+      <div class="stat-block">
+        <span class="stat-icon">🪙</span>
+        <div><span class="stat-label">STONK PRICE</span><b class="stat-value mono" id="heroStbPrice" style="font-size:15px;">$0.0346</b></div>
       </div>
     </div>
 
@@ -518,6 +541,16 @@
     </div>
   </div>
 
+  <!-- ===== Prize pool breakdown — replaces the old native alert() ===== -->
+  <div id="breakdownModal" class="trade-modal" style="display:none;">
+    <div class="trade-modal-backdrop" id="breakdownModalBackdrop"></div>
+    <div class="trade-modal-card" style="max-width:420px;">
+      <button class="trade-modal-close" id="breakdownModalClose">✕</button>
+      <h3 id="breakdownTitle">Prize Pool Breakdown</h3>
+      <div id="breakdownBody" class="breakdown-body"></div>
+    </div>
+  </div>
+
   <div id="youreInModal" class="trade-modal" style="display:none;">
     <div class="trade-modal-backdrop" id="youreInModalBackdrop"></div>
     <div class="trade-modal-card" style="text-align:center;">
@@ -619,6 +652,92 @@
         <div class="hiw-n">06</div>
         <h3>You can stack contests</h3>
         <p>Nothing stops you from being in the Weekly Qualifier, a Morning session, and a Full Day session all at once — each has its own portfolio and its own shot at a ticket.</p>
+      </div>
+      <div class="hiw-block">
+        <div class="hiw-n">07</div>
+        <h3>Meet a few Stonk Brokers</h3>
+        <p>Every Activated Stonk Broker looks a little different — same pixel-art lineage, different face. Here's a taste of what's actually up for grabs.</p>
+        <div class="broker-gallery h-scroll">
+          <div class="broker-gallery-item">
+            <svg viewBox="0 0 16 16" shape-rendering="crispEdges" style="image-rendering:pixelated;">
+              <rect width="16" height="16" fill="#0D1218"/>
+              <rect x="6" y="0" width="4" height="1" fill="#8CFF00"/>
+              <rect x="5" y="1" width="1" height="1" fill="#8CFF00"/>
+              <rect x="10" y="1" width="1" height="1" fill="#8CFF00"/>
+              <rect x="4" y="2" width="8" height="1" fill="#2A343D"/>
+              <rect x="3" y="3" width="10" height="4" fill="#F5C99B"/>
+              <rect x="4" y="3" width="2" height="1" fill="#3A2A1E"/>
+              <rect x="10" y="3" width="2" height="1" fill="#3A2A1E"/>
+              <rect x="5" y="5" width="1" height="1" fill="#1A1A1A"/>
+              <rect x="10" y="5" width="1" height="1" fill="#1A1A1A"/>
+              <rect x="6" y="7" width="4" height="1" fill="#7A5230"/>
+              <rect x="2" y="8" width="12" height="6" fill="#1E2830"/>
+              <rect x="6" y="8" width="4" height="6" fill="#E9EEF3"/>
+              <rect x="7" y="8" width="2" height="6" fill="#8CFF00"/>
+              <rect x="1" y="9" width="1" height="4" fill="#3ADC84"/>
+              <rect x="14" y="9" width="1" height="4" fill="#3ADC84"/>
+            </svg>
+          </div>
+          <div class="broker-gallery-item">
+            <svg viewBox="0 0 16 16" shape-rendering="crispEdges" style="image-rendering:pixelated;">
+              <rect width="16" height="16" fill="#0D1218"/>
+              <rect x="5" y="0" width="6" height="1" fill="#3A2A1E"/>
+              <rect x="4" y="1" width="1" height="1" fill="#3A2A1E"/>
+              <rect x="11" y="1" width="1" height="1" fill="#3A2A1E"/>
+              <rect x="4" y="2" width="8" height="1" fill="#2A1A10"/>
+              <rect x="3" y="3" width="10" height="4" fill="#C98B5E"/>
+              <rect x="4" y="3" width="2" height="1" fill="#3A2A1E"/>
+              <rect x="10" y="3" width="2" height="1" fill="#3A2A1E"/>
+              <rect x="5" y="5" width="1" height="1" fill="#1A1A1A"/>
+              <rect x="10" y="5" width="1" height="1" fill="#1A1A1A"/>
+              <rect x="6" y="7" width="4" height="1" fill="#8A5A3A"/>
+              <rect x="2" y="8" width="12" height="6" fill="#152A24"/>
+              <rect x="6" y="8" width="4" height="6" fill="#E9EEF3"/>
+              <rect x="7" y="8" width="2" height="6" fill="#FF6A3D"/>
+              <rect x="1" y="9" width="1" height="4" fill="#3ADC84"/>
+              <rect x="14" y="9" width="1" height="4" fill="#3ADC84"/>
+            </svg>
+          </div>
+          <div class="broker-gallery-item">
+            <svg viewBox="0 0 16 16" shape-rendering="crispEdges" style="image-rendering:pixelated;">
+              <rect width="16" height="16" fill="#0D1218"/>
+              <rect x="5" y="0" width="6" height="1" fill="#D9B25C"/>
+              <rect x="4" y="1" width="1" height="1" fill="#D9B25C"/>
+              <rect x="11" y="1" width="1" height="1" fill="#D9B25C"/>
+              <rect x="4" y="2" width="8" height="1" fill="#A88535"/>
+              <rect x="3" y="3" width="10" height="4" fill="#F5C99B"/>
+              <rect x="4" y="3" width="2" height="1" fill="#A88535"/>
+              <rect x="10" y="3" width="2" height="1" fill="#A88535"/>
+              <rect x="4" y="5" width="8" height="1" fill="#1A1A1A"/>
+              <rect x="6" y="7" width="4" height="1" fill="#C98B5E"/>
+              <rect x="2" y="8" width="12" height="6" fill="#3A1420"/>
+              <rect x="6" y="8" width="4" height="6" fill="#E9EEF3"/>
+              <rect x="7" y="8" width="2" height="6" fill="#D9B25C"/>
+              <rect x="1" y="9" width="1" height="4" fill="#3ADC84"/>
+              <rect x="14" y="9" width="1" height="4" fill="#3ADC84"/>
+            </svg>
+          </div>
+          <div class="broker-gallery-item">
+            <svg viewBox="0 0 16 16" shape-rendering="crispEdges" style="image-rendering:pixelated;">
+              <rect width="16" height="16" fill="#0D1218"/>
+              <rect x="6" y="0" width="4" height="1" fill="#4FA8FF"/>
+              <rect x="5" y="1" width="1" height="1" fill="#4FA8FF"/>
+              <rect x="10" y="1" width="1" height="1" fill="#4FA8FF"/>
+              <rect x="4" y="2" width="8" height="1" fill="#1A1A1A"/>
+              <rect x="3" y="3" width="10" height="4" fill="#8A5A3A"/>
+              <rect x="4" y="3" width="2" height="1" fill="#1A1A1A"/>
+              <rect x="10" y="3" width="2" height="1" fill="#1A1A1A"/>
+              <rect x="5" y="5" width="1" height="1" fill="#0A0A0A"/>
+              <rect x="10" y="5" width="1" height="1" fill="#0A0A0A"/>
+              <rect x="6" y="7" width="4" height="1" fill="#5A3A20"/>
+              <rect x="2" y="8" width="12" height="6" fill="#0F0F14"/>
+              <rect x="6" y="8" width="4" height="6" fill="#E9EEF3"/>
+              <rect x="7" y="8" width="2" height="6" fill="#4FA8FF"/>
+              <rect x="1" y="9" width="1" height="4" fill="#3ADC84"/>
+              <rect x="14" y="9" width="1" height="4" fill="#3ADC84"/>
+            </svg>
+          </div>
+        </div>
       </div>
     </div>
   </div>

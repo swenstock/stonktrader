@@ -83,8 +83,19 @@ function applyPendingSatelliteAllocations(satellite) {
       );
       continue;
     }
-    const totalFee = tier ? tier.entryFee : satellite.entry_fee;
-    if (!account || account.stonk_balance < totalFee) {
+
+    // A won prize (source = 'freeroll_prize' or 'freeroll_bonus') was
+    // already paid for the moment it was awarded — out of that category's
+    // own freeroll fund, itself built from real paid entries elsewhere.
+    // It should NEVER be charged again here, and it shouldn't count
+    // toward THIS room's own pool either, since nothing was actually paid
+    // into this specific room by this entrant. Before this fix, every
+    // "free" prize was silently charging the winner the full entry fee
+    // anyway — a real bug, not by design.
+    const isWonPrize = pa.source === "freeroll_prize" || pa.source === "freeroll_bonus";
+    const totalFee = isWonPrize ? 0 : tier ? tier.entryFee : satellite.entry_fee;
+    const poolContribution = isWonPrize ? 0 : satellite.entry_fee; // satellite.entry_fee = poolFee already, for a real paying entrant
+    if (!isWonPrize && (!account || account.stonk_balance < totalFee)) {
       db.prepare("UPDATE pending_allocations SET status='failed', fail_reason=? WHERE id=?").run(
         "Not enough STONK at open",
         pa.id
@@ -95,10 +106,12 @@ function applyPendingSatelliteAllocations(satellite) {
     const label = `${satellite.name} · ${new Date().toLocaleDateString()} (Entry ${existingCount + 1})`;
     const portfolioId = createPortfolio(pa.account_id, label);
     db.exec("BEGIN");
-    custodian.debit(pa.account_id, totalFee, "satellite_entry", { referenceType: "satellite", referenceId: satellite.id });
+    if (!isWonPrize) {
+      custodian.debit(pa.account_id, totalFee, "satellite_entry", { referenceType: "satellite", referenceId: satellite.id });
+    }
     db.prepare(
       "INSERT INTO satellite_entries (satellite_id, account_id, portfolio_id, entry_fee_paid) VALUES (?, ?, ?, ?)"
-    ).run(satellite.id, pa.account_id, portfolioId, satellite.entry_fee); // satellite.entry_fee = poolFee already
+    ).run(satellite.id, pa.account_id, portfolioId, poolContribution);
 
     if (tier && tier.surcharge > 0) {
       db.prepare("UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk + ? WHERE category_id = ?").run(tier.surcharge, tier.categoryId);
