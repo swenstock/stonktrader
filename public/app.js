@@ -120,6 +120,13 @@ const ONBOARDING_CONTENT = {
       }
     },
   },
+  rules: {
+    icon: "📖",
+    title: "Quick rundown before you set up",
+    body: "You're in — here's how the whole thing actually works, so nothing catches you off guard.\n\nEvery contest gives you a fresh $100,000 paper portfolio. Trade real stocks, real prices, zero real risk. Max 10% of it in any one position — that's the whole game: picking and sizing well, not one YOLO bet.\n\nFree rolls, everywhere: Degen Hours pays out every market hour, Full Day/Morning/Afternoon once a day each, and Weekly — what you just entered — once a week. Win any of them and you get a real prize: Weekly's winner gets an actual Main Event ticket. The others win a ticket into that category's Runner tier, one step up.\n\nThe Main Event is the big one — real Stonk Broker NFTs, funded by everyone's entry fees. Win a satellite, get a ticket, and you're in for free. Rules and How It Works are always one tap away in the nav if you want the full detail on any of this later.",
+    cta: "Got it — set up my portfolio",
+    action: () => switchView("mycontests"),
+  },
   portfolio: {
     icon: "✅",
     title: "You're in!",
@@ -812,7 +819,7 @@ async function joinSatellite(satelliteId, qty = 1, onboardingFromStep = null, ro
         // window rather than potentially never firing at all.
         localStorage.setItem("onboardingHourlyNudgeAt", String(Date.now() + 12 * 60000));
       }
-      advanceOnboarding(onboardingFromStep, onboardingFromStep === "welcome" ? "portfolio" : "portfolio_hourly");
+      advanceOnboarding(onboardingFromStep, onboardingFromStep === "welcome" ? "rules" : "portfolio_hourly");
     }
   } catch (err) {
     await refreshContests();
@@ -871,7 +878,7 @@ async function reserveRoom(tierId, priceLevel, qty = 1, onboardingFromStep = nul
       if (onboardingFromStep === "welcome") {
         localStorage.setItem("onboardingHourlyNudgeAt", String(Date.now() + 12 * 60000));
       }
-      advanceOnboarding(onboardingFromStep, onboardingFromStep === "welcome" ? "portfolio" : "portfolio_hourly");
+      advanceOnboarding(onboardingFromStep, onboardingFromStep === "welcome" ? "rules" : "portfolio_hourly");
     }
   } catch (err) {
     await refreshContests();
@@ -2335,7 +2342,6 @@ function populateAllocTargetSelect() {
 function addAllocRow(symbol = "", percent = null, containerId = "allocationRows", totalId = "allocTotalPct", idPrefix = "allocRow") {
   allocRowCount++;
   const id = `${idPrefix}${allocRowCount}`;
-  ensureSymbolDatalist();
 
   // percent === null means "no value was explicitly given, so this is
   // presumably a manually-added row — compute a sensible default (up to
@@ -2357,29 +2363,83 @@ function addAllocRow(symbol = "", percent = null, containerId = "allocationRows"
   row.className = "alloc-row";
   row.id = id;
   row.innerHTML = `
-    <input type="text" class="alloc-symbol mono" list="allocSymbolDatalist" value="${symbol}" placeholder="Type a ticker…" autocomplete="off" spellcheck="false">
+    <div class="alloc-symbol-wrap">
+      <input type="text" class="alloc-symbol mono" value="${symbol}" placeholder="Type a ticker…" autocomplete="off" spellcheck="false">
+      <div class="alloc-symbol-suggestions"></div>
+    </div>
     <input type="number" class="alloc-percent" min="0.1" max="10" step="0.1" placeholder="%" value="${pctInputValue}">
     <span style="font-size:12px;color:var(--text-dim);">%</span>
     <button class="alloc-row-remove" type="button" onclick="document.getElementById('${id}').remove(); updateAllocTotal('${containerId}','${totalId}');">✕</button>
   `;
   document.getElementById(containerId).appendChild(row);
-  row.querySelector(".alloc-symbol").addEventListener("change", (e) => {
-    e.target.value = e.target.value.toUpperCase().trim();
-  });
+
+  const symbolInput = row.querySelector(".alloc-symbol");
+  const suggestionsBox = row.querySelector(".alloc-symbol-suggestions");
+  wireSymbolAutocomplete(symbolInput, suggestionsBox);
   row.querySelector(".alloc-percent").addEventListener("input", () => updateAllocTotal(containerId, totalId));
   updateAllocTotal(containerId, totalId);
 }
 
-// One shared <datalist> built once, reused by every symbol input across
-// both the allocation modal and the scheduled-order modal — native HTML
-// autocomplete: type to filter live, or just pick from the suggestions,
-// no framework needed for either interaction.
-function ensureSymbolDatalist() {
-  if (document.getElementById("allocSymbolDatalist")) return;
-  const dl = document.createElement("datalist");
-  dl.id = "allocSymbolDatalist";
-  dl.innerHTML = (window.__symbols || []).map((s) => `<option value="${s.symbol}">${s.symbol} — ${s.name || ""}</option>`).join("");
-  document.body.appendChild(dl);
+// Custom autocomplete, built from scratch rather than relying on native
+// <input list="datalist">. Native datalist notoriously does not reliably
+// show a visible suggestion dropdown on iOS Safari — the input itself
+// worked, but the suggestions were invisible on the exact device that
+// matters most here. This guarantees a real, tappable dropdown everywhere.
+function wireSymbolAutocomplete(input, box) {
+  let activeIndex = -1;
+  function renderMatches() {
+    const q = input.value.trim().toUpperCase();
+    if (!q) {
+      box.style.display = "none";
+      return;
+    }
+    const matches = (window.__symbols || [])
+      .filter((s) => s.symbol.startsWith(q) || (s.name || "").toUpperCase().includes(q))
+      .slice(0, 8);
+    if (matches.length === 0) {
+      box.style.display = "none";
+      return;
+    }
+    activeIndex = -1;
+    box.innerHTML = matches
+      .map((s) => `<div class="alloc-suggestion" data-symbol="${s.symbol}"><b>${s.symbol}</b><span>${s.name || ""}</span></div>`)
+      .join("");
+    box.style.display = "block";
+    box.querySelectorAll(".alloc-suggestion").forEach((el) => {
+      // mousedown, not click — fires before the input's blur event, so
+      // the suggestion is still in the DOM when the tap/click lands
+      el.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        input.value = el.dataset.symbol;
+        box.style.display = "none";
+      });
+    });
+  }
+  input.addEventListener("input", renderMatches);
+  input.addEventListener("focus", renderMatches);
+  input.addEventListener("blur", () => setTimeout(() => (box.style.display = "none"), 150));
+  input.addEventListener("change", () => {
+    input.value = input.value.toUpperCase().trim();
+  });
+  input.addEventListener("keydown", (e) => {
+    const items = [...box.querySelectorAll(".alloc-suggestion")];
+    if (!items.length || box.style.display === "none") return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      activeIndex = Math.min(activeIndex + 1, items.length - 1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      activeIndex = Math.max(activeIndex - 1, 0);
+    } else if (e.key === "Enter" && activeIndex >= 0) {
+      e.preventDefault();
+      input.value = items[activeIndex].dataset.symbol;
+      box.style.display = "none";
+      return;
+    } else {
+      return;
+    }
+    items.forEach((el, i) => el.classList.toggle("active", i === activeIndex));
+  });
 }
 
 function updateAllocTotal(containerId = "allocationRows", totalId = "allocTotalPct") {
