@@ -172,6 +172,25 @@ const ONBOARDING_CONTENT = {
       }
     },
   },
+  to_hourly_later: {
+    icon: "⚡",
+    title: "Degen Hours isn't open right now",
+    bodyFor: () => {
+      const hourlyCat = satellitesCache.categories?.find((c) => c.id === "hourly");
+      const freerollLevel = hourlyCat?.levels.find((l) => l.priceLevel === "free");
+      const when = freerollLevel?.opensAt ? fmtCountdown(freerollLevel.opensAt) : "later today";
+      return `It runs every hour during real market hours (9:30am\u20133:30pm ET, weekdays) \u2014 no 10% position cap, resolves fast, and a free win stacks a ticket toward that day's Race to the Close. Next one opens in ${when}. Reserve your spot now and it'll fire automatically the moment it opens.`;
+    },
+    cta: "Reserve my free spot for next hour",
+    action: () => {
+      switchView("lobby");
+      const hourlyCat = satellitesCache.categories?.find((c) => c.id === "hourly");
+      const freerollLevel = hourlyCat?.levels.find((l) => l.priceLevel === "free");
+      if (freerollLevel) {
+        reserveRoom("hourly", "free", 1, "to_hourly_later", freerollLevel.opensAt);
+      }
+    },
+  },
   portfolio_hourly: {
     icon: "✅",
     title: "You're in your Degen Hours contest too!",
@@ -203,10 +222,7 @@ function showOnboardingPopup(step, onDismiss = null) {
   // auto-fires with whatever's configured. Same popup covering both cases
   // with one static verb was correct for one and wrong for the other.
   const wasReservation = localStorage.getItem("onboardingLastEntryWasReservation") === "true";
-  const body =
-    (step === "portfolio" || step === "portfolio_hourly") && typeof content.bodyFor === "function"
-      ? content.bodyFor(wasReservation)
-      : content.body;
+  const body = typeof content.bodyFor === "function" ? content.bodyFor(wasReservation) : content.body;
   document.getElementById("onboardingBody").textContent = body;
   document.getElementById("onboardingCtaBtn").textContent = content.cta;
   document.getElementById("onboardingCtaBtn").onclick = () => {
@@ -283,6 +299,12 @@ function onboardingPortfolioConfigured() {
     const hourlyFreeroll = hourlyCat?.levels.find((l) => l.priceLevel === "free");
     if (hourlyFreeroll && hourlyFreeroll.status === "open") {
       advanceOnboarding("portfolio", "to_hourly");
+    } else if (hourlyFreeroll && hourlyFreeroll.opensAt) {
+      // Not open this exact moment, but a real next slot exists — show
+      // the countdown + reserve-ahead popup instead of silently skipping
+      // straight to the paid-tier upsell, which used to mean Degen Hours
+      // just never got introduced at all if the timing didn't line up.
+      advanceOnboarding("portfolio", "to_hourly_later");
     } else {
       beginWaitingForReady(roomLocksAt);
     }
@@ -786,14 +808,22 @@ function renderSatelliteCategoryTree() {
                 : `(~$${cheapest.entryFeeUsd.toFixed(2)}–${priciest.entryFeeUsd.toFixed(2)})`
             }</span>`;
 
-      // Short-cycle categories get a live, urgent countdown instead of a
-      // static "X open now" — a ticking clock is exactly what makes Degen
-      // Hours and Race to the Close feel like they're actually happening
-      // right now, not just a line item sitting in a list.
-      const isUrgentCategory = (cat.id === "hourly" || cat.id === "race_to_close") && openCount > 0;
-      const statusHtml = isUrgentCategory
-        ? `<span class="cat-tree-status cat-tree-countdown"><span class="cat-tree-pulse">●</span> <span class="countdown-text" data-ends="${openLevels[0].locksAt}">${fmtCountdown(openLevels[0].locksAt)}</span></span>`
-        : `<span class="cat-tree-status ${openCount > 0 ? "up" : ""}">${openCount > 0 ? `${openCount} open now` : `${visibleLevels.length} tiers`}</span>`;
+      // Short-cycle categories get a live countdown instead of static
+      // text — either "closes in X" while open (a ticking clock is
+      // exactly what makes these feel like they're actually happening
+      // right now) or "opens in X" while closed, so Degen Hours and Race
+      // to the Close never just sit there as a flat, uninformative line
+      // when they're between slots.
+      const isShortCycle = cat.id === "hourly" || cat.id === "race_to_close";
+      const nextOpensAt = visibleLevels.find((l) => l.status === "pending" && l.opensAt)?.opensAt;
+      let statusHtml;
+      if (isShortCycle && openCount > 0) {
+        statusHtml = `<span class="cat-tree-status cat-tree-countdown"><span class="cat-tree-pulse">●</span> <span class="countdown-text" data-ends="${openLevels[0].locksAt}">${fmtCountdown(openLevels[0].locksAt)}</span></span>`;
+      } else if (isShortCycle && nextOpensAt) {
+        statusHtml = `<span class="cat-tree-status cat-tree-countdown cat-tree-countdown-waiting">🕐 opens in <span class="countdown-text" data-ends="${nextOpensAt}">${fmtCountdown(nextOpensAt)}</span></span>`;
+      } else {
+        statusHtml = `<span class="cat-tree-status ${openCount > 0 ? "up" : ""}">${openCount > 0 ? `${openCount} open now` : `${visibleLevels.length} tiers`}</span>`;
+      }
 
       return `<button class="cat-tree-row" data-idx="${i}">
         <span class="cat-tree-icon">${cat.icon}</span>
