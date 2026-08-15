@@ -114,6 +114,34 @@
     <button class="freeroll-toast-dismiss" id="freerollReminderDismiss">✕</button>
   </div>
 
+  <!-- ===== Test clock — dev/test-only, hidden unless TEST_MODE is confirmed
+       active on the server. Lets a developer jump the scheduling clock to
+       any moment to check contest behavior without waiting real time. ===== -->
+  <button id="testClockBtn" class="test-clock-btn" style="display:none;">🕐 <span id="testClockBtnLabel">Test Clock</span></button>
+  <div id="testClockModal" class="trade-modal" style="display:none;">
+    <div class="trade-modal-backdrop" id="testClockModalBackdrop"></div>
+    <div class="trade-modal-card" style="max-width:380px;">
+      <button class="trade-modal-close" id="testClockModalClose">✕</button>
+      <h3>🕐 Test Clock</h3>
+      <p style="color:var(--text-dim);font-size:12.5px;margin-top:-6px;">Jump the server's scheduling clock to any moment — see exactly how contests, freerolls, and Degen Hours behave at that time, without waiting for real time to pass.</p>
+      <div class="test-clock-current">
+        <span>Server is currently treating "now" as:</span>
+        <b id="testClockCurrentValue" class="mono">—</b>
+      </div>
+      <label class="test-clock-label" for="testClockInput">Jump to:</label>
+      <input type="datetime-local" id="testClockInput" class="test-clock-input">
+      <div class="test-clock-quick-row">
+        <button class="btn btn-outline btn-sm test-clock-preset" data-preset="weekday-morning">Mon 9:31am</button>
+        <button class="btn btn-outline btn-sm test-clock-preset" data-preset="weekday-afternoon">Mon 2:00pm</button>
+        <button class="btn btn-outline btn-sm test-clock-preset" data-preset="weekend">Saturday</button>
+        <button class="btn btn-outline btn-sm test-clock-preset" data-preset="friday-close">Fri 3:45pm</button>
+      </div>
+      <button class="btn btn-gold" id="testClockSetBtn" style="width:100%;margin-top:12px;">Jump to this time</button>
+      <button class="btn btn-outline" id="testClockClearBtn" style="width:100%;margin-top:8px;">Back to real time</button>
+      <p id="testClockMsg" style="font-size:12px;margin-top:10px;"></p>
+    </div>
+  </div>
+
   <!-- ===== LOBBY ===== -->
   <div id="lobbyView" class="view">
     <div class="lobby-hero">

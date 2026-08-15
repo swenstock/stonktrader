@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 const custodian = require("../custodian");
+const { getNow } = require("../testClock");
 const requireAuth = require("../middleware/requireAuth");
 const { CONFIG, currentWeekWindow, isWeekday, currentStonkUsdPriceMicros } = require("../contestScheduler");
 
@@ -72,8 +73,8 @@ router.get("/", (req, res) => {
     .map((c) => serializeContest(c, myAccountId));
 
   let nextOpensAt = null;
-  if (!current && !isWeekday(new Date())) {
-    const { weekStart } = currentWeekWindow(new Date());
+  if (!current && !isWeekday(getNow())) {
+    const { weekStart } = currentWeekWindow(getNow());
     nextOpensAt = new Date(weekStart.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
   }
 

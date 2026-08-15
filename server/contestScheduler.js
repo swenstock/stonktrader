@@ -30,11 +30,13 @@ const CONFIG = {
   maxEntriesPerAccount: 10,
 };
 
+const testClock = require("./testClock");
 const TEST_MODE = process.env.TEST_MODE === "true";
 const TEST_MAIN_EVENT_MINUTES = Number(process.env.TEST_MAIN_EVENT_MINUTES) || 10;
 
 function openNewContest(now = new Date()) {
-  const { weekStart, weekEnd } = TEST_MODE
+  const testModeBypassActive = TEST_MODE && !testClock.getStatus().overridden;
+  const { weekStart, weekEnd } = testModeBypassActive
     ? { weekStart: now, weekEnd: new Date(now.getTime() + TEST_MAIN_EVENT_MINUTES * 60000) }
     : currentWeekWindow(now);
   const info = db
@@ -49,7 +51,9 @@ function openNewContest(now = new Date()) {
 }
 
 function ensureOpenContest(now = new Date()) {
-  if (TEST_MODE) {
+  // Suspended while a clock override is active — see the matching note in
+  // satelliteScheduler.js's ensureOpenSatellites for why.
+  if (TEST_MODE && !testClock.getStatus().overridden) {
     // Always available, always cycling — the moment there's no open Main
     // Event, immediately start a fresh one on a short compressed window,
     // regardless of real day/time.
@@ -227,7 +231,7 @@ function payAffiliateCommission(entry, entryType = "contest") {
   return commission;
 }
 
-function tick(now = new Date()) {
+function tick(now = testClock.getNow()) {
   ensureOpenContest(now);
   const open = db.prepare("SELECT * FROM contests WHERE status = 'open'").all();
   for (const contest of open) {

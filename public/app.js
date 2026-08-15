@@ -421,6 +421,122 @@ async function boot() {
   setInterval(refreshStbPrice, 15000);
   setInterval(checkDelayedOnboardingPrompt, 60000); // check every minute in case the tab stays open through the eligible window
   setInterval(checkUpcomingFreerollReminders, 60000);
+  initTestClock();
+  setInterval(refreshTestClockStatus, 10000);
+
+// ---------------- Test Clock (dev/test-only debug tool) ----------------
+let testClockModeActive = false;
+
+function initTestClock() {
+  document.getElementById("testClockBtn").addEventListener("click", openTestClockModal);
+  document.getElementById("testClockModalClose").addEventListener("click", closeTestClockModal);
+  document.getElementById("testClockModalBackdrop").addEventListener("click", closeTestClockModal);
+  document.getElementById("testClockSetBtn").addEventListener("click", submitTestClock);
+  document.getElementById("testClockClearBtn").addEventListener("click", clearTestClock);
+  document.querySelectorAll(".test-clock-preset").forEach((btn) => {
+    btn.addEventListener("click", () => applyTestClockPreset(btn.dataset.preset));
+  });
+  refreshTestClockStatus();
+}
+
+async function refreshTestClockStatus() {
+  try {
+    const status = await api("/test-clock");
+    testClockModeActive = status.testModeActive;
+    const btn = document.getElementById("testClockBtn");
+    btn.style.display = status.testModeActive ? "flex" : "none";
+    document.getElementById("testClockBtnLabel").textContent = status.overridden ? "Time set" : "Test Clock";
+    btn.classList.toggle("overridden", status.overridden);
+    const currentEl = document.getElementById("testClockCurrentValue");
+    if (currentEl) {
+      currentEl.textContent = new Date(status.currentNow).toLocaleString(undefined, {
+        weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short",
+      });
+    }
+  } catch (err) {
+    // Not logged in yet, or the endpoint genuinely isn't reachable — the
+    // button just stays hidden either way, no need to surface this.
+  }
+}
+
+function openTestClockModal() {
+  refreshTestClockStatus();
+  document.getElementById("testClockMsg").textContent = "";
+  document.getElementById("testClockModal").style.display = "flex";
+}
+function closeTestClockModal() {
+  document.getElementById("testClockModal").style.display = "none";
+}
+
+// Presets computed against Eastern Time (EDT, UTC-4 — correct for the
+// current time of year; a dev tool doesn't need to be EST/EDT-perfect
+// year-round). Always jumps to the NEXT occurrence of that day/time from
+// right now, never into the past.
+function applyTestClockPreset(preset) {
+  const nowUtc = new Date();
+  const nowEtMs = nowUtc.getTime() - 4 * 3600000; // shift into ET-equivalent for day-of-week math
+  const nowEt = new Date(nowEtMs);
+  const etDay = nowEt.getUTCDay(); // 0=Sun..6=Sat, evaluated on the ET-shifted clock
+
+  function nextEtDateTime(targetDay, hour, minute) {
+    let daysAhead = (targetDay - etDay + 7) % 7;
+    const candidateEtMidnight = new Date(Date.UTC(nowEt.getUTCFullYear(), nowEt.getUTCMonth(), nowEt.getUTCDate() + daysAhead, hour + 4, minute)); // +4 converts ET wall-clock back to UTC
+    if (candidateEtMidnight.getTime() <= nowUtc.getTime()) daysAhead += 7; // that exact moment already passed today — push to next week
+    return new Date(Date.UTC(nowEt.getUTCFullYear(), nowEt.getUTCMonth(), nowEt.getUTCDate() + daysAhead, hour + 4, minute));
+  }
+
+  let target;
+  if (preset === "weekday-morning") target = nextEtDateTime(1, 9, 31); // next Monday 9:31am ET
+  else if (preset === "weekday-afternoon") target = nextEtDateTime(1, 14, 0); // next Monday 2:00pm ET
+  else if (preset === "weekend") target = nextEtDateTime(6, 12, 0); // next Saturday noon ET
+  else if (preset === "friday-close") target = nextEtDateTime(5, 15, 45); // next Friday 3:45pm ET
+  else return;
+
+  // datetime-local inputs want "YYYY-MM-DDTHH:mm" in the BROWSER's own
+  // local time — the input's displayed value may look different from the
+  // ET time picked above depending on the browser's timezone, but the
+  // underlying UTC moment (what actually gets sent) is correct regardless.
+  const pad = (n) => String(n).padStart(2, "0");
+  const local = `${target.getFullYear()}-${pad(target.getMonth() + 1)}-${pad(target.getDate())}T${pad(target.getHours())}:${pad(target.getMinutes())}`;
+  document.getElementById("testClockInput").value = local;
+}
+
+async function submitTestClock() {
+  const input = document.getElementById("testClockInput");
+  const msg = document.getElementById("testClockMsg");
+  if (!input.value) {
+    msg.style.color = "var(--red)";
+    msg.textContent = "Pick a date and time first, or use one of the quick presets.";
+    return;
+  }
+  try {
+    const result = await api("/test-clock", { method: "POST", body: JSON.stringify({ datetime: input.value }) });
+    msg.style.color = "var(--green)";
+    msg.textContent = `Jumped to ${new Date(result.now).toLocaleString()}. Refreshing contests…`;
+    await refreshTestClockStatus();
+    await refreshContests();
+    setTimeout(() => (msg.textContent = ""), 3000);
+  } catch (err) {
+    msg.style.color = "var(--red)";
+    msg.textContent = err.message;
+  }
+}
+
+async function clearTestClock() {
+  const msg = document.getElementById("testClockMsg");
+  try {
+    await api("/test-clock", { method: "DELETE" });
+    msg.style.color = "var(--green)";
+    msg.textContent = "Back to real time. Refreshing contests…";
+    await refreshTestClockStatus();
+    await refreshContests();
+    setTimeout(() => (msg.textContent = ""), 3000);
+  } catch (err) {
+    msg.style.color = "var(--red)";
+    msg.textContent = err.message;
+  }
+}
+
 // Reminds a logged-in trader 15 minutes before any category's free roll
 // opens, if they haven't already reserved/entered it. Checked every 60s —
 // plenty precise for a 15-minute warning. Deduped per specific occurrence

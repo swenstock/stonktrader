@@ -66,7 +66,13 @@ function windowFor(tier, now) {
   // always available regardless of real time of day or day of week,
   // cycling on a short fixed duration instead. Off by default — only for
   // local/staging testing, never set this in a real deployment.
-  if (TEST_MODE) {
+  //
+  // EXCEPTION: if a test-clock override is active (someone's deliberately
+  // jumped to a specific moment specifically to see how real hour-gating
+  // behaves then), this bypass would defeat the entire point — fall
+  // through to the real logic below instead, evaluated at that chosen
+  // simulated time.
+  if (TEST_MODE && !testClock.getStatus().overridden) {
     return { opensAt: now, locksAt: new Date(now.getTime() + TEST_SATELLITE_MINUTES * 60000) };
   }
   if (tier.cadence === "weekly") {
@@ -101,12 +107,16 @@ function openNewSatellite(tier, now) {
 }
 
 function ensureOpenSatellites(now = new Date()) {
+  const testModeBypassActive = TEST_MODE && !testClock.getStatus().overridden;
   for (const tier of TIERS) {
-    if (TEST_MODE) {
+    if (testModeBypassActive) {
       // Always available, always cycling — the moment a tier has no OPEN
       // room, immediately open a fresh one (short test duration). No
       // weekday check, no real-hour check, "afternoon" is tradeable at
-      // 3am on a Sunday just as much as any other tier.
+      // 3am on a Sunday just as much as any other tier. Suspended while a
+      // clock override is active — someone jumping to a specific time
+      // wants to see the REAL hour-gating behavior at that moment, not
+      // have it bypassed by the same flag that enables the override.
       const openNow = db
         .prepare("SELECT id FROM satellites WHERE tier_id = ? AND price_level = ? AND status = 'open'")
         .get(tier.categoryId, tier.priceLevel);
@@ -277,7 +287,8 @@ function resolveSatellite(satellite) {
   db.exec("COMMIT");
 }
 
-function tick(now = new Date()) {
+const testClock = require("./testClock");
+function tick(now = testClock.getNow()) {
   ensureOpenSatellites(now);
   const open = db.prepare("SELECT * FROM satellites WHERE status = 'open'").all();
   for (const s of open) {

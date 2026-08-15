@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const db = require("../db");
 const custodian = require("../custodian");
+const { getNow } = require("../testClock");
 const requireAuth = require("../middleware/requireAuth");
 const { createPortfolio } = require("../portfolioValue");
 const { TIERS, CATEGORIES, FREEROLL_PRIZE_CONFIG } = require("../satelliteScheduler");
@@ -172,7 +173,7 @@ router.get("/", (req, res) => {
     }
   }
 
-  const now = new Date();
+  const now = getNow();
 
   const currentByTier = TIERS.map((tier) => {
     const open = db
