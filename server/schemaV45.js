@@ -60,6 +60,21 @@ function run() {
     );
     CREATE INDEX IF NOT EXISTS idx_sbc_reserve_bucket
       ON sbc_reserve_ledger(bucket, id);
+
+    -- V45 freeroll money is tracked as actual STONK, not as a count of
+    -- pre-funded prize units. The old freeroll_fund table is intentionally
+    -- left untouched because its historic prizes_available values were
+    -- created under older Runner prices and prize rules. We will reconcile
+    -- that legacy balance deliberately instead of guessing its new value.
+    CREATE TABLE IF NOT EXISTS freeroll_reserve_v45 (
+      category_id TEXT PRIMARY KEY,
+      balance_stonk REAL NOT NULL DEFAULT 0,
+      contributed_lifetime REAL NOT NULL DEFAULT 0,
+      spent_lifetime REAL NOT NULL DEFAULT 0,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+    INSERT OR IGNORE INTO freeroll_reserve_v45 (category_id) VALUES
+      ('weekly_qualifier'), ('full_day'), ('morning'), ('afternoon'), ('hourly'), ('race_to_close');
   `);
 }
 
