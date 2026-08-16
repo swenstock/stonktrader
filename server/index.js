@@ -4,8 +4,6 @@ const http = require("http");
 const path = require("path");
 const cors = require("cors");
 
-// db.js creates the legacy schema; schemaV45 only adds backward-compatible
-// columns/tables required by the current ticket economy and reserve ledgers.
 require("./schemaV45").run();
 
 const authRoutes = require("./routes/auth");
@@ -16,6 +14,7 @@ const quoteRoutes = require("./routes/quotes");
 const simulatedMarketRoutes = require("./routes/simulatedMarket");
 const portfolioRoutes = require("./routes/portfolios");
 const leaderboardRoutes = require("./routes/leaderboard");
+const leaderboardV45Routes = require("./routes/leaderboardV45");
 const contestRoutes = require("./routes/contests");
 const satelliteRoutes = require("./routes/satellites");
 const ticketRoutes = require("./routes/tickets");
@@ -45,6 +44,7 @@ app.use("/api/quotes", quoteRoutes);
 app.use("/api/sim-market", simulatedMarketRoutes);
 app.use("/api/portfolios", portfolioRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
+app.use("/api/leaderboard-v45", leaderboardV45Routes);
 app.use("/api/contests", contestRoutes);
 app.use("/api/satellites", satelliteRoutes);
 app.use("/api/tickets", ticketRoutes);
