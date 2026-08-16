@@ -27,7 +27,9 @@ const adminRoutes = require("./routes/admin");
 const testClockRoutes = require("./routes/testClock");
 const devRoutes = require("./routes/dev");
 const contestScheduler = require("./contestScheduler");
-const satelliteScheduler = require("./satelliteScheduler");
+const satelliteScheduler = process.env.PAYOUT_ENGINE_V45 === "true"
+  ? require("./satelliteSchedulerV45")
+  : require("./satelliteScheduler");
 const marketOpenScheduler = require("./marketOpenScheduler");
 const { attachWebSocket } = require("./ws");
 
@@ -58,7 +60,11 @@ contestScheduler.start();
 satelliteScheduler.start();
 marketOpenScheduler.start();
 
-app.get("/api/health", (req, res) => res.json({ ok: true }));
+app.get("/api/health", (req, res) => res.json({
+  ok: true,
+  satellitePayoutEngine: satelliteScheduler.engineVersion || "legacy",
+  marketDataProvider: process.env.MARKET_DATA_PROVIDER || "demo",
+}));
 
 app.use(express.static(path.join(__dirname, "..", "public")));
 
@@ -68,4 +74,5 @@ attachWebSocket(server);
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Stonk paper trading server running on http://localhost:${PORT}`);
+  console.log(`Satellite payout engine: ${satelliteScheduler.engineVersion || "legacy"}`);
 });
