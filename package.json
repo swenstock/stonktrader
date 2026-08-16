@@ -6,10 +6,11 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "npm run test:payout && npm run test:settlement && npm run test:settlement-db && npm run test:freeroll-reserve && npm run test:rake && npm run test:quotes && npm run test:clock",
+    "test": "npm run test:payout && npm run test:settlement && npm run test:settlement-db && npm run test:scheduler-v45 && npm run test:freeroll-reserve && npm run test:rake && npm run test:quotes && npm run test:clock",
     "test:payout": "node server/payoutEngineV2.test.js",
     "test:settlement": "node server/satelliteSettlementPlanV45.test.js",
     "test:settlement-db": "node server/satelliteSettlementExecutorV45.test.js",
+    "test:scheduler-v45": "node server/satelliteSchedulerV45.test.js",
     "test:freeroll-reserve": "node server/freerollReserveV45.test.js",
     "test:rake": "node server/rakeV45.test.js",
     "test:quotes": "node server/simulatedQuoteEngine.test.js",
