@@ -1,8 +1,8 @@
-# Stonk Broker Challenge — V45 Rebuild Status
+# Stonk Broker Challenge — V45 Simulated Launch Status
 
 Branch: `v45-rebuild`
 
-This branch is the simulated-production rebuild. `main` remains untouched until the branch is explicitly approved and merged.
+This branch is the simulated public build being promoted to `main` after the final green CI gate.
 
 ## Implemented and test-covered
 
@@ -24,95 +24,57 @@ This branch is the simulated-production rebuild. `main` remains untouched until 
 - Main Event ticket backing = 3,000 STONK; market resale price is independent.
 - Main Event Reserve accounting.
 - Deterministic top-down residual STONK bonuses.
-- Atomic settlement executor.
-- Explicit underfunded-settlement guard.
-- V45 scheduler behind `PAYOUT_ENGINE_V45=true`.
+- Atomic settlement executor and explicit underfunded-settlement guard.
+- V45 satellite scheduler/resolver is now the application default; `PAYOUT_ENGINE_V45=legacy` is an intentional QA rollback only.
 - Deterministic simulated quote engine driven by Test Clock.
 - Test Clock interprets bare date/time as America/New_York including DST.
-- Existing portfolio/trade engine now uses the deterministic provider.
+- Compressed TEST_MODE sessions default to 20 minutes so real Degen cutoff rules remain testable.
+- Compressed TEST_MODE rooms may trade within their synthetic open/lock window even on weekends/after hours; production-duration rooms still enforce U.S. equity market hours.
+- Existing portfolio/trade engine uses the deterministic provider.
 - Server-authoritative percentage quick trades.
 - Standard 10% cost-basis entry rule.
 - Degen Hours percentage buys use available cash and no 10% cap.
-- Server trading-window enforcement.
 - Typed ticket inventory: Runner / Clerk / Trader / Jr. / Main Event.
-- True player-to-player order book:
-  - Bids left
-  - Offers right
-  - Sell to Bid
-  - Buy Offer
-  - one ticket/order
+- True player-to-player order book: Bids left, Offers right, Sell to Bid, Buy Offer, one ticket/order.
 - Exchange fee configurable, default 0 until product decision.
 - Freeroll V45 reserve ledger separated from legacy prize counters.
 - Degen Hours + Race protected contributions share the V45 `degen` acquisition reserve.
 - Main Event funding/economics API.
 - Full-field V45 leaderboard API with Find Me, money line, all entries, and P&L gap/cushion.
-- Safe V45 preview frontend at `/v45/`:
-  - browse mode
-  - auth
-  - real server funding meter
-  - Trading Floor
-  - My Contests
-  - Ticket Exchange
-  - Test Clock
-  - tutorials
-- Chart-first execution page at `/v45/trade.html?id=<portfolioId>`:
-  - candles/line
-  - Tick/1m/5m/15m/1h/1D
-  - volume
-  - MA/EMA
-  - crosshair
-  - position list
-  - symbol lookup
-  - Shares / Percentage quick trading
+- V45 frontend at `/v45/`; root `/` redirects to it.
+- Obsolete prior frontend copies have been removed from the working branch; Git history preserves them.
+- Victory StonkBroker trophy artwork replaces the generic trophy treatment in the welcome/tutorial and win-oriented lobby cues.
+- Chart-first execution page at `/v45/trade.html?id=<portfolioId>` with candles/line, Tick/1m/5m/15m/1h/1D, volume, MA/EMA, crosshair, positions, symbol lookup and Shares/Percentage quick trading.
 - Full-field Find Me page at `/v45/leaders.html`.
-- GitHub Actions CI covers syntax, payout math, reserves, exact rake, scheduler behavior, atomic settlement, server boot, frontend shell and an end-to-end simulated user journey.
+- GitHub Actions CI covers syntax, payout math, reserves, exact rake, scheduler behavior, atomic settlement, server boot, frontend shells and an end-to-end simulated user journey.
 
 ## Safety / feature flags
 
 - `TEST_MODE=true` enables Test Clock and test-only funding/ticket tools.
 - `/api/dev/*` returns 404 unless TEST_MODE is enabled.
-- `PAYOUT_ENGINE_V45=true` selects the V45 satellite scheduler/resolver.
-- Default remains legacy unless the flag is explicitly enabled.
+- V45 payout engine is default. `PAYOUT_ENGINE_V45=legacy` is rollback-only.
 - `MARKET_DATA_PROVIDER=demo` uses deterministic simulation.
 - `MARKET_DATA_PROVIDER=live` intentionally fails until a licensed live provider is actually connected.
 
-## Deliberately unresolved — do not guess
+## Deliberately unresolved before any real-money launch
 
 ### 1. Lower-tier ticket redemption backing
 
-When a won/purchased Clerk/Trader/Jr. ticket is redeemed for a future contest, we still need to lock how its backing is routed.
-
-Example: a Clerk ticket has 200 STONK face/backing under the current model. Does redemption route:
-- 150 into that contest + 50 into freeroll reserve, exactly like a cash entry, or
-- a different liability treatment?
-
-Do not hard-wire final redemption economics until Andrew confirms.
+When a won/purchased Clerk/Trader/Jr. ticket is redeemed for a future contest, final backing routing still needs an explicit product decision. Do not invent this for real-money settlement.
 
 ### 2. Freeroll capacity when reserve is smaller than top-10% liability
 
-V45 refuses to create unfunded prizes. A 1,000-player freeroll currently implies:
-- 100 prize-paying positions
-- 2 Runner tickets each
-- 200 Runner tickets total
-- 20,000 STONK backing at 100 per Runner ticket.
+V45 refuses to create unfunded prizes. Current behavior blocks an underfunded settlement explicitly rather than silently changing the payout or subsidizing it from SBC revenue. A production player-facing capacity/prefunding rule must be chosen before real-value launch.
 
-Current scheduler behavior is intentionally conservative: if reserve is insufficient at settlement, the room becomes `blocked` with an explicit reason and makes no prize writes.
+## Simulated launch boundary
 
-Before production launch, choose a player-facing capacity rule, e.g. reserve-backed entry caps / funded field sizes, promotional prefunding, or another explicit funding source. Do not silently subsidize from SBC revenue or change the advertised payout.
+This build is suitable for public simulated/paper-trading testing. It is **not** a real-money production launch:
 
-## Not yet production-live
+- no real wallet/token custody or settlement is connected;
+- no licensed live quote vendor is connected;
+- lower-tier real-value redemption is not final;
+- real-money security/compliance/legal review remains outstanding.
 
-- Root `/` still serves the old frontend.
-- `main` has not been merged.
-- No real wallet/token settlement is connected.
-- No licensed live quote vendor is connected.
-- No final lower-tier ticket redemption flow is live.
-- No final real-money security/legal deployment review has been performed.
+## Launch rule
 
-## Merge rule
-
-Do not merge PR #1 until:
-1. latest CI is green,
-2. preview is visually reviewed,
-3. the two unresolved economic rules above are explicitly decided,
-4. branch deployment/Render path is confirmed.
+Promote to `main` only after the latest CI run is green. After merge, verify the Render deployment and custom domain separately; GitHub alone cannot prove the Render/DNS mapping.
