@@ -4,6 +4,10 @@ const http = require("http");
 const path = require("path");
 const cors = require("cors");
 
+// db.js creates the legacy schema; schemaV45 only adds backward-compatible
+// columns/tables required by the current ticket economy and reserve ledgers.
+require("./schemaV45").run();
+
 const authRoutes = require("./routes/auth");
 const accountRoutes = require("./routes/account");
 const quoteRoutes = require("./routes/quotes");
