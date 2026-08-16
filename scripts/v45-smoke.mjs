@@ -34,13 +34,9 @@ const seller = await call('/auth/signup', { method:'POST', body:{displayName:`Se
 await call('/dev/fund', { method:'POST', token:buyer.token, body:{amount:20000} });
 await call('/dev/fund', { method:'POST', token:seller.token, body:{amount:20000} });
 
-// Freeze QA at a known in-session time before asking the scheduler for rooms.
-// This prevents a CI run's real wall clock from accidentally landing inside
-// Degen's final five-minute entry cutoff.
-const tradeClock = await call('/test-clock', { method:'POST', token:buyer.token, body:{datetime:'2026-08-17T10:05'} });
-if (!tradeClock.now) throw new Error('Test Clock did not return an authoritative time');
-
-// ---- REAL PAPER-TRADING PATH: STANDARD VS DEGEN PERCENTAGE SEMANTICS ----
+// Ask the TEST_MODE scheduler for the rooms it actually created first. Then
+// derive a clock instant inside the current Degen room, rather than assuming
+// the runner's wall-clock date. That makes the end-to-end test deterministic.
 const floor = await call('/satellites', { token:buyer.token });
 if (floor.payoutEngine !== 'v45') throw new Error('Trading Floor API is not using V45 payout engine');
 const fullDay = floor.categories.find(c=>c.id==='full_day');
@@ -49,9 +45,17 @@ const freeStandard = fullDay?.levels?.find(l=>l.priceLevel==='free' && l.status=
 const degenRunner = degen?.levels?.find(l=>l.priceLevel==='runner' && l.status==='open');
 if (!freeStandard?.id || !degenRunner?.id) throw new Error('Expected TEST_MODE standard freeroll and Degen Runner rooms to be open');
 
+const degenOpenMs = new Date(degenRunner.opensAt).getTime();
+const degenLockMs = new Date(degenRunner.locksAt).getTime();
+if (!Number.isFinite(degenOpenMs) || !Number.isFinite(degenLockMs) || degenLockMs <= degenOpenMs) throw new Error('Degen test room has invalid time bounds');
+const tradeInstant = new Date(Math.min(degenOpenMs + 10*60*1000, degenLockMs - 10*60*1000));
+const tradeClock = await call('/test-clock', { method:'POST', token:buyer.token, body:{datetime:tradeInstant.toISOString()} });
+if (!tradeClock.now) throw new Error('Test Clock did not return an authoritative time');
+
+// ---- REAL PAPER-TRADING PATH: STANDARD VS DEGEN PERCENTAGE SEMANTICS ----
 const standardEntry = await call(`/satellites/${freeStandard.id}/enter`, { method:'POST', token:buyer.token, body:{} });
 let standardP = await call(`/portfolios/${standardEntry.portfolioId}`, { token:buyer.token });
-if (!standardP.tradingAllowed || standardP.isDegenHours) throw new Error('Standard TEST_MODE portfolio rules are wrong');
+if (!standardP.tradingAllowed || standardP.isDegenHours) throw new Error(`Standard TEST_MODE portfolio rules are wrong: ${JSON.stringify({tradingAllowed:standardP.tradingAllowed,isDegenHours:standardP.isDegenHours,message:standardP.tradingMessage,now:standardP.serverNow,opensAt:freeStandard.opensAt,locksAt:freeStandard.locksAt})}`);
 await call(`/portfolios/${standardEntry.portfolioId}/trades`, { method:'POST', token:buyer.token, body:{symbol:'NVDA',side:'buy',percent:25} });
 standardP = await call(`/portfolios/${standardEntry.portfolioId}`, { token:buyer.token });
 if (Math.abs(standardP.cash - 97500) > 2) throw new Error(`Standard 25% quick buy should target 2.5% portfolio / ~$97,500 cash, got ${standardP.cash}`);
