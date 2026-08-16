@@ -26,7 +26,6 @@ const seller = await call('/auth/signup', { method:'POST', body:{displayName:`Se
 await call('/dev/fund', { method:'POST', token:buyer.token, body:{amount:20000} });
 await call('/dev/fund', { method:'POST', token:seller.token, body:{amount:20000} });
 
-// ---- BID -> SELL TO BID ----
 const mintedRunner = await call('/dev/tickets', { method:'POST', token:seller.token, body:{ticketType:'runner',quantity:1} });
 const runnerTicketId = mintedRunner.tickets[0].id;
 const bid = await call('/ticket-market/bids', { method:'POST', token:buyer.token, body:{ticketType:'runner',bidPrice:150} });
@@ -36,7 +35,6 @@ await call(`/ticket-market/bids/${bid.id}/sell`, { method:'POST', token:seller.t
 const buyerAfterBid = await call('/tickets', { token:buyer.token });
 if ((buyerAfterBid.inventory.runner?.owned || 0) !== 1) throw new Error('Runner ticket did not transfer to bid buyer');
 
-// ---- OFFER -> BUY OFFER ----
 const mintedClerk = await call('/dev/tickets', { method:'POST', token:seller.token, body:{ticketType:'clerk',quantity:1} });
 const clerkTicketId = mintedClerk.tickets[0].id;
 const offer = await call('/ticket-market/offers', { method:'POST', token:seller.token, body:{ticketId:clerkTicketId,askPrice:180} });
@@ -46,18 +44,15 @@ await call(`/ticket-market/offers/${offer.id}/buy`, { method:'POST', token:buyer
 const buyerAfterOffer = await call('/tickets', { token:buyer.token });
 if ((buyerAfterOffer.inventory.clerk?.owned || 0) !== 1) throw new Error('Clerk ticket did not transfer to offer buyer');
 
-// No invented exchange fee unless explicitly configured.
 const finalRunnerBook = await call('/ticket-market/book/runner');
 if (Number(finalRunnerBook.exchangeFeePct) !== 0) throw new Error('Default exchange fee must remain 0 until product decision');
 
-// ---- TEST CLOCK + DETERMINISTIC SIM DATA ----
 const clock = await call('/test-clock', { method:'POST', token:buyer.token, body:{datetime:'2026-08-17T09:30'} });
-const instant = new Date(clock.currentNow);
-if (instant.getUTCHours() !== 13) throw new Error(`9:30 ET August Test Clock did not map to 13:30Z: ${clock.currentNow}`);
+const instant = new Date(clock.now);
+if (instant.getUTCHours() !== 13 || instant.getUTCMinutes() !== 30) throw new Error(`9:30 ET August Test Clock did not map to 13:30Z: ${clock.now}`);
 const q1 = await call('/sim-market/quotes?symbols=NVDA,MSFT');
 if (q1.length !== 2 || q1.some(q=>q.source!=='sim')) throw new Error('Simulated quote feed invalid');
 
-// ---- ECONOMIC PREVIEW ----
 const payout = await call('/dev/payout-preview?tier=trader&field=100');
 if (payout.status !== 'OK' || payout.paidPlaces !== 10 || !payout.reconciliation?.entry || !payout.reconciliation?.prize) {
   throw new Error('Trader-100 payout preview failed reconciliation');
