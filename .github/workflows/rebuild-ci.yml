@@ -23,6 +23,7 @@ jobs:
           node --check public/v45/v45.js
           node --check public/v45/v45-links.js
           node --check public/v45/trade.js
+          node --check public/v45/leaders.js
           node --check scripts/v45-smoke.mjs
       - name: Unit tests
         run: npm test
@@ -54,9 +55,12 @@ jobs:
           curl -fsS 'http://127.0.0.1:3456/api/sim-market/quotes?symbols=NVDA,MSFT' >/tmp/quotes.json
           curl -fsS http://127.0.0.1:3456/v45/ >/tmp/v45.html
           curl -fsS 'http://127.0.0.1:3456/v45/trade.html?id=1' >/tmp/trade.html
+          curl -fsS http://127.0.0.1:3456/v45/leaders.html >/tmp/leaders.html
           grep -q "CAN'T" /tmp/v45.html
           grep -q 'TICKET EXCHANGE' /tmp/v45.html
           grep -q 'QUICK EXECUTION' /tmp/trade.html
           grep -q 'marketChart' /tmp/trade.html
+          grep -q 'JUMP TO ME' /tmp/leaders.html
+          grep -q 'JUMP TO MONEY LINE' /tmp/leaders.html
           node -e "const q=require('/tmp/quotes.json'); if(q.length!==2||q.some(x=>x.source!=='sim')) process.exit(1)"
           SBC_BASE_URL=http://127.0.0.1:3456/api node scripts/v45-smoke.mjs
