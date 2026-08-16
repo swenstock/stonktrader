@@ -31,9 +31,14 @@ if (cfg.tiers.runner.playerPrice !== 100 || cfg.tiers.clerk.playerPrice !== 200 
 
 const buyer = await call('/auth/signup', { method:'POST', body:{displayName:`Buyer${stamp.slice(-5)}`,email:buyerEmail,password:'testpass123'} });
 const seller = await call('/auth/signup', { method:'POST', body:{displayName:`Seller${stamp.slice(-5)}`,email:sellerEmail,password:'testpass123'} });
-
 await call('/dev/fund', { method:'POST', token:buyer.token, body:{amount:20000} });
 await call('/dev/fund', { method:'POST', token:seller.token, body:{amount:20000} });
+
+// Freeze QA at a known in-session time before asking the scheduler for rooms.
+// This prevents a CI run's real wall clock from accidentally landing inside
+// Degen's final five-minute entry cutoff.
+const tradeClock = await call('/test-clock', { method:'POST', token:buyer.token, body:{datetime:'2026-08-17T10:05'} });
+if (!tradeClock.now) throw new Error('Test Clock did not return an authoritative time');
 
 // ---- REAL PAPER-TRADING PATH: STANDARD VS DEGEN PERCENTAGE SEMANTICS ----
 const floor = await call('/satellites', { token:buyer.token });
@@ -65,6 +70,11 @@ await call(`/portfolios/${degenEntry.portfolioId}/trades`, { method:'POST', toke
 degenP = await call(`/portfolios/${degenEntry.portfolioId}`, { token:buyer.token });
 if (Math.abs(degenP.cash - 75000) > 5) throw new Error(`Degen 50% sell should liquidate half the position, got ${degenP.cash}`);
 
+// ---- FULL FIELD / FIND ME ----
+const board = await call(`/leaderboard-v45/satellite/${degenRunner.id}`, { token:buyer.token });
+if (!Array.isArray(board.rows) || !board.rows.some(r=>r.isMine)) throw new Error('Find Me board did not identify the signed-in trader');
+if (board.moneyLineRank !== Math.max(1, Math.ceil(board.fieldSize * 0.10))) throw new Error('Money line is not top 10%');
+
 // ---- BID -> SELL TO BID ----
 const mintedRunner = await call('/dev/tickets', { method:'POST', token:seller.token, body:{ticketType:'runner',quantity:1} });
 const runnerTicketId = mintedRunner.tickets[0].id;
@@ -84,7 +94,6 @@ if (clerkBook.lowestAsk !== 180) throw new Error('Clerk lowest ask not visible i
 await call(`/ticket-market/offers/${offer.id}/buy`, { method:'POST', token:buyer.token, body:{} });
 const buyerAfterOffer = await call('/tickets', { token:buyer.token });
 if ((buyerAfterOffer.inventory.clerk?.owned || 0) !== 1) throw new Error('Clerk ticket did not transfer to offer buyer');
-
 const finalRunnerBook = await call('/ticket-market/book/runner');
 if (Number(finalRunnerBook.exchangeFeePct) !== 0) throw new Error('Default exchange fee must remain 0 until product decision');
 
