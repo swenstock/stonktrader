@@ -25,6 +25,7 @@ const scheduledOrderRoutes = require("./routes/scheduledOrders");
 const ticketMarketRoutes = require("./routes/ticketMarket");
 const adminRoutes = require("./routes/admin");
 const testClockRoutes = require("./routes/testClock");
+const devRoutes = require("./routes/dev");
 const contestScheduler = require("./contestScheduler");
 const satelliteScheduler = require("./satelliteScheduler");
 const marketOpenScheduler = require("./marketOpenScheduler");
@@ -51,6 +52,7 @@ app.use("/api/scheduled-orders", scheduledOrderRoutes);
 app.use("/api/ticket-market", ticketMarketRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/test-clock", testClockRoutes);
+app.use("/api/dev", devRoutes);
 
 contestScheduler.start();
 satelliteScheduler.start();
