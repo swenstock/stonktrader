@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22.5.1'
+          node-version: '22.x'
           cache: npm
       - run: npm ci
       - name: Syntax check JavaScript
@@ -31,16 +31,23 @@ jobs:
         run: |
           node server/index.js > /tmp/sbc-server.log 2>&1 &
           PID=$!
-          trap 'kill $PID || true' EXIT
+          trap 'kill $PID 2>/dev/null || true' EXIT
+          READY=0
           for i in {1..20}; do
-            if curl -fsS http://127.0.0.1:3456/api/health >/dev/null; then break; fi
+            if curl -fsS http://127.0.0.1:3456/api/health >/dev/null 2>&1; then READY=1; break; fi
+            if ! kill -0 $PID 2>/dev/null; then break; fi
             sleep 0.5
           done
+          if [ "$READY" != "1" ]; then
+            echo '--- SBC SERVER STARTUP LOG ---'
+            cat /tmp/sbc-server.log || true
+            exit 1
+          fi
           curl -fsS http://127.0.0.1:3456/api/health
           curl -fsS http://127.0.0.1:3456/api/config >/tmp/config.json
           curl -fsS http://127.0.0.1:3456/api/economics >/tmp/economics.json
           curl -fsS 'http://127.0.0.1:3456/api/sim-market/quotes?symbols=NVDA,MSFT' >/tmp/quotes.json
           curl -fsS http://127.0.0.1:3456/v45/ >/tmp/v45.html
-          grep -q 'CAN.T' /tmp/v45.html
+          grep -q "CAN'T" /tmp/v45.html
           grep -q 'TICKET EXCHANGE' /tmp/v45.html
           node -e "const q=require('/tmp/quotes.json'); if(q.length!==2||q.some(x=>x.source!=='sim')) process.exit(1)"
