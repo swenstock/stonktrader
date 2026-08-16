@@ -5,9 +5,14 @@ const custodian = require("../custodian");
 const { getNow } = require("../testClock");
 const requireAuth = require("../middleware/requireAuth");
 const { createPortfolio } = require("../portfolioValue");
-const { TIERS, CATEGORIES, FREEROLL_PRIZE_CONFIG } = require("../satelliteScheduler");
+const { TIERS, CATEGORIES, FREEROLL_PRIZE_CONFIG } = require("../tierConfig");
+const { computePaidContest, computeFreerollRequirement } = require("../payoutEngineV2");
+const freerollReserve = require("../freerollReserveV45");
 const { currentStonkUsdPriceMicros } = require("../contestScheduler");
 const { isWeekday, etCalendarDate, etDateTime, easternParts, currentWeekWindow } = require("../timeHelpers");
+
+const V45_ENABLED = process.env.PAYOUT_ENGINE_V45 === "true";
+const PRICE_LEVEL_TO_TIER = { runner: "runner", low: "clerk", mid: "trader", high: "junior" };
 
 function stonkToUsd(stonkAmount) {
   return Number(((stonkAmount * currentStonkUsdPriceMicros()) / 1e6).toFixed(2));
@@ -56,6 +61,38 @@ function nextOccurrence(tier, now) {
   return now;
 }
 
+function v45Projection(priceLevel, entrantCount, categoryId) {
+  if (!V45_ENABLED || entrantCount < 1) return null;
+  if (priceLevel === "free") {
+    const req = computeFreerollRequirement({ fieldSize: entrantCount });
+    const reserveBalance = Number(freerollReserve.get(categoryId)?.balance_stonk || 0);
+    return {
+      engine: "v45",
+      status: reserveBalance >= req.liabilityRequired ? "FUNDED" : "RESERVE_SHORTFALL",
+      paidPlaces: req.paidPlaces,
+      baselineTicketType: "runner",
+      baselineTicketsEach: 2,
+      totalTicketsRequired: req.ticketsRequired,
+      reserveRequired: req.liabilityRequired,
+      reserveAvailable: reserveBalance,
+      reserveShortfall: Math.max(0, req.liabilityRequired - reserveBalance),
+    };
+  }
+  const tierKey = PRICE_LEVEL_TO_TIER[priceLevel];
+  if (!tierKey) return null;
+  const math = computePaidContest({ tierKey, fieldSize: entrantCount });
+  return {
+    engine: "v45",
+    status: math.status,
+    paidPlaces: math.paidPlaces,
+    mainEventTickets: math.mainEventTickets || 0,
+    baselineLiability: math.baselineLiability,
+    contestPrizePool: math.contestPrizePool,
+    residualBonuses: math.residualBonuses || 0,
+    shortfall: math.shortfall || 0,
+  };
+}
+
 function serializePendingTier(tier, now, myAccountId) {
   const myPendingCount = myAccountId
     ? db.prepare(`SELECT COUNT(*) as n FROM pending_allocations
@@ -63,9 +100,9 @@ function serializePendingTier(tier, now, myAccountId) {
         AND IFNULL(target_price_level, '') = IFNULL(?, '') AND status = 'pending'`)
         .get(myAccountId, tier.categoryId, tier.priceLevel).n
     : 0;
-  const freerollFund = tier.priceLevel === "free" ? db.prepare("SELECT * FROM freeroll_fund WHERE category_id = ?").get(tier.categoryId) : null;
-  const freerollPrizesAvailable = freerollFund?.prizes_available ?? 0;
-  const freerollLifetimeAwarded = freerollFund?.total_prizes_funded_lifetime ?? 0;
+  const reserveBalance = tier.priceLevel === "free"
+    ? Number(freerollReserve.get(tier.categoryId)?.balance_stonk || 0)
+    : null;
   return {
     id: null,
     tierId: tier.categoryId,
@@ -76,15 +113,14 @@ function serializePendingTier(tier, now, myAccountId) {
     cadence: tier.cadence,
     entryFee: tier.entryFee,
     entryFeeUsd: stonkToUsd(tier.entryFee),
-    ticketCost: 3000,
+    contestPortion: tier.poolFee,
+    freerollContribution: tier.surcharge,
     status: "pending",
     opensAt: nextOccurrence(tier, now).toISOString(),
     locksAt: null,
     entrantCount: 0,
-    poolGross: 0,
-    ticketsProjected: freerollPrizesAvailable,
-    lifetimeAwarded: freerollLifetimeAwarded,
-    remainderProjected: 0,
+    reserveAvailable: reserveBalance,
+    payoutProjection: null,
     joined: myPendingCount > 0,
     myEntryCount: myPendingCount,
     maxEntriesPerAccount: tier.maxEntriesPerAccount,
@@ -93,13 +129,6 @@ function serializePendingTier(tier, now, myAccountId) {
 
 function serializeSatellite(s, myAccountId) {
   const entrantCount = db.prepare("SELECT COUNT(*) as n FROM satellite_entries WHERE satellite_id = ?").get(s.id).n;
-  const grossPool = s.status === "open" ? entrantCount * s.entry_fee : s.pool_gross;
-  const playerPool = grossPool * 0.85;
-  const ticketsProjected = Math.floor(playerPool / s.ticket_cost);
-  const remainderProjected = s.status === "open" ? playerPool - ticketsProjected * s.ticket_cost : s.remainder_stonk;
-  const freerollFund = s.price_level === "free" ? db.prepare("SELECT * FROM freeroll_fund WHERE category_id = ?").get(s.tier_id) : null;
-  const freerollPrizesAvailable = s.status === "open" && freerollFund ? freerollFund.prizes_available : null;
-  const freerollLifetimeAwarded = freerollFund?.total_prizes_funded_lifetime ?? 0;
   const tierMeta = TIERS.find((t) => t.categoryId === s.tier_id && t.priceLevel === s.price_level);
   const myEntryCount = myAccountId
     ? db.prepare("SELECT COUNT(*) as n FROM satellite_entries WHERE satellite_id = ? AND account_id = ?").get(s.id, myAccountId).n
@@ -118,19 +147,20 @@ function serializeSatellite(s, myAccountId) {
     cadence: tierMeta?.cadence || "daily",
     entryFee: totalEntryFee,
     entryFeeUsd: stonkToUsd(totalEntryFee),
-    surcharge: tierMeta?.surcharge || 0,
-    ticketCost: s.ticket_cost,
+    contestPortion: tierMeta?.poolFee ?? s.entry_fee,
+    freerollContribution: tierMeta?.surcharge || 0,
     status: s.status,
     opensAt: s.opens_at,
     locksAt: s.locks_at,
     entrantCount,
-    poolGross: grossPool,
-    ticketsProjected: freerollPrizesAvailable !== null ? freerollPrizesAvailable : (s.status === "open" ? ticketsProjected : s.tickets_funded),
-    lifetimeAwarded: freerollLifetimeAwarded,
-    ticketsFunded: s.tickets_funded,
-    remainderProjected: Math.round(remainderProjected || 0),
-    remainderStonk: s.remainder_stonk,
-    remainderDisplayName: s.remainder_display_name,
+    poolGross: Number(s.pool_gross || 0),
+    playerPool: Number(s.player_pool || 0),
+    ticketsFunded: Number(s.tickets_funded || 0),
+    remainderStonk: Number(s.remainder_stonk || 0),
+    settlementVersion: s.settlement_version || "legacy",
+    settlementError: s.settlement_error || null,
+    payoutProjection: s.status === "open" ? v45Projection(s.price_level, entrantCount, s.tier_id) : null,
+    reserveAvailable: s.price_level === "free" ? Number(freerollReserve.get(s.tier_id)?.balance_stonk || 0) : null,
     joined: myEntryCount > 0,
     myEntryCount,
     maxEntriesPerAccount: tierMeta ? tierMeta.maxEntriesPerAccount : 10,
@@ -163,15 +193,19 @@ router.get("/", (req, res) => {
     cadence: cat.cadence,
     levels: currentByTier.filter((t) => t.tierId === cat.id),
   }));
-  const history = db.prepare("SELECT * FROM satellites WHERE status = 'resolved' ORDER BY resolved_at DESC LIMIT 40")
+  const history = db.prepare("SELECT * FROM satellites WHERE status IN ('resolved','blocked') ORDER BY COALESCE(resolved_at, locks_at) DESC LIMIT 60")
     .all().map((s) => serializeSatellite(s, myAccountId));
-  res.json({ categories, history });
+  res.json({
+    payoutEngine: V45_ENABLED ? "v45" : "legacy",
+    categories,
+    history,
+  });
 });
 
 router.post("/:id/enter", requireAuth, (req, res) => {
   const satellite = db.prepare("SELECT * FROM satellites WHERE id = ?").get(req.params.id);
   if (!satellite) return res.status(404).json({ error: "Satellite not found" });
-  if (satellite.status !== "open") return res.status(400).json({ error: "This satellite has locked" });
+  if (satellite.status !== "open") return res.status(400).json({ error: "This satellite is not open" });
   const tier = TIERS.find((t) => t.categoryId === satellite.tier_id && t.priceLevel === satellite.price_level);
   if (!tier) return res.status(500).json({ error: "Unknown tier configuration" });
 
@@ -186,12 +220,12 @@ router.post("/:id/enter", requireAuth, (req, res) => {
       return res.status(400).json({
         code: "ENTRY_CUTOFF_REACHED",
         error: isDegenHours
-          ? "Degen Hours entry closes 5 minutes before the hour ends — this one's cutting it too close."
-          : "Race to the Close entry closes in the final 2 minutes — even the finale has to actually finish.",
+          ? "Degen Hours entry closes 5 minutes before the hour ends."
+          : "Race to the Close entry closes in the final 2 minutes.",
       });
     }
   } else if (!isFreeroll) {
-    return res.status(400).json({ error: "Registration for this contest closed the moment it opened — reserve your spot next time before it starts." });
+    return res.status(400).json({ error: "Registration for this contest closed when it opened. Reserve the next occurrence instead." });
   }
 
   const existingCount = db.prepare("SELECT COUNT(*) as n FROM satellite_entries WHERE satellite_id = ? AND account_id = ?")
@@ -206,29 +240,40 @@ router.post("/:id/enter", requireAuth, (req, res) => {
 
   const account = db.prepare("SELECT * FROM accounts WHERE id = ?").get(req.account.id);
   if (account.stonk_balance < tier.entryFee) return res.status(400).json({ error: "Not enough STONK to enter" });
-  const label = `${satellite.name} · ${getNow().toLocaleDateString()} (Entry ${existingCount + 1})`;
+  const label = `${satellite.name} (Entry ${existingCount + 1})`;
   const portfolioId = createPortfolio(account.id, label);
 
   db.exec("BEGIN");
-  if (tier.entryFee > 0) {
-    custodian.debit(account.id, tier.entryFee, "satellite_entry", { referenceType: "satellite", referenceId: satellite.id });
-  }
-  db.prepare("INSERT INTO satellite_entries (satellite_id, account_id, portfolio_id, entry_fee_paid) VALUES (?, ?, ?, ?)")
-    .run(satellite.id, account.id, portfolioId, tier.poolFee);
-
-  if (tier.surcharge > 0) {
-    db.prepare("UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk + ? WHERE category_id = ?")
-      .run(tier.surcharge, tier.categoryId);
-    const fund = db.prepare("SELECT * FROM freeroll_fund WHERE category_id = ?").get(tier.categoryId);
-    const threshold = FREEROLL_PRIZE_CONFIG[tier.categoryId].threshold;
-    if (fund.accumulated_stonk >= threshold) {
-      db.prepare(`UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk - ?, prizes_available = prizes_available + 1,
-        total_prizes_funded_lifetime = total_prizes_funded_lifetime + 1 WHERE category_id = ?`)
-        .run(threshold, tier.categoryId);
+  try {
+    if (tier.entryFee > 0) {
+      custodian.debit(account.id, tier.entryFee, "satellite_entry", { referenceType: "satellite", referenceId: satellite.id });
     }
+    db.prepare("INSERT INTO satellite_entries (satellite_id, account_id, portfolio_id, entry_fee_paid) VALUES (?, ?, ?, ?)")
+      .run(satellite.id, account.id, portfolioId, tier.poolFee);
+
+    if (tier.surcharge > 0) {
+      // Mature legacy accumulator remains the single capture point during the
+      // transition. schemaV45's trigger mirrors each positive +50 into the
+      // actual V45 reserve. When V45 is enabled we deliberately do NOT turn
+      // that balance into old prizes_available counters.
+      db.prepare("UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk + ? WHERE category_id = ?")
+        .run(tier.surcharge, tier.categoryId);
+      if (!V45_ENABLED) {
+        const fund = db.prepare("SELECT * FROM freeroll_fund WHERE category_id = ?").get(tier.categoryId);
+        const threshold = FREEROLL_PRIZE_CONFIG[tier.categoryId].threshold;
+        if (fund.accumulated_stonk >= threshold) {
+          db.prepare(`UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk - ?, prizes_available = prizes_available + 1,
+            total_prizes_funded_lifetime = total_prizes_funded_lifetime + 1 WHERE category_id = ?`)
+            .run(threshold, tier.categoryId);
+        }
+      }
+    }
+    db.exec("COMMIT");
+    res.json({ ok: true, satelliteId: satellite.id, portfolioId, entryFeePaid: tier.entryFee });
+  } catch (err) {
+    try { db.exec("ROLLBACK"); } catch (_) {}
+    throw err;
   }
-  db.exec("COMMIT");
-  res.json({ ok: true, satelliteId: satellite.id, portfolioId, entryFeePaid: tier.entryFee });
 });
 
 module.exports = router;
