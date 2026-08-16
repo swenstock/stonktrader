@@ -1,0 +1,41 @@
+name: V45 Rebuild CI
+
+on:
+  push:
+    branches: [v45-rebuild]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.5.1'
+          cache: npm
+      - run: npm ci
+      - name: Syntax check server JavaScript
+        run: find server -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: Unit tests
+        run: npm test
+      - name: Server/API smoke test
+        env:
+          TEST_MODE: 'true'
+          DB_PATH: /tmp/sbc-v45-ci.db
+          PORT: '3456'
+        run: |
+          node server/index.js > /tmp/sbc-server.log 2>&1 &
+          PID=$!
+          trap 'kill $PID || true' EXIT
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:3456/api/health >/dev/null; then break; fi
+            sleep 0.5
+          done
+          curl -fsS http://127.0.0.1:3456/api/health
+          curl -fsS http://127.0.0.1:3456/api/config >/tmp/config.json
+          curl -fsS http://127.0.0.1:3456/api/economics >/tmp/economics.json
+          curl -fsS 'http://127.0.0.1:3456/api/sim-market/quotes?symbols=NVDA,MSFT' >/tmp/quotes.json
+          node -e "const q=require('/tmp/quotes.json'); if(q.length!==2||q.some(x=>x.source!=='sim')) process.exit(1)"
