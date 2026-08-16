@@ -17,11 +17,13 @@ jobs:
           node-version: '22.5.1'
           cache: npm
       - run: npm ci
-      - name: Syntax check server JavaScript
-        run: find server -name '*.js' -print0 | xargs -0 -n1 node --check
+      - name: Syntax check JavaScript
+        run: |
+          find server -name '*.js' -print0 | xargs -0 -n1 node --check
+          node --check public/v45/v45.js
       - name: Unit tests
         run: npm test
-      - name: Server/API smoke test
+      - name: Server/API/frontend smoke test
         env:
           TEST_MODE: 'true'
           DB_PATH: /tmp/sbc-v45-ci.db
@@ -38,4 +40,7 @@ jobs:
           curl -fsS http://127.0.0.1:3456/api/config >/tmp/config.json
           curl -fsS http://127.0.0.1:3456/api/economics >/tmp/economics.json
           curl -fsS 'http://127.0.0.1:3456/api/sim-market/quotes?symbols=NVDA,MSFT' >/tmp/quotes.json
+          curl -fsS http://127.0.0.1:3456/v45/ >/tmp/v45.html
+          grep -q 'CAN.T' /tmp/v45.html
+          grep -q 'TICKET EXCHANGE' /tmp/v45.html
           node -e "const q=require('/tmp/quotes.json'); if(q.length!==2||q.some(x=>x.source!=='sim')) process.exit(1)"
