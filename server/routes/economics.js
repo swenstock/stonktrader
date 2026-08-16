@@ -2,12 +2,22 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const reserveLedger = require('../reserveLedger');
+const freerollReserve = require('../freerollReserveV45');
 
 const MAIN_EVENT_TARGET = 733332;
 
 router.get('/', (req, res) => {
   const reserves = reserveLedger.balances();
-  const freerollByCategory = db.prepare(`
+  const freerollV45 = freerollReserve.all().map(r => ({
+    categoryId: r.category_id,
+    balanceStonk: Number(r.balance_stonk),
+    contributedLifetime: Number(r.contributed_lifetime),
+    spentLifetime: Number(r.spent_lifetime),
+    updatedAt: r.updated_at,
+  }));
+  // Historic counter-style balances remain visible but are NOT silently
+  // converted into V45 STONK because they were funded under older prices/rules.
+  const legacyFreeroll = db.prepare(`
     SELECT category_id, accumulated_stonk, prizes_available, total_prizes_funded_lifetime
     FROM freeroll_fund ORDER BY category_id
   `).all();
@@ -34,8 +44,10 @@ router.get('/', (req, res) => {
       note: 'Funding meter reflects reserve-ledger commitments, never ticket resale prices.',
     },
     reserves,
-    freerollByCategory,
+    freerollV45,
+    legacyFreeroll,
     outstandingTickets,
+    migrationNote: 'Legacy freeroll prize counters remain separate until explicitly reconciled under the new prices and top-10% payout rule.',
   });
 });
 
