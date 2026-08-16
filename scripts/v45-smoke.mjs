@@ -11,6 +11,15 @@ async function call(path, { method='GET', token='', body } = {}) {
   return out;
 }
 
+async function expectError(path, options, text) {
+  try { await call(path, options); }
+  catch (err) {
+    if (!String(err.message).includes(text)) throw err;
+    return;
+  }
+  throw new Error(`Expected ${path} to fail with ${text}`);
+}
+
 const stamp = `${Date.now()}-${Math.floor(Math.random()*1e6)}`;
 const buyerEmail = `buyer-${stamp}@example.com`;
 const sellerEmail = `seller-${stamp}@example.com`;
@@ -26,6 +35,37 @@ const seller = await call('/auth/signup', { method:'POST', body:{displayName:`Se
 await call('/dev/fund', { method:'POST', token:buyer.token, body:{amount:20000} });
 await call('/dev/fund', { method:'POST', token:seller.token, body:{amount:20000} });
 
+// ---- REAL PAPER-TRADING PATH: STANDARD VS DEGEN PERCENTAGE SEMANTICS ----
+const floor = await call('/satellites', { token:buyer.token });
+if (floor.payoutEngine !== 'v45') throw new Error('Trading Floor API is not using V45 payout engine');
+const fullDay = floor.categories.find(c=>c.id==='full_day');
+const degen = floor.categories.find(c=>c.id==='hourly');
+const freeStandard = fullDay?.levels?.find(l=>l.priceLevel==='free' && l.status==='open');
+const degenRunner = degen?.levels?.find(l=>l.priceLevel==='runner' && l.status==='open');
+if (!freeStandard?.id || !degenRunner?.id) throw new Error('Expected TEST_MODE standard freeroll and Degen Runner rooms to be open');
+
+const standardEntry = await call(`/satellites/${freeStandard.id}/enter`, { method:'POST', token:buyer.token, body:{} });
+let standardP = await call(`/portfolios/${standardEntry.portfolioId}`, { token:buyer.token });
+if (!standardP.tradingAllowed || standardP.isDegenHours) throw new Error('Standard TEST_MODE portfolio rules are wrong');
+await call(`/portfolios/${standardEntry.portfolioId}/trades`, { method:'POST', token:buyer.token, body:{symbol:'NVDA',side:'buy',percent:25} });
+standardP = await call(`/portfolios/${standardEntry.portfolioId}`, { token:buyer.token });
+if (Math.abs(standardP.cash - 97500) > 2) throw new Error(`Standard 25% quick buy should target 2.5% portfolio / ~$97,500 cash, got ${standardP.cash}`);
+await call(`/portfolios/${standardEntry.portfolioId}/trades`, { method:'POST', token:buyer.token, body:{symbol:'NVDA',side:'buy',percent:100} });
+standardP = await call(`/portfolios/${standardEntry.portfolioId}`, { token:buyer.token });
+if (Math.abs(standardP.cash - 90000) > 3) throw new Error(`Standard 100% quick buy should reach 10% cost basis / ~$90,000 cash, got ${standardP.cash}`);
+await expectError(`/portfolios/${standardEntry.portfolioId}/trades`, { method:'POST', token:buyer.token, body:{symbol:'NVDA',side:'buy',quantity:1} }, '10%');
+
+const degenEntry = await call(`/satellites/${degenRunner.id}/enter`, { method:'POST', token:buyer.token, body:{} });
+let degenP = await call(`/portfolios/${degenEntry.portfolioId}`, { token:buyer.token });
+if (!degenP.tradingAllowed || !degenP.isDegenHours) throw new Error('Degen portfolio rules are wrong');
+await call(`/portfolios/${degenEntry.portfolioId}/trades`, { method:'POST', token:buyer.token, body:{symbol:'NVDA',side:'buy',percent:50} });
+degenP = await call(`/portfolios/${degenEntry.portfolioId}`, { token:buyer.token });
+if (Math.abs(degenP.cash - 50000) > 3) throw new Error(`Degen 50% buy should use half available cash, got ${degenP.cash}`);
+await call(`/portfolios/${degenEntry.portfolioId}/trades`, { method:'POST', token:buyer.token, body:{symbol:'NVDA',side:'sell',percent:50} });
+degenP = await call(`/portfolios/${degenEntry.portfolioId}`, { token:buyer.token });
+if (Math.abs(degenP.cash - 75000) > 5) throw new Error(`Degen 50% sell should liquidate half the position, got ${degenP.cash}`);
+
+// ---- BID -> SELL TO BID ----
 const mintedRunner = await call('/dev/tickets', { method:'POST', token:seller.token, body:{ticketType:'runner',quantity:1} });
 const runnerTicketId = mintedRunner.tickets[0].id;
 const bid = await call('/ticket-market/bids', { method:'POST', token:buyer.token, body:{ticketType:'runner',bidPrice:150} });
@@ -35,6 +75,7 @@ await call(`/ticket-market/bids/${bid.id}/sell`, { method:'POST', token:seller.t
 const buyerAfterBid = await call('/tickets', { token:buyer.token });
 if ((buyerAfterBid.inventory.runner?.owned || 0) !== 1) throw new Error('Runner ticket did not transfer to bid buyer');
 
+// ---- OFFER -> BUY OFFER ----
 const mintedClerk = await call('/dev/tickets', { method:'POST', token:seller.token, body:{ticketType:'clerk',quantity:1} });
 const clerkTicketId = mintedClerk.tickets[0].id;
 const offer = await call('/ticket-market/offers', { method:'POST', token:seller.token, body:{ticketId:clerkTicketId,askPrice:180} });
@@ -47,12 +88,14 @@ if ((buyerAfterOffer.inventory.clerk?.owned || 0) !== 1) throw new Error('Clerk 
 const finalRunnerBook = await call('/ticket-market/book/runner');
 if (Number(finalRunnerBook.exchangeFeePct) !== 0) throw new Error('Default exchange fee must remain 0 until product decision');
 
+// ---- TEST CLOCK + DETERMINISTIC SIM DATA ----
 const clock = await call('/test-clock', { method:'POST', token:buyer.token, body:{datetime:'2026-08-17T09:30'} });
 const instant = new Date(clock.now);
 if (instant.getUTCHours() !== 13 || instant.getUTCMinutes() !== 30) throw new Error(`9:30 ET August Test Clock did not map to 13:30Z: ${clock.now}`);
 const q1 = await call('/sim-market/quotes?symbols=NVDA,MSFT');
 if (q1.length !== 2 || q1.some(q=>q.source!=='sim')) throw new Error('Simulated quote feed invalid');
 
+// ---- ECONOMIC PREVIEW ----
 const payout = await call('/dev/payout-preview?tier=trader&field=100');
 if (payout.status !== 'OK' || payout.paidPlaces !== 10 || !payout.reconciliation?.entry || !payout.reconciliation?.prize) {
   throw new Error('Trader-100 payout preview failed reconciliation');
