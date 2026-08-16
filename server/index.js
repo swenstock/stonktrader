@@ -4,6 +4,18 @@ const http = require("http");
 const path = require("path");
 const cors = require("cors");
 
+// V45 is the rebuild default. Normalize this BEFORE any routes/schedulers are
+// required so every module agrees on the active economic engine.
+const useLegacySatellitePayout = String(process.env.PAYOUT_ENGINE_V45 || "v45").toLowerCase() === "legacy";
+process.env.PAYOUT_ENGINE_V45 = useLegacySatellitePayout ? "legacy" : "true";
+
+// Compressed QA rooms still need enough runway to exercise the real Degen
+// 5-minute cutoff. Twenty minutes keeps tests fast without making entry
+// impossible. Production ignores this unless TEST_MODE=true.
+if (process.env.TEST_MODE === "true" && !process.env.TEST_SATELLITE_MINUTES) {
+  process.env.TEST_SATELLITE_MINUTES = "20";
+}
+
 require("./schemaV45").run();
 
 const authRoutes = require("./routes/auth");
@@ -26,11 +38,6 @@ const adminRoutes = require("./routes/admin");
 const testClockRoutes = require("./routes/testClock");
 const devRoutes = require("./routes/dev");
 const contestScheduler = require("./contestScheduler");
-
-// V45 is the rebuild default. Set PAYOUT_ENGINE_V45=legacy only for an
-// intentional rollback during QA; an absent env var must never silently
-// reactivate the retired satellite payout rules after deployment.
-const useLegacySatellitePayout = String(process.env.PAYOUT_ENGINE_V45 || "v45").toLowerCase() === "legacy";
 const satelliteScheduler = useLegacySatellitePayout
   ? require("./satelliteScheduler")
   : require("./satelliteSchedulerV45");
