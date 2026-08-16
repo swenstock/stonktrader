@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SBC — Portfolio Execution</title>
+  <link rel="stylesheet" href="./v45.css">
+  <link rel="stylesheet" href="./trade.css">
+</head>
+<body class="trade-page">
+<header class="topbar trade-topbar">
+  <button class="brand" id="homeBtn"><span>STONK</span> BROKER CHALLENGE</button>
+  <div class="trade-head-copy"><small>NOW VIEWING</small><b id="portfolioTitle">PORTFOLIO</b><span id="contestMeta">Loading…</span></div>
+  <div class="top-actions"><button id="backBtn" class="ghost">← MY CONTESTS</button></div>
+</header>
+<div class="statusbar"><span id="marketMode">SIM DATA</span><span id="serverNow">—</span><span id="tradeStatus">CHECKING MARKET…</span></div>
+
+<main class="trade-shell">
+  <section class="portfolio-scorebar">
+    <div><small>PORTFOLIO VALUE</small><b id="portfolioValue">$100,000.00</b></div>
+    <div><small>P&amp;L</small><b id="portfolioPL">$0.00</b></div>
+    <div><small>CASH</small><b id="portfolioCash">$100,000.00</b></div>
+    <div><small>POSITIONS</small><b id="positionCount">0</b></div>
+    <div><small>RULE SET</small><b id="ruleSet">STANDARD 10%</b></div>
+  </section>
+
+  <div class="execution-grid">
+    <aside class="positions-panel">
+      <header><small>YOUR BOOK</small><h2>POSITIONS</h2></header>
+      <div id="positionsList" class="positions-list"></div>
+      <div class="symbol-search">
+        <label for="symbolInput">LOOK UP SYMBOL</label>
+        <div><input id="symbolInput" list="symbolList" value="NVDA" maxlength="8"><button id="loadSymbol" class="blue">GO</button></div>
+        <datalist id="symbolList"></datalist>
+      </div>
+    </aside>
+
+    <section class="chart-panel">
+      <div class="chart-toolbar">
+        <div class="symbol-title"><b id="chartSymbol">NVDA</b><span id="chartCompany">NVIDIA Corp.</span></div>
+        <div class="quote-now"><b id="chartPrice">—</b><span id="chartChange">—</span></div>
+        <div class="chart-types"><button data-chart-type="candles" class="active">CANDLES</button><button data-chart-type="line">LINE</button></div>
+      </div>
+      <div class="interval-row">
+        <button data-interval="tick">TICK</button><button data-interval="1m">1m</button><button data-interval="5m" class="active">5m</button><button data-interval="15m">15m</button><button data-interval="1h">1h</button><button data-interval="1D">1D</button>
+        <span class="toolbar-spacer"></span>
+        <label><input id="maToggle" type="checkbox"> MA</label><label><input id="emaToggle" type="checkbox"> EMA</label><label><input id="volumeToggle" type="checkbox" checked> VOL</label><label><input id="crosshairToggle" type="checkbox" checked> CROSSHAIR</label>
+      </div>
+      <div class="ohlc-strip" id="ohlcStrip">O — &nbsp; H — &nbsp; L — &nbsp; C —</div>
+      <div class="canvas-wrap"><canvas id="marketChart"></canvas><div id="chartTip" class="chart-tip hidden"></div></div>
+      <div class="position-strip" id="positionStrip">NO POSITION IN NVDA</div>
+
+      <section class="quick-trade">
+        <div class="quick-head"><div><small>QUICK EXECUTION</small><h2 id="quickTitle">TRADE NVDA</h2></div><span id="tradeRuleNote">Standard buys are capped at 10% cost basis.</span></div>
+        <div class="quick-grid">
+          <div class="side-toggle"><button id="buySide" class="active buy">BUY</button><button id="sellSide" class="sell">SELL</button></div>
+          <div class="mode-toggle"><button id="percentMode" class="active">PERCENTAGE</button><button id="sharesMode">SHARES</button></div>
+          <div id="percentControls" class="percent-controls"><button data-percent="25">25%</button><button data-percent="50">50%</button><button data-percent="75">75%</button><button data-percent="100">100%</button></div>
+          <div id="sharesControls" class="shares-controls hidden"><input id="shareQty" type="number" min="0" step="0.01" placeholder="Shares"><button id="submitShares" class="green">EXECUTE</button></div>
+        </div>
+        <div id="quickMeaning" class="quick-meaning">BUY 25% means target 2.5% of portfolio value in this stock.</div>
+        <div id="tradeClosedMsg" class="trade-closed hidden"></div>
+      </section>
+    </section>
+  </div>
+
+  <section class="panel history-panel">
+    <div class="section-head"><div><small>EXECUTION LOG</small><h2>RECENT TRADES</h2></div><button id="refreshBtn" class="ghost">REFRESH</button></div>
+    <div id="tradeHistory" class="trade-history"></div>
+  </section>
+</main>
+<div id="toast" class="toast"></div>
+<script src="./trade.js"></script>
+</body>
+</html>
