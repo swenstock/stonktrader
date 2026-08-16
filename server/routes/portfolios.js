@@ -9,6 +9,8 @@ const { easternParts, isWeekday } = require("../timeHelpers");
 
 const MAX_INITIAL_POSITION_PCT = 0.10;
 const TEST_MODE = process.env.TEST_MODE === "true";
+const TEST_SATELLITE_MINUTES = Number(process.env.TEST_SATELLITE_MINUTES || 20);
+const TEST_MAIN_EVENT_MINUTES = Number(process.env.TEST_MAIN_EVENT_MINUTES || 10);
 
 function satelliteForPortfolio(portfolioId) {
   return db.prepare(`SELECT satellites.* FROM satellite_entries
@@ -30,7 +32,21 @@ function regularMarketOpen(now) {
   if (!isWeekday(now)) return false;
   const p = easternParts(now);
   const minutes = Number(p.hour) * 60 + Number(p.minute);
-  return minutes >= 570 && minutes < 960; // 9:30am <= now < 4:00pm ET
+  return minutes >= 570 && minutes < 960;
+}
+
+function durationMinutes(start, end) {
+  return Math.max(0, (new Date(end).getTime() - new Date(start).getTime()) / 60000);
+}
+
+function isCompressedTestSatellite(satellite) {
+  if (!TEST_MODE || !satellite) return false;
+  return durationMinutes(satellite.opens_at, satellite.locks_at) <= TEST_SATELLITE_MINUTES + 0.25;
+}
+
+function isCompressedTestContest(contest) {
+  if (!TEST_MODE || !contest) return false;
+  return durationMinutes(contest.week_start, contest.week_end) <= TEST_MAIN_EVENT_MINUTES + 0.25;
 }
 
 function tradeAvailability(portfolioId) {
@@ -41,10 +57,12 @@ function tradeAvailability(portfolioId) {
     const opens = new Date(satellite.opens_at).getTime();
     const locks = new Date(satellite.locks_at).getTime();
     if (now.getTime() < opens || now.getTime() >= locks) return { allowed:false, reason:"This contest is outside its trading window.", now };
-    // TEST_MODE without an explicit clock override intentionally runs compressed
-    // sessions at any wall-clock hour. Once an override is set, real market-hour
-    // rules are tested exactly.
-    if (!(TEST_MODE && !testClock.getStatus().overridden) && !regularMarketOpen(now)) {
+
+    // Compressed TEST_MODE rooms are synthetic QA sessions and may be created
+    // on weekends/after hours. Their own open/lock bounds are authoritative.
+    // Real-duration rooms — including Test Clock simulations of actual market
+    // sessions — still obey normal U.S. equity market hours.
+    if (!isCompressedTestSatellite(satellite) && !regularMarketOpen(now)) {
       return { allowed:false, reason:"US equity trading is closed. SBC trading resumes at the next regular-market window.", now };
     }
     return { allowed:true, now, type:"satellite", source:satellite };
@@ -56,7 +74,7 @@ function tradeAvailability(portfolioId) {
     if (now.getTime() < new Date(contest.week_start).getTime() || now.getTime() >= new Date(contest.week_end).getTime()) {
       return { allowed:false, reason:"The Main Event is outside its active week.", now };
     }
-    if (!(TEST_MODE && !testClock.getStatus().overridden) && !regularMarketOpen(now)) {
+    if (!isCompressedTestContest(contest) && !regularMarketOpen(now)) {
       return { allowed:false, reason:"US equity trading is closed. The Main Event resumes at the next regular-market open.", now };
     }
     return { allowed:true, now, type:"contest", source:contest };
@@ -189,8 +207,6 @@ router.post("/:id/trades", requireAuth, (req, res) => {
       const spend = fresh.cash_balance * (percent / 100);
       quantity = spend / quote.price;
     } else {
-      // Standard SBC quick-buy buttons mean 25/50/75/100% of the 10% max
-      // position allocation: 2.5%, 5%, 7.5%, or 10% target cost basis.
       const portfolioValue = totalValueForPortfolio(portfolioId);
       const existingCostBasis = position ? position.avg_cost * position.quantity : 0;
       const targetCostBasis = portfolioValue * MAX_INITIAL_POSITION_PCT * (percent / 100);
