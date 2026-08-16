@@ -18,6 +18,8 @@ function run() {
   addColumn('tickets', 'backing_stonk REAL');
   addColumn('satellites', 'settlement_version TEXT');
   addColumn('satellites', 'settlement_error TEXT');
+  addColumn('satellite_results', 'entry_id INTEGER');
+  addColumn('satellite_results', 'portfolio_id INTEGER');
   addColumn('satellite_results', 'ticket_type TEXT');
   addColumn('satellite_results', 'ticket_quantity INTEGER');
   addColumn('satellite_results', 'stonk_bonus REAL');
