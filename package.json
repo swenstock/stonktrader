@@ -6,9 +6,10 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "npm run test:payout && npm run test:quotes",
+    "test": "npm run test:payout && npm run test:quotes && npm run test:clock",
     "test:payout": "node server/payoutEngineV2.test.js",
-    "test:quotes": "node server/simulatedQuoteEngine.test.js"
+    "test:quotes": "node server/simulatedQuoteEngine.test.js",
+    "test:clock": "node server/testClock.test.js"
   },
   "engines": {
     "node": ">=22.5.0"
