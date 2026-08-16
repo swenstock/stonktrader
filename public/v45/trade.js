@@ -1,6 +1,7 @@
 (() => {
   'use strict';
-  const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+  const rootNode=r=>typeof r==='string'?document.querySelector(r):r;
+  const $=(s,r=document)=>rootNode(r).querySelector(s), $$=(s,r=document)=>[...rootNode(r).querySelectorAll(s)];
   const token=localStorage.getItem('token')||'';
   const params=new URLSearchParams(location.search);
   const portfolioId=params.get('id');
@@ -162,16 +163,15 @@
     $('#marketChart').addEventListener('mousemove',handleChartMouse);$('#marketChart').addEventListener('mouseleave',clearHover);window.addEventListener('resize',drawChart);
   }
 
-  // Contextual tutorial follows the same "show until explicitly disabled" rule.
   const tutorialSteps=[
     ['.positions-panel','YOUR POSITIONS','Click any holding to load it directly into the chart and execution controls.'],
     ['.chart-panel','TRADE FROM THE CHART','Candles or line, multiple intervals, volume, MA/EMA and crosshair preferences are saved locally.'],
     ['.quick-trade','QUICK EXECUTION','Shares are exact. Percentage buys use SBC semantics: standard = slice of the 10% cap; Degen = available cash.'],
   ];
-  let tutIndex=0,tutTarget=null,tutOld='';
+  let tutTarget=null,tutOld='';
   function endTutorial(){if(tutTarget)tutTarget.style.outline=tutOld;$('#portfolioTutorial')?.remove()}
   function showTutorial(i=0){
-    endTutorial();tutIndex=i;if(i>=tutorialSteps.length)return;
+    endTutorial();if(i>=tutorialSteps.length)return;
     const [sel,title,text]=tutorialSteps[i],target=$(sel);if(!target)return;target.scrollIntoView({block:'center',behavior:'smooth'});tutTarget=target;tutOld=target.style.outline;target.style.outline='3px solid #ffc400';
     const pop=document.createElement('div');pop.id='portfolioTutorial';Object.assign(pop.style,{position:'fixed',zIndex:500,width:'min(420px,calc(100vw - 36px))',background:'#07121a',border:'1px solid #a07d12',borderRadius:'14px',padding:'18px',boxShadow:'0 20px 80px #000'});pop.innerHTML=`<small style="color:#ffc400;font-weight:900">${i+1} OF ${tutorialSteps.length}</small><h2 style="margin:7px 0">${title}</h2><p style="color:#b5c6ce;font-size:12px">${text}</p><div style="display:grid;grid-template-columns:1fr 1fr;gap:7px"><button id="ptSkip" class="ghost">SKIP FOR NOW</button><button id="ptNext" class="green">${i===tutorialSteps.length-1?'DONE':'NEXT →'}</button></div><button id="ptDisable" class="danger" style="width:100%;padding:10px;border-radius:8px;margin-top:7px;font-weight:900">DON'T SHOW THIS AGAIN</button>`;document.body.appendChild(pop);
     const r=target.getBoundingClientRect(),safe=innerWidth<620?12:18,gap=12,w=Math.min(420,innerWidth-safe*2);pop.style.width=`${w}px`;let top=r.bottom+gap;const h=pop.offsetHeight;if(top+h>innerHeight-safe)top=r.top-h-gap;if(top<safe)top=safe;pop.style.left=`${Math.max(safe,Math.min(innerWidth-w-safe,r.left))}px`;pop.style.top=`${top}px`;
