@@ -39,11 +39,13 @@ function writeResults({ satellite, ranked, awards }) {
       });
     }
     db.prepare(`INSERT INTO satellite_results
-      (satellite_id, account_id, rank, pl, prize_type, prize_amount, ticket_type, ticket_quantity, stonk_bonus)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+      (satellite_id, account_id, entry_id, portfolio_id, rank, pl, prize_type, prize_amount, ticket_type, ticket_quantity, stonk_bonus)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .run(
         satellite.id,
         r.accountId,
+        r.entryId ?? null,
+        r.portfolioId ?? null,
         rank,
         Number(r.pl || 0),
         resultPrizeType(award),
