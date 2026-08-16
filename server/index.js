@@ -10,6 +10,7 @@ require("./schemaV45").run();
 
 const authRoutes = require("./routes/auth");
 const accountRoutes = require("./routes/account");
+const configRoutes = require("./routes/config");
 const quoteRoutes = require("./routes/quotes");
 const simulatedMarketRoutes = require("./routes/simulatedMarket");
 const portfolioRoutes = require("./routes/portfolios");
@@ -34,6 +35,7 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/account", accountRoutes);
+app.use("/api/config", configRoutes);
 app.use("/api/quotes", quoteRoutes);
 app.use("/api/sim-market", simulatedMarketRoutes);
 app.use("/api/portfolios", portfolioRoutes);
