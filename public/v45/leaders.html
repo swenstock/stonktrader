@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SBC — Leaderboards</title>
+  <link rel="stylesheet" href="./v45.css">
+  <link rel="stylesheet" href="./leaders.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="brand" id="homeBtn"><span>STONK</span> BROKER CHALLENGE</button>
+  <div class="leaders-title"><small>LIVE STANDINGS</small><b>LEADERBOARDS</b></div>
+  <div class="top-actions"><button id="helpBtn" class="ghost">?</button><button id="backBtn" class="ghost">← BACK</button></div>
+</header>
+<div class="statusbar"><span>FULL FIELD</span><span id="sourceStatus">SELECT A CONTEST</span><span>TOP 10% PRIZE ZONE</span></div>
+
+<main class="leaders-shell">
+  <section class="source-panel">
+    <div class="section-head"><div><small>CHOOSE THE FIELD</small><h2>LIVE + RECENT CONTESTS</h2></div><button id="refreshSources" class="ghost">REFRESH</button></div>
+    <div id="sourceTabs" class="source-tabs"></div>
+  </section>
+
+  <section class="leader-stage">
+    <div class="leader-head">
+      <div><small id="leaderType">CONTEST</small><h1 id="leaderName">SELECT A CONTEST</h1><p id="leaderMeta">Every entry appears once in the full field.</p></div>
+      <button id="refreshBoard" class="ghost">REFRESH STANDINGS</button>
+    </div>
+
+    <div class="find-summary" id="findSummary">
+      <div><small>YOUR BEST RANK</small><b id="yourRank">—</b></div>
+      <div><small>MONEY LINE</small><b id="moneyLine">—</b></div>
+      <div><small>RIGHT NOW</small><b id="rightNow">SIGN IN TO FIND YOU</b></div>
+      <div class="jump-box"><button id="jumpMe" class="green">🎯 JUMP TO ME</button><button id="jumpMoney" class="gold">💰 JUMP TO MONEY LINE</button></div>
+    </div>
+
+    <div class="leader-scroll" id="leaderScroll">
+      <div class="leader-table-head"><span>RANK</span><span>TRADER</span><span>ENTRY</span><span>P&amp;L</span><span>STATUS</span></div>
+      <div id="leaderRows"></div>
+    </div>
+    <div id="scrollFooter" class="scroll-footer">Select a contest to load the full field.</div>
+  </section>
+</main>
+<div id="toast" class="toast"></div>
+<script src="./leaders.js"></script>
+</body>
+</html>
