@@ -16,6 +16,11 @@ function run() {
   addColumn('tickets', "ticket_type TEXT NOT NULL DEFAULT 'main_event'");
   addColumn('tickets', 'applied_to_satellite_id INTEGER');
   addColumn('tickets', 'backing_stonk REAL');
+  addColumn('satellites', 'settlement_version TEXT');
+  addColumn('satellites', 'settlement_error TEXT');
+  addColumn('satellite_results', 'ticket_type TEXT');
+  addColumn('satellite_results', 'ticket_quantity INTEGER');
+  addColumn('satellite_results', 'stonk_bonus REAL');
   db.prepare("UPDATE tickets SET backing_stonk = value_stonk WHERE backing_stonk IS NULL").run();
 
   db.exec(`
@@ -52,9 +57,6 @@ function run() {
     CREATE INDEX IF NOT EXISTS idx_sbc_reserve_bucket
       ON sbc_reserve_ledger(bucket, id);
 
-    -- The legacy table did not include Race because Race has no free room.
-    -- Add the row only so old paid-entry code cannot crash while the V45
-    -- resolver is being introduced. V45 pools Race contributions with Degen.
     INSERT OR IGNORE INTO freeroll_fund (category_id) VALUES ('race_to_close');
 
     CREATE TABLE IF NOT EXISTS freeroll_reserve_v45 (
@@ -67,10 +69,6 @@ function run() {
     INSERT OR IGNORE INTO freeroll_reserve_v45 (category_id) VALUES
       ('weekly_qualifier'), ('full_day'), ('morning'), ('afternoon'), ('degen');
 
-    -- During the transition, mature entry code still deposits the protected
-    -- 50 into legacy freeroll_fund.accumulated_stonk. Mirror ONLY positive
-    -- increases into the V45 actual-STONK reserve. Legacy threshold deductions
-    -- are negative changes and therefore never reduce/double-count V45 money.
     DROP TRIGGER IF EXISTS trg_v45_mirror_freeroll_contribution;
     CREATE TRIGGER trg_v45_mirror_freeroll_contribution
     AFTER UPDATE OF accumulated_stonk ON freeroll_fund
