@@ -26,9 +26,14 @@ const adminRoutes = require("./routes/admin");
 const testClockRoutes = require("./routes/testClock");
 const devRoutes = require("./routes/dev");
 const contestScheduler = require("./contestScheduler");
-const satelliteScheduler = process.env.PAYOUT_ENGINE_V45 === "true"
-  ? require("./satelliteSchedulerV45")
-  : require("./satelliteScheduler");
+
+// V45 is the rebuild default. Set PAYOUT_ENGINE_V45=legacy only for an
+// intentional rollback during QA; an absent env var must never silently
+// reactivate the retired satellite payout rules after deployment.
+const useLegacySatellitePayout = String(process.env.PAYOUT_ENGINE_V45 || "v45").toLowerCase() === "legacy";
+const satelliteScheduler = useLegacySatellitePayout
+  ? require("./satelliteScheduler")
+  : require("./satelliteSchedulerV45");
 const marketOpenScheduler = require("./marketOpenScheduler");
 const { attachWebSocket } = require("./ws");
 
