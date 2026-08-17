@@ -9,7 +9,6 @@
     return fallback?.src||'';
   };
   const img=(key,cls,alt='StonkBroker')=>{const el=document.createElement('img');el.className=cls;el.src=art(key);el.alt=alt;return el;};
-  const cleanEmojiLabel=(el)=>{if(!el)return;el.childNodes.forEach(n=>{if(n.nodeType===Node.TEXT_NODE)n.textContent=n.textContent.replace(/^[\s🏆📂👑✨🌞🌇📅]+/u,'').trimStart();});};
 
   function compactPath(){
     const box=document.querySelector('.statement');
@@ -17,14 +16,25 @@
     box.dataset.mobileV3='1';
     const rows=[
       ['runner','EARN A TICKET','Finish in the money.'],
-      ['trader','PLAY • HOLD • SELL','Use your ticket or trade it.'],
-      ['junior','WIN THE STONKBROKER','Main Event champion takes it.']
+      ['trader','PLAY • HOLD • SELL','Use it or trade it.'],
+      ['junior','WIN THE STONKBROKER','Finish #1 in the Main Event.']
     ];
     box.innerHTML='';
     rows.forEach(([key,title,copy])=>{
       const row=document.createElement('div');row.className='mobile-path-row';
       row.appendChild(img(key,'mobile-broker-anchor'));
       const text=document.createElement('div');text.innerHTML=`<b>${title}</b><span>${copy}</span>`;row.appendChild(text);box.appendChild(row);
+    });
+  }
+
+  function decorateFloorCTA(){
+    document.querySelectorAll('.action').forEach(a=>{
+      const t=(a.textContent||'').toUpperCase();
+      if(!t.includes('TRADING FLOOR')||a.querySelector('.mobile-floor-brokers'))return;
+      const strip=document.createElement('div');strip.className='mobile-floor-brokers';
+      tierOrder.forEach(key=>strip.appendChild(img(key,'mobile-floor-broker',key)));
+      a.appendChild(strip);
+      const small=a.querySelector('small');if(small)small.textContent='Free Roll → Jr. StonkBroker';
     });
   }
 
@@ -51,7 +61,7 @@
 
     document.querySelectorAll('.mini-tier').forEach((row,i)=>{
       if(row.querySelector('.mobile-tier-thumb'))return;
-      const key=tierOrder[i]||'runner';row.insertBefore(img(key,'mobile-tier-thumb'),row.firstChild);
+      row.insertBefore(img(tierOrder[i]||'runner','mobile-tier-thumb'),row.firstChild);
     });
 
     let current=0;
@@ -63,14 +73,6 @@
     steps.forEach((_,i)=>{const d=document.createElement('span');d.className='mobile-step-dot';d.onclick=()=>show(i);dots.appendChild(d);});
     function show(i){current=Math.max(0,Math.min(steps.length-1,i));steps.forEach((s,j)=>s.classList.toggle('mobile-step-active',j===current));[...dots.children].forEach((d,j)=>d.classList.toggle('active',j===current));prev.disabled=current===0;next.disabled=current===steps.length-1;}
     prev.onclick=()=>show(current-1);next.onclick=()=>show(current+1);show(0);
-  }
-
-  function footerAnchor(){
-    const card=document.querySelector('.footer-card');if(!card)return;
-    if(!card.querySelector('.mobile-footer-broker'))card.insertBefore(img('junior','mobile-footer-broker'),card.firstChild);
-    const strong=card.querySelector('strong');const span=card.querySelector('span');
-    if(strong)strong.textContent='MAIN EVENT = THE DESTINATION';
-    if(span)span.textContent='Earn or buy a ticket. Finish #1.';
   }
 
   function sessionAnchors(){document.querySelectorAll('.session').forEach(session=>{const holder=session.querySelector('.session-icon');if(!holder||holder.querySelector('.mobile-session-broker'))return;let key='runner';try{if(typeof currentTierKey!=='undefined'&&tierOrder.includes(currentTierKey))key=currentTierKey;}catch(e){}holder.textContent='';holder.appendChild(img(key,'mobile-session-broker'));});}
@@ -86,11 +88,11 @@
   }
 
   function tightenLabels(){
-    document.querySelectorAll('.action').forEach(a=>{const t=(a.textContent||'').toUpperCase();if(t.includes('TRADING FLOOR')){const small=a.querySelector('small');if(small)small.textContent='Choose tier • session • trade';}if(t.includes('TICKET EXCHANGE')){const small=a.querySelector('small');if(small)small.textContent='Buy or sell tickets';}});
+    document.querySelectorAll('.action').forEach(a=>{const t=(a.textContent||'').toUpperCase();if(t.includes('TICKET EXCHANGE')){const small=a.querySelector('small');if(small)small.textContent='Buy or sell tickets';}});
   }
 
-  function enhance(){compactPath();setupStepViewer();footerAnchor();sessionAnchors();contestAnchors();headerBroker();tightenLabels();}
-  const observer=new MutationObserver(()=>{sessionAnchors();contestAnchors();});
+  function enhance(){compactPath();decorateFloorCTA();setupStepViewer();sessionAnchors();contestAnchors();headerBroker();tightenLabels();}
+  const observer=new MutationObserver(()=>{sessionAnchors();contestAnchors();decorateFloorCTA();});
   const start=()=>{enhance();syncVisiblePrices();observer.observe(document.body,{childList:true,subtree:true});};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
