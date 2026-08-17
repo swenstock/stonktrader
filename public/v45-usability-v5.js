@@ -34,7 +34,7 @@
       const tabs=document.createElement('div');tabs.className='orders-activity-tabs';
       tabs.innerHTML='<button type="button" data-orders-tab="queued">QUEUED</button><button type="button" data-orders-tab="activity">RECENT ACTIVITY</button>';
       tabs.querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>setOrderTab(btn.dataset.ordersTab)));
-      head.after(tabs);
+      head?.after(tabs);
     }
 
     if(hList.parentElement!==queue){
@@ -48,7 +48,6 @@
     if(!document.getElementById('queueSubtitle')){
       const ghost=document.createElement('span');ghost.id='queueSubtitle';ghost.hidden=true;queue.appendChild(ghost);
     }
-
     setOrderTab(orderTab);
   }
 
@@ -59,9 +58,8 @@
     const grid=document.querySelector('.bottom-trade-grid');
     if(!layout||!holdings||!grid)return;
     layout.classList.add('usability-v5');
-    let stack=layout.querySelector('.trade-left-stack');
-    if(!stack){
-      stack=document.createElement('div');stack.className='trade-left-stack';
+    if(!layout.querySelector('.trade-left-stack')){
+      const stack=document.createElement('div');stack.className='trade-left-stack';
       layout.insertBefore(stack,holdings);stack.appendChild(holdings);stack.appendChild(grid);
     }
   }
@@ -75,50 +73,20 @@
     const empty=rows.length===0;
     card.classList.toggle('empty-portfolio',empty);
     let kpis=card.querySelector('.empty-portfolio-kpis');
-    if(!empty){ if(kpis)kpis.remove(); card.dataset.emptySig=''; return; }
-
+    if(!empty){ if(kpis)kpis.remove(); return; }
+    if(!kpis){ kpis=document.createElement('div');kpis.className='empty-portfolio-kpis';card.querySelector('.card-head')?.after(kpis); }
     const cash=Number(p.cash??100000);
-    const sig=`${cash.toFixed(2)}|${rows.length}`;
-    if(card.dataset.emptySig===sig && kpis && body.querySelector('.empty-cash-row'))return;
-    card.dataset.emptySig=sig;
-
-    if(!kpis){
-      kpis=document.createElement('div');kpis.className='empty-portfolio-kpis';
-      card.querySelector('.card-head')?.after(kpis);
-    }
-    kpis.innerHTML=`
-      <div class="empty-kpi"><span>PORTFOLIO VALUE</span><b>${money(cash)}</b></div>
-      <div class="empty-kpi"><span>INVESTED</span><b>$0</b></div>
-      <div class="empty-kpi good"><span>P&L</span><b>+$0.00</b></div>
-      <div class="empty-kpi"><span>POSITIONS</span><b>0</b></div>`;
-    body.innerHTML=`<tr class="empty-cash-row">
-      <td><span class="cash-label">CASH</span><span class="cash-sub">100% uninvested</span></td>
-      <td>—</td><td>—</td><td>—</td><td>${money(cash)} • 100%</td><td class="pl-good">+$0.00 • 0.0%</td>
-    </tr>`;
+    kpis.innerHTML=`<div class="empty-kpi"><span>PORTFOLIO VALUE</span><b>${money(cash)}</b></div><div class="empty-kpi"><span>INVESTED</span><b>$0</b></div><div class="empty-kpi good"><span>P&L</span><b>+$0.00</b></div><div class="empty-kpi"><span>POSITIONS</span><b>0</b></div>`;
+    if(!body.querySelector('.empty-cash-row')) body.innerHTML=`<tr class="empty-cash-row"><td><span class="cash-label">CASH</span><span class="cash-sub">100% uninvested</span></td><td>—</td><td>—</td><td>—</td><td>${money(cash)} • 100%</td><td class="pl-good">+$0.00 • 0.0%</td></tr>`;
   }
 
   function ensureSuccessOverlay(){
     if(successOverlay)return successOverlay;
-    successOverlay=document.createElement('div');
-    successOverlay.className='queue-success-overlay';successOverlay.hidden=true;
-    successOverlay.innerHTML=`<div class="queue-success-card" role="dialog" aria-modal="true" aria-labelledby="queueSuccessTitle">
-      <div class="queue-success-icon">✓</div>
-      <h2 id="queueSuccessTitle">ORDER QUEUED</h2>
-      <p>Your order is saved and will execute when the session opens.</p>
-      <div class="queue-success-detail" id="queueSuccessDetail"></div>
-      <div class="queue-success-actions">
-        <button type="button" class="primary" id="queueViewOrders">VIEW MY ORDERS</button>
-        <button type="button" id="queueKeepTrading">KEEP TRADING</button>
-      </div>
-      <span class="queue-success-help">You can cancel queued orders before the session opens.</span>
-    </div>`;
+    successOverlay=document.createElement('div');successOverlay.className='queue-success-overlay';successOverlay.hidden=true;
+    successOverlay.innerHTML=`<div class="queue-success-card" role="dialog" aria-modal="true" aria-labelledby="queueSuccessTitle"><div class="queue-success-icon">✓</div><h2 id="queueSuccessTitle">ORDER QUEUED</h2><p>Your order is saved and will execute when the session opens.</p><div class="queue-success-detail" id="queueSuccessDetail"></div><div class="queue-success-actions"><button type="button" class="primary" id="queueViewOrders">VIEW MY ORDERS</button><button type="button" id="queueKeepTrading">KEEP TRADING</button></div><span class="queue-success-help">You can cancel queued orders before the session opens.</span></div>`;
     document.body.appendChild(successOverlay);
     successOverlay.querySelector('#queueKeepTrading').onclick=()=>successOverlay.hidden=true;
-    successOverlay.querySelector('#queueViewOrders').onclick=()=>{
-      successOverlay.hidden=true;setOrderTab('queued');
-      const card=document.querySelector('.orders-activity-card');
-      card?.scrollIntoView({behavior:'smooth',block:'center'});card?.classList.add('pulse');setTimeout(()=>card?.classList.remove('pulse'),1000);
-    };
+    successOverlay.querySelector('#queueViewOrders').onclick=()=>{successOverlay.hidden=true;setOrderTab('queued');const card=document.querySelector('.orders-activity-card');card?.scrollIntoView({behavior:'smooth',block:'center'});};
     successOverlay.addEventListener('click',e=>{if(e.target===successOverlay)successOverlay.hidden=true;});
     return successOverlay;
   }
@@ -135,32 +103,28 @@
     const original=window.submitPortfolioOrder;
     function wrapped(){
       const ctx=currentCtx();const p=currentP();const before=p?.queued?.length||0;
-      original.apply(this,arguments);
+      const out=original.apply(this,arguments);
       const p2=currentP();
-      if(ctx?.mode==='reserve' && (p2?.queued?.length||0)>before){
-        const order=p2.queued[p2.queued.length-1];showQueueSuccess(order);
-      }
-      setTimeout(afterRender,0);
+      if(ctx?.mode==='reserve' && (p2?.queued?.length||0)>before){const order=p2.queued[p2.queued.length-1];showQueueSuccess(order);}
+      setTimeout(runOnce,50);
+      return out;
     }
     wrapped.__usabilityV5=true;window.submitPortfolioOrder=wrapped;
   }
 
-  function patchRenderFns(){
-    ['renderPortfolio','renderHoldings','renderQueuedOrders','renderTradeHistory'].forEach(name=>{
-      const fn=window[name];if(typeof fn!=='function'||fn.__usabilityV5)return;
-      function wrapped(){const out=fn.apply(this,arguments);setTimeout(afterRender,0);return out;}
-      wrapped.__usabilityV5=true;window[name]=wrapped;
-    });
-  }
-
-  function afterRender(){
-    consolidateOrdersPanel();buildDesktopLeftStack();renderEmptyPortfolioFramework();setOrderTab(orderTab);
+  function runOnce(){
+    consolidateOrdersPanel();
+    buildDesktopLeftStack();
+    renderEmptyPortfolioFramework();
+    setOrderTab(orderTab);
   }
 
   function start(){
-    patchRenderFns();patchSubmit();afterRender();
-    const obs=new MutationObserver(()=>{renderEmptyPortfolioFramework();consolidateOrdersPanel();});
-    obs.observe(document.body,{subtree:true,childList:true});
+    patchSubmit();
+    runOnce();
+    setTimeout(runOnce,400);
+    setTimeout(runOnce,1200);
   }
+
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
