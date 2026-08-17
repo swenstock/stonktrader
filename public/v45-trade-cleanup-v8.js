@@ -11,6 +11,60 @@
     ['maybeShowFirstVisitTutorial','maybeShowContextTutorial','startTutorial','startViewTutorial','replayCurrentTutorial','beginTutorialFromWelcome','renderTutorialStep'].forEach(name=>{try{window[name]=noop;}catch(e){}});
   }
 
+  function tierName(){
+    const ctx=getCtx();
+    const title=(document.getElementById('portfolioTitle')?.textContent||'').trim();
+    const fromTitle=(title.split(/—|-/).pop()||'').trim();
+    const raw=String(ctx?.tierName||ctx?.tierLabel||ctx?.tier||ctx?.tierId||fromTitle||'').trim();
+    return raw.replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
+  }
+
+  function copyVisualFrom(source,holder){
+    if(!source||!holder)return false;
+    const img=source.matches?.('img')?source:source.querySelector?.('img');
+    if(img?.src){
+      const clone=img.cloneNode(true);clone.removeAttribute('width');clone.removeAttribute('height');clone.className='tier-broker-title-img';clone.alt=`${tierName()} tier broker`;
+      holder.replaceChildren(clone);return true;
+    }
+    const svg=source.matches?.('svg')?source:source.querySelector?.('svg');
+    if(svg){const clone=svg.cloneNode(true);clone.classList.add('tier-broker-title-svg');holder.replaceChildren(clone);return true;}
+    const candidates=[source,...(source.querySelectorAll?.('*')||[])];
+    for(const el of candidates){
+      const bg=getComputedStyle(el).backgroundImage;
+      if(bg&&bg!=='none'&&/url\(/i.test(bg)){
+        holder.replaceChildren();holder.style.backgroundImage=bg;holder.style.backgroundSize='cover';holder.style.backgroundPosition='center';holder.style.backgroundRepeat='no-repeat';return true;
+      }
+    }
+    return false;
+  }
+
+  function ensureTierBrokerArt(){
+    const title=document.getElementById('portfolioTitle');
+    const row=title?.closest('.trade-head-title-row');
+    if(!title||!row)return;
+    const tier=tierName();if(!tier)return;
+    let holder=row.querySelector('.tier-broker-title-art');
+    if(!holder){holder=document.createElement('span');holder.className='tier-broker-title-art';row.insertBefore(holder,title);}
+    if(holder.dataset.tier===tier&&holder.childNodes.length)return;
+    holder.dataset.tier=tier;holder.replaceChildren();holder.style.backgroundImage='';
+    const needle=tier.toLowerCase();
+    const selectors=['[data-tier]','[data-tier-id]','[class*="tier"]','[class*="contest"]','[class*="room"]','[class*="card"]'];
+    const all=[...document.querySelectorAll(selectors.join(','))].filter(el=>!el.closest('#view-portfolio'));
+    const ranked=all.filter(el=>{
+      const d=String(el.dataset?.tier||el.dataset?.tierId||'').toLowerCase().replace(/[_-]+/g,' ');
+      const text=(el.textContent||'').toLowerCase();
+      return d.includes(needle)||text.includes(needle);
+    });
+    for(const candidate of ranked){if(copyVisualFrom(candidate,holder))return;}
+    const anyImg=[...document.images].find(img=>{
+      if(img.closest('#view-portfolio'))return false;
+      const hay=`${img.alt||''} ${img.title||''} ${img.src||''}`.toLowerCase().replace(/[_-]+/g,' ');
+      return hay.includes(needle);
+    });
+    if(anyImg&&copyVisualFrom(anyImg,holder))return;
+    holder.classList.add('tier-broker-title-art-fallback');
+  }
+
   function ensureHeaderRule(){
     const head=document.querySelector('#view-portfolio .trade-head');
     const title=document.getElementById('portfolioTitle');
@@ -28,6 +82,7 @@
     const ctx=getCtx();const degen=!!ctx?.degen;
     const badge=document.getElementById('tradeRuleBadge');
     if(badge){badge.classList.toggle('degen',degen);badge.textContent=degen?'DEGEN • NO POSITION CAP':'STANDARD • 10% MAX AT ENTRY';}
+    ensureTierBrokerArt();
   }
 
   function ensureLeftStack(){
@@ -116,6 +171,7 @@
     const observer=new MutationObserver(()=>{
       clearTimeout(timer);
       timer=setTimeout(()=>{
+        ensureTierBrokerArt();
         compactSymbolLookup();
         polishActivityRows();
         markUserSizingIntent();
@@ -126,17 +182,17 @@
   }
 
   function patchConfirmRules(){
-    if(typeof window.confirmRulesGate!=='function'||window.confirmRulesGate.__v9)return;
+    if(typeof window.confirmRulesGate!=='function'||window.confirmRulesGate.__v10)return;
     const original=window.confirmRulesGate;
     function wrapped(){const out=original.apply(this,arguments);setTimeout(()=>{hardPauseTutorials();ensureHeaderRule();ensureLeftStack();compactSymbolLookup();polishActivityRows();defaultPercentMode(true);markSelectedEntryDestination();},0);setTimeout(()=>defaultPercentMode(false),120);setTimeout(()=>defaultPercentMode(false),500);return out;}
-    wrapped.__v9=true;window.confirmRulesGate=wrapped;
+    wrapped.__v10=true;window.confirmRulesGate=wrapped;
   }
 
   function patchRenderPortfolio(){
-    if(typeof window.renderPortfolio!=='function'||window.renderPortfolio.__v9)return;
+    if(typeof window.renderPortfolio!=='function'||window.renderPortfolio.__v10)return;
     const original=window.renderPortfolio;
-    function wrapped(){const out=original.apply(this,arguments);ensureHeaderRule();ensureLeftStack();compactSymbolLookup();polishActivityRows();markSelectedEntryDestination();setTimeout(()=>defaultPercentMode(false),0);setTimeout(()=>defaultPercentMode(false),120);return out;}
-    wrapped.__v9=true;window.renderPortfolio=wrapped;
+    function wrapped(){const out=original.apply(this,arguments);ensureHeaderRule();ensureLeftStack();compactSymbolLookup();polishActivityRows();markSelectedEntryDestination();setTimeout(()=>{ensureTierBrokerArt();defaultPercentMode(false);},0);setTimeout(()=>defaultPercentMode(false),120);return out;}
+    wrapped.__v10=true;window.renderPortfolio=wrapped;
   }
 
   function markSelectedEntryDestination(){
@@ -147,5 +203,5 @@
 
   function run(){hardPauseTutorials();patchRenderPortfolio();patchConfirmRules();ensureHeaderRule();ensureLeftStack();compactSymbolLookup();polishActivityRows();defaultPercentMode(false);markUserSizingIntent();markSelectedEntryDestination();watchDynamicTradeUi();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
-  setTimeout(run,250);setTimeout(run,1000);setTimeout(()=>defaultPercentMode(false),1600);
+  setTimeout(run,250);setTimeout(run,1000);setTimeout(()=>{ensureTierBrokerArt();defaultPercentMode(false);},1600);
 })();
