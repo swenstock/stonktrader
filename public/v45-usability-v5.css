@@ -1,0 +1,28 @@
+/* V45 usability v5 — tighter desktop trading + mobile navigation. Exact V45 shell remains unchanged. */
+
+/* Shared: concise order/activity panel */
+.orders-activity-tabs{display:flex;gap:6px;margin:8px 0 10px}.orders-activity-tabs button{border:1px solid #355063;background:#07141d;color:#9fb2bd;border-radius:9px;padding:8px 12px;font-weight:1000;font-size:9px}.orders-activity-tabs button.active{background:#0f2940;color:#fff;border-color:#4db8ff}.orders-pane[hidden]{display:none!important}.orders-activity-card .card-head{align-items:center}.orders-activity-card .card-head h2{margin:0}.orders-activity-card .order-list{min-height:0}.orders-activity-card .order-row{min-height:46px}.orders-activity-card.pulse{animation:ordersPulse .9s ease}@keyframes ordersPulse{0%,100%{box-shadow:none}35%{box-shadow:0 0 0 2px #45c9ff,0 0 28px #45c9ff44}}
+
+/* Empty portfolio should look intentional, not broken. */
+.holdings-card.empty-portfolio{min-height:0!important}.empty-portfolio-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:8px 0 10px}.empty-kpi{border:1px solid #294352;border-radius:10px;background:#061019;padding:9px 10px}.empty-kpi span{display:block;color:#7f97a5;font-size:7px;font-weight:900;letter-spacing:.08em}.empty-kpi b{display:block;margin-top:3px;font-size:16px}.empty-kpi.good b{color:#68e660}.empty-cash-row td{padding-top:12px!important;padding-bottom:12px!important}.empty-cash-row .cash-label{font-weight:1000;color:#fff}.empty-cash-row .cash-sub{display:block;color:#7f94a0;font-size:7px;margin-top:2px}
+
+/* Success confirmation */
+.queue-success-overlay{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;background:rgba(0,0,0,.72);backdrop-filter:blur(5px);padding:18px}.queue-success-card{width:min(440px,100%);border:1px solid #34764e;border-radius:18px;background:linear-gradient(145deg,#07131a,#04100c);box-shadow:0 24px 80px #000;padding:22px}.queue-success-icon{width:48px;height:48px;display:grid;place-items:center;border-radius:50%;background:#0d341a;border:1px solid #45d56d;color:#65ed81;font-size:26px;font-weight:1000}.queue-success-card h2{font-size:24px;margin:13px 0 5px}.queue-success-card p{color:#a9bbc5;font-size:11px;line-height:1.45;margin:0}.queue-success-detail{margin:13px 0;padding:11px 12px;border:1px solid #294453;border-radius:10px;background:#061019;font-size:10px}.queue-success-detail b{display:block;color:#fff;font-size:14px;margin-bottom:3px}.queue-success-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.queue-success-actions button{min-height:44px;border-radius:10px;font-weight:1000;font-size:10px;border:1px solid #365367;background:#071722;color:#fff}.queue-success-actions .primary{background:#147c2c;border-color:#42d75f}.queue-success-help{display:block;text-align:center;color:#718691;font-size:8px;margin-top:10px}
+
+@media (min-width:901px){
+  /* Use the left column instead of leaving a giant void under CURRENT POSITIONS. */
+  .trade-layout.usability-v5{align-items:start;grid-template-columns:minmax(520px,.92fr) minmax(520px,1.08fr)}
+  .trade-left-stack{display:grid;gap:12px;min-width:0}.trade-left-stack .holdings-card{align-self:start}.trade-left-stack .bottom-trade-grid{display:block;margin:0}.trade-left-stack .bottom-trade-grid .queue-card{margin:0}.trade-left-stack .bottom-trade-grid .history-card{display:none!important}
+  .trade-left-stack .holdings-card{padding-bottom:12px}.trade-left-stack .holdings-table{margin-bottom:0}
+  .trade-left-stack .orders-activity-card{padding:12px}
+}
+
+@media (max-width:900px){
+  /* Mobile/tablet: action first, then holdings, then orders. */
+  .trade-layout{display:flex!important;flex-direction:column!important;gap:9px!important}.chart-trade-card{order:1}.holdings-card{order:2}.bottom-trade-grid{order:3;display:block!important;margin-top:9px!important}.bottom-trade-grid .history-card{display:none!important}.bottom-trade-grid .queue-card{margin:0!important}
+  .empty-portfolio-kpis{grid-template-columns:1fr 1fr}.empty-kpi{padding:7px 8px}.empty-kpi b{font-size:14px}
+  .holdings-card{padding:10px!important}.holdings-card .card-head h2{font-size:20px!important}.holdings-card .card-head span{font-size:7px!important}
+  .holdings-table th{font-size:6px!important}.holdings-table td{font-size:8px!important}.holdings-table th:nth-child(3),.holdings-table td:nth-child(3){display:none}.holdings-table th:nth-child(4),.holdings-table td:nth-child(4){display:none}
+  .orders-activity-tabs{margin:6px 0}.orders-activity-tabs button{flex:1;min-height:38px;padding:7px;font-size:8px}
+  .queue-success-overlay{align-items:end;padding:10px}.queue-success-card{border-radius:18px 18px 10px 10px;padding:17px}.queue-success-card h2{font-size:21px}.queue-success-actions{grid-template-columns:1fr}.queue-success-actions button{min-height:46px}
+}
