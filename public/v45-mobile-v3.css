@@ -1,0 +1,50 @@
+/* Mobile v3: consolidate, anchor with broker art, remove repetition. Desktop unaffected. */
+@media (max-width:620px){
+  .shell{padding-left:9px;padding-right:9px}
+
+  /* Compress the path into three tiny broker-led rows */
+  .statement{gap:5px!important;margin-top:8px!important}
+  .statement .mobile-path-row{display:grid!important;grid-template-columns:42px 1fr!important;gap:8px!important;align-items:center!important;padding:7px 9px!important;min-height:0!important}
+  .statement .mobile-broker-anchor{width:40px!important;height:40px!important;grid-row:auto!important}
+  .statement .mobile-path-row b{font-size:12px!important;line-height:1.05!important}
+  .statement .mobile-path-row span{font-size:8.5px!important;line-height:1.2!important;margin-top:2px!important}
+
+  /* How It Works: more information per inch */
+  .how{padding:10px!important;margin-top:9px!important}
+  .how-title h2{font-size:22px!important}
+  .price-ref{font-size:7.5px!important;margin-top:4px!important}
+  .steps{margin-top:7px!important}
+  .step{padding:9px!important}
+  .mobile-step-head{grid-template-columns:52px 1fr!important;gap:8px!important;margin-bottom:5px!important}
+  .mobile-step-broker{width:52px!important;height:52px!important}
+  .mobile-step-title .num{width:25px!important;height:25px!important;font-size:12px!important}
+  .mobile-step-title h3{font-size:15px!important;margin-top:4px!important}
+  .step>p{font-size:9px!important;line-height:1.25!important;margin:4px 0 6px!important}
+
+  /* Tier list: broker thumbnail + tier + price in one row */
+  .mini-tiers{display:grid!important;gap:4px!important}
+  .mini-tier{display:grid!important;grid-template-columns:34px minmax(0,1fr) auto!important;align-items:center!important;gap:7px!important;padding:5px 7px!important;min-height:42px!important;border-radius:10px!important}
+  .mobile-tier-thumb{width:32px;height:32px;border-radius:7px;object-fit:cover;image-rendering:pixelated;border:1px solid #43596a;background:#a9c8df}
+  .mini-tier b{font-size:9px!important;line-height:1.05!important}
+  .mini-tier span{font-size:8px!important}
+  .mobile-step-nav{grid-template-columns:36px 1fr 36px!important;margin-top:6px!important}
+  .mobile-step-nav button{height:34px!important;font-size:18px!important}
+
+  /* The destination is already explained above; keep footer as a compact reminder */
+  .footer-card{grid-template-columns:46px 1fr!important;padding:9px!important;column-gap:8px!important;margin-top:8px!important}
+  .footer-card .mobile-footer-broker{width:44px!important;height:44px!important}
+  .footer-card strong{font-size:14px!important;line-height:1.05!important}
+  .footer-card span{font-size:8.5px!important;line-height:1.2!important}
+
+  /* Calls to action need one line of explanation, not two paragraphs */
+  .action{min-height:54px!important;padding:10px 12px!important;font-size:15px!important}
+  .action small{font-size:8px!important;line-height:1.2!important}
+
+  /* Tighten tier/session screens globally */
+  .page-head{padding:9px!important}.page-head h1{font-size:20px!important}.page-head p{font-size:8px!important;margin-top:3px!important}
+  .tier-hero{padding:9px!important;grid-template-columns:72px 1fr!important}.tier-hero img{width:70px!important}.tier-hero h1{font-size:19px!important}.tier-hero p{font-size:8px!important}.tier-price{padding-top:6px!important}.tier-price strong{font-size:19px!important}
+  .session{grid-template-columns:48px 1fr!important;padding:8px!important;gap:6px 8px!important}.session-icon,.session-icon .mobile-session-broker{width:48px!important;height:48px!important}.session h3{font-size:15px!important}.session p{font-size:8px!important}.session-preview{padding:6px!important}.session-right,.session-side{padding-top:6px!important}.session-right button,.session-side button,.session-side button.secondary{min-height:36px!important;padding:7px!important}
+
+  /* My Contests: trim repeated labels and padding */
+  .entry-rack-wrap{padding:6px!important}.selected-entry-banner{padding:8px!important}.mc-summary{padding:7px 8px!important}.mc-hero{gap:6px!important}.mc-scoreboard{padding:9px!important}.mc-fun-card{padding:8px!important}.mc-positions-top{padding:8px!important}.mc-clean-actions{padding:7px!important}.pro-ai-card,.mc-pro-card{padding:9px!important}
+}
