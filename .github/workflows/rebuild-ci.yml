@@ -2,7 +2,7 @@ name: V45 Rebuild CI
 
 on:
   push:
-    branches: [v45-rebuild]
+    branches: [v45-rebuild, v45-exact-restore]
   pull_request:
     branches: [main]
 
@@ -49,7 +49,15 @@ jobs:
             exit 1
           fi
           curl -fsS http://127.0.0.1:3456/api/health >/tmp/health.json
-          node -e "const h=require('/tmp/health.json'); if(h.satellitePayoutEngine!=='v45') process.exit(1)"
+          node -e "const h=require('/tmp/health.json'); if(h.satellitePayoutEngine!=='v45'||h.shellBytes!==407262||h.shellSha256!=='06b85e828cb2404b830c648f0d6f3f5832ad15826ffd6f8446700c2683c7d669') process.exit(1)"
+          curl -fsS http://127.0.0.1:3456/ >/tmp/root-v45.html
+          test "$(wc -c < /tmp/root-v45.html | tr -d ' ')" = "407262"
+          echo '06b85e828cb2404b830c648f0d6f3f5832ad15826ffd6f8446700c2683c7d669  /tmp/root-v45.html' | sha256sum -c -
+          grep -q 'WELCOME TO STONK BROKER' /tmp/root-v45.html
+          grep -q 'YOUR ENTRIES' /tmp/root-v45.html
+          grep -q 'NOW VIEWING' /tmp/root-v45.html
+          grep -q 'TEST CLOCK' /tmp/root-v45.html
+          grep -q "DON'T SHOW THIS INTRO AGAIN" /tmp/root-v45.html
           curl -fsS http://127.0.0.1:3456/api/config >/tmp/config.json
           curl -fsS http://127.0.0.1:3456/api/economics >/tmp/economics.json
           curl -fsS 'http://127.0.0.1:3456/api/sim-market/quotes?symbols=NVDA,MSFT' >/tmp/quotes.json
