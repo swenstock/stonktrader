@@ -21,7 +21,6 @@
     <div><small>P&amp;L</small><b id="portfolioPL">$0.00</b></div>
     <div><small>CASH</small><b id="portfolioCash">$100,000.00</b></div>
     <div><small>POSITIONS</small><b id="positionCount">0</b></div>
-    <div><small>RULE SET</small><b id="ruleSet">STANDARD 10%</b></div>
   </section>
 
   <div class="execution-grid">
@@ -33,6 +32,14 @@
         <div><input id="symbolInput" list="symbolList" value="NVDA" maxlength="8"><button id="loadSymbol" class="blue">GO</button></div>
         <datalist id="symbolList"></datalist>
       </div>
+      <footer class="position-rules-footer">
+        <div class="rule-primary"><small>RULE SET</small><b id="ruleSet">STANDARD 10%</b></div>
+        <div class="rule-chip"><small>PORTFOLIO</small><span>WEEKLY</span></div>
+        <div class="rule-chip"><small>TRACK</small><span>RUNNER</span></div>
+        <div class="rule-chip"><small>MAX MOVE</small><span>10%</span></div>
+        <div class="rule-chip"><small>TOOLS</small><span>PORT ANALYTICS</span></div>
+        <div class="rule-chip"><small>NEXT</small><span>ADVANCE</span></div>
+      </footer>
     </aside>
 
     <section class="chart-panel">
@@ -54,7 +61,7 @@
         <div class="quick-head"><div><small>QUICK EXECUTION</small><h2 id="quickTitle">TRADE NVDA</h2></div><span id="tradeRuleNote">Standard buys are capped at 10% cost basis.</span></div>
         <div class="quick-grid">
           <div class="side-toggle"><button id="buySide" class="active buy">BUY</button><button id="sellSide" class="sell">SELL</button></div>
-          <div class="mode-toggle"><button id="percentMode" class="active">PERCENTAGE</button><button id="sharesMode">SHARES</button></div>
+          <div class="mode-toggle"><button id="percentMode" class="active">% OF ALLOCATION</button><button id="sharesMode">SHARES</button></div>
           <div id="percentControls" class="percent-controls"><button data-percent="25">25%</button><button data-percent="50">50%</button><button data-percent="75">75%</button><button data-percent="100">100%</button></div>
           <div id="sharesControls" class="shares-controls hidden"><input id="shareQty" type="number" min="0" step="0.01" placeholder="Shares"><button id="submitShares" class="green">EXECUTE</button></div>
         </div>
