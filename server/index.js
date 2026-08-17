@@ -3,6 +3,7 @@ const express = require("express");
 const http = require("http");
 const path = require("path");
 const cors = require("cors");
+const { exactV45Shell, EXPECTED_BYTES, EXPECTED_SHA256 } = require("./v45ExactShell");
 
 // V45 is the rebuild default. Normalize this BEFORE any routes/schedulers are
 // required so every module agrees on the active economic engine.
@@ -76,7 +77,16 @@ app.get("/api/health", (req, res) => res.json({
   ok: true,
   satellitePayoutEngine: satelliteScheduler.engineVersion || "legacy",
   marketDataProvider: process.env.MARKET_DATA_PROVIDER || "demo",
+  shell: "SBC_INTERACTIVE_GUI_V45_TEST_CLOCK_HANDOFF",
+  shellBytes: EXPECTED_BYTES,
+  shellSha256: EXPECTED_SHA256,
 }));
+
+// The approved V45 handoff is the visible application shell. Serve it before
+// express.static so no older/newer public/index.html can silently replace it.
+app.get(["/", "/v45-exact"], (req, res) => {
+  res.type("html").send(exactV45Shell);
+});
 
 app.use(express.static(path.join(__dirname, "..", "public")));
 
@@ -87,4 +97,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Stonk paper trading server running on http://localhost:${PORT}`);
   console.log(`Satellite payout engine: ${satelliteScheduler.engineVersion || "legacy"}`);
+  console.log(`Visible shell: exact V45 (${EXPECTED_BYTES} bytes, ${EXPECTED_SHA256})`);
 });
