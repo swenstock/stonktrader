@@ -27,8 +27,8 @@
     const head=queue.querySelector('.card-head');
     const title=head?.querySelector('h2');
     const sub=head?.querySelector('span');
-    if(title){ title.textContent='ORDERS & ACTIVITY'; title.removeAttribute('id'); }
-    if(sub){ sub.textContent='Queued orders and recent trades'; sub.removeAttribute('id'); }
+    if(title && title.textContent!=='ORDERS & ACTIVITY'){ title.textContent='ORDERS & ACTIVITY'; title.removeAttribute('id'); }
+    if(sub && sub.textContent!=='Queued orders and recent trades'){ sub.textContent='Queued orders and recent trades'; sub.removeAttribute('id'); }
 
     if(!queue.querySelector('.orders-activity-tabs')){
       const tabs=document.createElement('div');tabs.className='orders-activity-tabs';
@@ -42,7 +42,6 @@
     }
     history.style.display='none';
 
-    // Keep the IDs expected by the original render functions alive, but hidden.
     if(!document.getElementById('queueTitle')){
       const ghost=document.createElement('span');ghost.id='queueTitle';ghost.hidden=true;queue.appendChild(ghost);
     }
@@ -76,13 +75,17 @@
     const empty=rows.length===0;
     card.classList.toggle('empty-portfolio',empty);
     let kpis=card.querySelector('.empty-portfolio-kpis');
-    if(!empty){ if(kpis)kpis.remove(); return; }
+    if(!empty){ if(kpis)kpis.remove(); card.dataset.emptySig=''; return; }
+
+    const cash=Number(p.cash??100000);
+    const sig=`${cash.toFixed(2)}|${rows.length}`;
+    if(card.dataset.emptySig===sig && kpis && body.querySelector('.empty-cash-row'))return;
+    card.dataset.emptySig=sig;
 
     if(!kpis){
       kpis=document.createElement('div');kpis.className='empty-portfolio-kpis';
       card.querySelector('.card-head')?.after(kpis);
     }
-    const cash=Number(p.cash??100000);
     kpis.innerHTML=`
       <div class="empty-kpi"><span>PORTFOLIO VALUE</span><b>${money(cash)}</b></div>
       <div class="empty-kpi"><span>INVESTED</span><b>$0</b></div>
