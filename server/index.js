@@ -69,20 +69,21 @@ app.get("/api/health", (req, res) => res.json({
   shellBytes: EXPECTED_BYTES,
   shellSha256: EXPECTED_SHA256,
   mobilePolish: "v4",
+  desktopIcons: "v1",
 }));
 
-// Exact approved V45 remains byte-verified. Mobile composition is layered only
-// into the served response and only applies at phone widths.
-const MOBILE_HEAD = '<link rel="stylesheet" href="/v45-mobile-polish.css?v=4"><link rel="stylesheet" href="/v45-mobile-v3.css?v=4"><link rel="stylesheet" href="/v45-mobile-v4.css?v=4">';
-const MOBILE_BODY = '<script src="/v45-mobile-v3.js?v=4"></script><script src="/v45-mobile-v4.js?v=4"></script>';
-const exactV45WithMobilePolish = Buffer.from(
+// Exact approved V45 remains byte-verified. Enhancements are layered only into
+// the served response so the source shell itself stays untouched.
+const EXTRA_HEAD = '<link rel="stylesheet" href="/v45-mobile-polish.css?v=4"><link rel="stylesheet" href="/v45-mobile-v3.css?v=4"><link rel="stylesheet" href="/v45-mobile-v4.css?v=4"><link rel="stylesheet" href="/v45-desktop-icons.css?v=1">';
+const EXTRA_BODY = '<script src="/v45-mobile-v3.js?v=4"></script><script src="/v45-mobile-v4.js?v=4"></script><script src="/v45-desktop-icons.js?v=1"></script>';
+const exactV45WithEnhancements = Buffer.from(
   exactV45Shell.toString("utf8")
-    .replace("</head>", `${MOBILE_HEAD}</head>`)
-    .replace("</body>", `${MOBILE_BODY}</body>`),
+    .replace("</head>", `${EXTRA_HEAD}</head>`)
+    .replace("</body>", `${EXTRA_BODY}</body>`),
   "utf8"
 );
 
-app.get(["/", "/v45-exact"], (req, res) => res.type("html").send(exactV45WithMobilePolish));
+app.get(["/", "/v45-exact"], (req, res) => res.type("html").send(exactV45WithEnhancements));
 app.use(express.static(path.join(__dirname, "..", "public")));
 
 const server = http.createServer(app);
@@ -91,5 +92,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Stonk paper trading server running on http://localhost:${PORT}`);
   console.log(`Satellite payout engine: ${satelliteScheduler.engineVersion || "legacy"}`);
-  console.log(`Visible shell: exact V45 (${EXPECTED_BYTES} bytes, ${EXPECTED_SHA256}) + mobile polish v4`);
+  console.log(`Visible shell: exact V45 (${EXPECTED_BYTES} bytes, ${EXPECTED_SHA256}) + mobile polish v4 + desktop icons v1`);
 });
