@@ -68,13 +68,13 @@ app.get("/api/health", (req, res) => res.json({
   shell: "SBC_INTERACTIVE_GUI_V45_TEST_CLOCK_HANDOFF",
   shellBytes: EXPECTED_BYTES,
   shellSha256: EXPECTED_SHA256,
-  mobilePolish: "v3",
+  mobilePolish: "v4",
 }));
 
 // Exact approved V45 remains byte-verified. Mobile composition is layered only
 // into the served response and only applies at phone widths.
-const MOBILE_HEAD = '<link rel="stylesheet" href="/v45-mobile-polish.css?v=3"><link rel="stylesheet" href="/v45-mobile-v3.css?v=3">';
-const MOBILE_BODY = '<script src="/v45-mobile-v3.js?v=3"></script>';
+const MOBILE_HEAD = '<link rel="stylesheet" href="/v45-mobile-polish.css?v=4"><link rel="stylesheet" href="/v45-mobile-v3.css?v=4"><link rel="stylesheet" href="/v45-mobile-v4.css?v=4">';
+const MOBILE_BODY = '<script src="/v45-mobile-v3.js?v=4"></script><script src="/v45-mobile-v4.js?v=4"></script>';
 const exactV45WithMobilePolish = Buffer.from(
   exactV45Shell.toString("utf8")
     .replace("</head>", `${MOBILE_HEAD}</head>`)
@@ -91,5 +91,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Stonk paper trading server running on http://localhost:${PORT}`);
   console.log(`Satellite payout engine: ${satelliteScheduler.engineVersion || "legacy"}`);
-  console.log(`Visible shell: exact V45 (${EXPECTED_BYTES} bytes, ${EXPECTED_SHA256}) + mobile polish v3`);
+  console.log(`Visible shell: exact V45 (${EXPECTED_BYTES} bytes, ${EXPECTED_SHA256}) + mobile polish v4`);
 });
