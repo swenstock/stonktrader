@@ -1,0 +1,36 @@
+/* Tutorial safety v6: keep every tour card reachable on desktop and mobile. */
+.v45-tutorial-safe-card{
+  position:fixed!important;
+  left:50%!important;
+  top:50%!important;
+  right:auto!important;
+  bottom:auto!important;
+  transform:translate(-50%,-50%)!important;
+  width:min(560px,calc(100vw - 32px))!important;
+  max-width:calc(100vw - 32px)!important;
+  max-height:calc(100vh - 32px)!important;
+  overflow:auto!important;
+  z-index:1000002!important;
+  box-sizing:border-box!important;
+  margin:0!important;
+}
+.v45-tutorial-safe-card button,
+.v45-tutorial-safe-card [role="button"]{
+  position:relative!important;
+  z-index:1000003!important;
+  pointer-events:auto!important;
+}
+.v45-tutorial-safe-card .v45-tutorial-safe-actions{
+  position:sticky!important;
+  bottom:0!important;
+  z-index:1000004!important;
+  background:inherit!important;
+  padding-top:10px!important;
+}
+@media(max-width:620px){
+  .v45-tutorial-safe-card{
+    width:calc(100vw - 18px)!important;
+    max-width:calc(100vw - 18px)!important;
+    max-height:calc(100vh - 18px - env(safe-area-inset-bottom,0px))!important;
+  }
+}
