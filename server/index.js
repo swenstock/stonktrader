@@ -71,11 +71,17 @@ app.get("/api/health", (req, res) => res.json({
   mobilePolish: "v4",
   desktopIcons: "v1",
   usability: "v5.1-stable",
-  tutorialSafety: "v6",
+  tutorialPrompts: "paused-for-qa",
 }));
 
-const EXTRA_HEAD = '<link rel="stylesheet" href="/v45-mobile-polish.css?v=4"><link rel="stylesheet" href="/v45-mobile-v3.css?v=4"><link rel="stylesheet" href="/v45-mobile-v4.css?v=4"><link rel="stylesheet" href="/v45-desktop-icons.css?v=1"><link rel="stylesheet" href="/v45-usability-v5.css?v=51"><link rel="stylesheet" href="/v45-tutorial-safety-v6.css?v=6">';
-const EXTRA_BODY = '<script src="/v45-mobile-v3.js?v=4"></script><script src="/v45-mobile-v4.js?v=4"></script><script src="/v45-desktop-icons.js?v=1"></script><script src="/v45-usability-v5.js?v=51"></script><script src="/v45-tutorial-safety-v6.js?v=6"></script>';
+// QA pause: keep all tutorial code preserved in the exact V45 shell, but set
+// its existing persistence flags before the application initializes so no
+// automatic tutorial can interrupt desktop or mobile bug testing. These flags
+// can be removed in one place when tutorials are re-enabled.
+const TUTORIAL_PAUSE = `<script>(function(){try{var views=['lobby','home','trading-floor','tradingFloor','floor','my-contests','myContests','tier-lobby','tierLobby','portfolio','exchange','leaderboard','leaders'];localStorage.setItem('sbcDisableMainTutorialV45','true');views.forEach(function(v){localStorage.setItem('sbcDisableViewTutorialV45:'+v,'true');});window.SBC_TUTORIALS_PAUSED=true;}catch(e){window.SBC_TUTORIALS_PAUSED=true;}})();</script>`;
+
+const EXTRA_HEAD = TUTORIAL_PAUSE + '<link rel="stylesheet" href="/v45-mobile-polish.css?v=4"><link rel="stylesheet" href="/v45-mobile-v3.css?v=4"><link rel="stylesheet" href="/v45-mobile-v4.css?v=4"><link rel="stylesheet" href="/v45-desktop-icons.css?v=1"><link rel="stylesheet" href="/v45-usability-v5.css?v=51">';
+const EXTRA_BODY = '<script src="/v45-mobile-v3.js?v=4"></script><script src="/v45-mobile-v4.js?v=4"></script><script src="/v45-desktop-icons.js?v=1"></script><script src="/v45-usability-v5.js?v=51"></script>';
 const exactV45WithEnhancements = Buffer.from(
   exactV45Shell.toString("utf8")
     .replace("</head>", `${EXTRA_HEAD}</head>`)
@@ -92,5 +98,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Stonk paper trading server running on http://localhost:${PORT}`);
   console.log(`Satellite payout engine: ${satelliteScheduler.engineVersion || "legacy"}`);
-  console.log(`Visible shell: exact V45 (${EXPECTED_BYTES} bytes, ${EXPECTED_SHA256}) + mobile v4 + desktop icons v1 + usability v5.1 stable + tutorial safety v6`);
+  console.log(`Visible shell: exact V45 (${EXPECTED_BYTES} bytes, ${EXPECTED_SHA256}) + mobile v4 + desktop icons v1 + usability v5.1 stable; tutorials paused for QA`);
 });
