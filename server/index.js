@@ -73,7 +73,7 @@ app.get("/api/health", (req, res) => res.json({
   usability: "v5.1-stable",
   tutorialPrompts: "hard-paused-for-qa",
   myContestEntrySync: "v7",
-  tradeCleanup: "v8",
+  tradeCleanup: "v9",
 }));
 
 // QA hard pause. V45 checks for literal string '1', so set the exact values it
@@ -82,8 +82,8 @@ app.get("/api/health", (req, res) => res.json({
 // the verified shell for later re-enable.
 const TUTORIAL_PAUSE = `<script>(function(){try{var views=['lobby','floor','my','tier','portfolio','exchange','leaders'];localStorage.setItem('sbcDisableMainTutorialV45','1');views.forEach(function(v){localStorage.setItem('sbcDisableViewTutorialV45:'+v,'1');});window.SBC_TUTORIALS_PAUSED=true;}catch(e){window.SBC_TUTORIALS_PAUSED=true;}})();</script>`;
 
-const EXTRA_HEAD = TUTORIAL_PAUSE + '<link rel="stylesheet" href="/v45-mobile-polish.css?v=4"><link rel="stylesheet" href="/v45-mobile-v3.css?v=4"><link rel="stylesheet" href="/v45-mobile-v4.css?v=4"><link rel="stylesheet" href="/v45-desktop-icons.css?v=1"><link rel="stylesheet" href="/v45-usability-v5.css?v=51"><link rel="stylesheet" href="/v45-trade-cleanup-v8.css?v=8">';
-const EXTRA_BODY = '<script src="/v45-mobile-v3.js?v=4"></script><script src="/v45-mobile-v4.js?v=4"></script><script src="/v45-desktop-icons.js?v=1"></script><script src="/v45-usability-v5.js?v=51"></script><script src="/v45-mycontest-entry-sync-v7.js?v=7"></script><script src="/v45-trade-cleanup-v8.js?v=8"></script>';
+const EXTRA_HEAD = TUTORIAL_PAUSE + '<link rel="stylesheet" href="/v45-mobile-polish.css?v=4"><link rel="stylesheet" href="/v45-mobile-v3.css?v=4"><link rel="stylesheet" href="/v45-mobile-v4.css?v=4"><link rel="stylesheet" href="/v45-desktop-icons.css?v=1"><link rel="stylesheet" href="/v45-usability-v5.css?v=51"><link rel="stylesheet" href="/v45-trade-cleanup-v8.css?v=9">';
+const EXTRA_BODY = '<script src="/v45-mobile-v3.js?v=4"></script><script src="/v45-mobile-v4.js?v=4"></script><script src="/v45-desktop-icons.js?v=1"></script><script src="/v45-usability-v5.js?v=51"></script><script src="/v45-mycontest-entry-sync-v7.js?v=7"></script><script src="/v45-trade-cleanup-v8.js?v=9"></script>';
 
 let servedShell = exactV45Shell.toString("utf8");
 servedShell = servedShell
@@ -102,5 +102,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Stonk paper trading server running on http://localhost:${PORT}`);
   console.log(`Satellite payout engine: ${satelliteScheduler.engineVersion || "legacy"}`);
-  console.log(`Visible shell: exact V45 + mobile v4 + desktop icons v1 + usability v5.1 + My Contests sync v7 + trade cleanup v8; tutorials hard-paused`);
+  console.log(`Visible shell: exact V45 + mobile v4 + desktop icons v1 + usability v5.1 + My Contests sync v7 + trade cleanup v9; tutorials hard-paused`);
 });
