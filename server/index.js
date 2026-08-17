@@ -5,18 +5,9 @@ const path = require("path");
 const cors = require("cors");
 const { exactV45Shell, EXPECTED_BYTES, EXPECTED_SHA256 } = require("./v45ExactShell");
 
-// V45 is the rebuild default. Normalize this BEFORE any routes/schedulers are
-// required so every module agrees on the active economic engine.
 const useLegacySatellitePayout = String(process.env.PAYOUT_ENGINE_V45 || "v45").toLowerCase() === "legacy";
 process.env.PAYOUT_ENGINE_V45 = useLegacySatellitePayout ? "legacy" : "true";
-
-// Compressed QA rooms still need enough runway to exercise the real Degen
-// 5-minute cutoff. Twenty minutes keeps tests fast without making entry
-// impossible. Production ignores this unless TEST_MODE=true.
-if (process.env.TEST_MODE === "true" && !process.env.TEST_SATELLITE_MINUTES) {
-  process.env.TEST_SATELLITE_MINUTES = "20";
-}
-
+if (process.env.TEST_MODE === "true" && !process.env.TEST_SATELLITE_MINUTES) process.env.TEST_SATELLITE_MINUTES = "20";
 require("./schemaV45").run();
 
 const authRoutes = require("./routes/auth");
@@ -39,16 +30,13 @@ const adminRoutes = require("./routes/admin");
 const testClockRoutes = require("./routes/testClock");
 const devRoutes = require("./routes/dev");
 const contestScheduler = require("./contestScheduler");
-const satelliteScheduler = useLegacySatellitePayout
-  ? require("./satelliteScheduler")
-  : require("./satelliteSchedulerV45");
+const satelliteScheduler = useLegacySatellitePayout ? require("./satelliteScheduler") : require("./satelliteSchedulerV45");
 const marketOpenScheduler = require("./marketOpenScheduler");
 const { attachWebSocket } = require("./ws");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
 app.use("/api/auth", authRoutes);
 app.use("/api/account", accountRoutes);
 app.use("/api/config", configRoutes);
@@ -80,32 +68,28 @@ app.get("/api/health", (req, res) => res.json({
   shell: "SBC_INTERACTIVE_GUI_V45_TEST_CLOCK_HANDOFF",
   shellBytes: EXPECTED_BYTES,
   shellSha256: EXPECTED_SHA256,
-  mobilePolish: "v1",
+  mobilePolish: "v2",
 }));
 
-// Keep the approved V45 handoff byte-verified and untouched. The mobile-only
-// stylesheet is layered into the served response so desktop remains the exact
-// approved shell while phones get a deliberate responsive layout.
-const MOBILE_LINK = '<link rel="stylesheet" href="/v45-mobile-polish.css?v=1">';
+// The verified V45 bytes stay untouched. Mobile v2 is layered onto the served
+// response only, and its CSS is scoped to <=620px so desktop remains exact.
+const MOBILE_HEAD = '<link rel="stylesheet" href="/v45-mobile-polish.css?v=2">';
+const MOBILE_BODY = '<script src="/v45-mobile-v2.js?v=2"></script>';
 const exactV45WithMobilePolish = Buffer.from(
-  exactV45Shell.toString("utf8").replace("</head>", `${MOBILE_LINK}</head>`),
+  exactV45Shell.toString("utf8")
+    .replace("</head>", `${MOBILE_HEAD}</head>`)
+    .replace("</body>", `${MOBILE_BODY}</body>`),
   "utf8"
 );
 
-// The approved V45 handoff is the visible application shell. Serve it before
-// express.static so no older/newer public/index.html can silently replace it.
-app.get(["/", "/v45-exact"], (req, res) => {
-  res.type("html").send(exactV45WithMobilePolish);
-});
-
+app.get(["/", "/v45-exact"], (req, res) => res.type("html").send(exactV45WithMobilePolish));
 app.use(express.static(path.join(__dirname, "..", "public")));
 
 const server = http.createServer(app);
 attachWebSocket(server);
-
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Stonk paper trading server running on http://localhost:${PORT}`);
   console.log(`Satellite payout engine: ${satelliteScheduler.engineVersion || "legacy"}`);
-  console.log(`Visible shell: exact V45 (${EXPECTED_BYTES} bytes, ${EXPECTED_SHA256}) + mobile polish v1`);
+  console.log(`Visible shell: exact V45 (${EXPECTED_BYTES} bytes, ${EXPECTED_SHA256}) + mobile polish v2`);
 });
