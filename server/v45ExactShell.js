@@ -13,7 +13,13 @@ function read(name) {
 
 function repairedChunk(index) {
   const n = String(index).padStart(2, "0");
-  if ([6, 17, 18, 22].includes(index)) {
+  if (index === 6) {
+    return read("fix06_0.b64")
+      + read("fix06_1_0.b64") + read("fix06_1_1.b64") + read("fix06_1_2.b64")
+      + read("fix06_1_3a.b64") + read("fix06_1_3b.b64")
+      + read("fix06_2.b64");
+  }
+  if ([17, 18, 22].includes(index)) {
     return read(`fix${n}_0.b64`) + read(`fix${n}_1.b64`) + read(`fix${n}_2.b64`);
   }
   return read(`s${n}.b64`);
