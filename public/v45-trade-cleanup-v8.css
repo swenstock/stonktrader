@@ -1,0 +1,82 @@
+/* V45 trade cleanup v8 — compact, professional execution screen. */
+
+/* QA: tutorials are fully suppressed, regardless of legacy auto-trigger state. */
+#tutorialWelcome,#tutorialOverlay,.tutorial-welcome,.tutorial-overlay{display:none!important;visibility:hidden!important;pointer-events:none!important}
+
+/* Put the standard/degen rule in the portfolio header instead of spending a full row. */
+#view-portfolio .rules-strip{display:none!important}
+.trade-head-copy{min-width:0;flex:1}
+.trade-head-title-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.trade-head-title-row h1{margin:0}
+.trade-rule-badge{display:inline-flex;align-items:center;gap:5px;border:1px solid #345064;background:#07141d;border-radius:999px;padding:5px 8px;color:#b7c9d3;font-size:8px;font-weight:1000;letter-spacing:.045em;white-space:nowrap}
+.trade-rule-badge.degen{border-color:#a04d21;color:#ffb25e;background:#1b0d07}
+.trade-rule-review{border:1px solid #345064;background:#07141d;color:#dbe8ef;border-radius:8px;padding:6px 9px;font-size:8px;font-weight:1000;cursor:pointer}
+.trade-head-copy>p{margin-top:3px!important}
+
+/* Less vertical chrome at the top. */
+#view-portfolio .trade-page{gap:9px}
+#view-portfolio .trade-head{padding:11px 13px;min-height:0}
+#view-portfolio .portfolio-summary{gap:7px}
+#view-portfolio .port-stat{padding:9px 7px;min-height:58px}
+#view-portfolio .port-stat span{font-size:7px}
+#view-portfolio .port-stat b{font-size:15px}
+
+/* Desktop: positions own the left column; analytics + orders live immediately below it. */
+@media(min-width:901px){
+  .trade-layout.usability-v5{grid-template-columns:minmax(560px,1.03fr) minmax(500px,.97fr);gap:10px}
+  .trade-left-stack{gap:8px}
+  .trade-left-stack .analytics-dock,.trade-left-stack .advanced-chart-wrap{margin:0!important}
+  .trade-left-stack .analytics-dock-head{min-height:48px;padding:9px 11px}
+  .trade-left-stack .advanced-chart-toggle{min-height:46px;padding:8px 11px}
+  .trade-left-stack .analytics-dock-head b,.trade-left-stack .advanced-chart-toggle b{font-size:10px}
+  .trade-left-stack .analytics-dock-head span span,.trade-left-stack .advanced-chart-toggle span span{font-size:7px}
+}
+
+/* Quick trade should be a workstation, not half the page. */
+.chart-trade-card{padding:11px!important}
+.chart-trade-card .card-head{margin-bottom:7px!important}
+.chart-trade-card .card-head h2{font-size:24px!important;line-height:1!important}
+.chart-trade-card .card-head span{font-size:7px!important}
+.trade-search-row{gap:6px!important;margin-bottom:7px!important}
+.trade-search-row select,.trade-search-row button{min-height:38px!important;padding:7px 9px!important}
+.quote-strip{padding:7px 9px!important;margin-bottom:7px!important}
+
+/* Collapse chart tools into a slim two-line control strip. */
+.chart-toolbar{display:flex!important;flex-wrap:wrap!important;gap:5px!important;padding:6px!important;margin:6px 0!important}
+.toolbar-group{display:flex!important;align-items:center!important;gap:4px!important;flex-wrap:wrap!important}
+.toolbar-group>span{font-size:6px!important;margin-right:1px!important}
+.toolbar-group button{min-width:0!important;min-height:27px!important;padding:4px 7px!important;border-radius:7px!important;font-size:8px!important}
+.chart-type-row button,.chart-type-toggle button{min-height:30px!important;padding:5px 8px!important;font-size:8px!important}
+.chart-price-strip{font-size:7px!important;gap:5px!important;margin:4px 0!important}
+.symbol-chart{min-height:230px!important;height:250px!important}
+.chart-foot{padding:5px 0!important;gap:5px!important}
+.symbol-meta{gap:7px!important;font-size:7px!important}
+.chart-status{font-size:7px!important}
+
+/* One concise order-entry ticket. Percentage is the default and primary mode. */
+.quick-trade-clean{margin-top:7px!important;padding:9px!important;border-radius:10px!important}
+.quick-trade-clean .quick-trade-head{margin-bottom:5px!important}
+.quick-trade-clean .quick-trade-head b{font-size:11px!important}
+.quick-trade-clean .quick-trade-head>div>span{font-size:7px!important;margin-top:2px!important}
+.quick-input-mode{display:grid!important;grid-template-columns:1fr 1fr!important;gap:5px!important;margin:5px 0!important}
+.quick-input-mode button{min-height:30px!important;padding:4px 7px!important;font-size:8px!important}
+.quick-percent-row{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:5px!important;margin-top:5px!important}
+.quick-percent-row button{min-height:31px!important;padding:4px!important;font-size:9px!important}
+.percent-help{font-size:7px!important;line-height:1.25!important;margin-top:4px!important}
+.quick-action-row{gap:6px!important;margin-top:6px!important}
+.quick-action{min-height:38px!important;padding:7px 8px!important;font-size:9px!important}
+.quick-trade-note,.trade-cutoff,.order-error{font-size:7px!important;line-height:1.25!important;margin-top:4px!important}
+
+/* Empty state: show meaningful zeros, never a giant void. */
+.holdings-card.empty-portfolio{min-height:0!important}
+.empty-portfolio-kpis{margin:6px 0 7px!important}
+
+@media(max-width:900px){
+  .trade-head-title-row{gap:6px}
+  .trade-rule-badge{font-size:7px;padding:4px 6px}
+  .trade-rule-review{font-size:7px;padding:5px 7px}
+  .symbol-chart{height:220px!important;min-height:210px!important}
+  .chart-toolbar{gap:4px!important;padding:5px!important}
+  .toolbar-group button{padding:4px 6px!important}
+  .chart-trade-card .card-head h2{font-size:20px!important}
+}
