@@ -1,0 +1,66 @@
+name: V45 Rebuild CI
+
+on:
+  push:
+    branches: [v45-rebuild]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+      - run: npm ci
+      - name: Syntax check JavaScript
+        run: |
+          find server -name '*.js' -print0 | xargs -0 -n1 node --check
+          node --check public/v45/v45.js
+          node --check public/v45/v45-links.js
+          node --check public/v45/trade.js
+          node --check public/v45/leaders.js
+          node --check scripts/v45-smoke.mjs
+      - name: Unit tests
+        run: npm test
+      - name: Server/API/frontend smoke test
+        env:
+          TEST_MODE: 'true'
+          PAYOUT_ENGINE_V45: 'true'
+          DB_PATH: /tmp/sbc-v45-ci.db
+          PORT: '3456'
+        run: |
+          node server/index.js > /tmp/sbc-server.log 2>&1 &
+          PID=$!
+          trap 'kill $PID 2>/dev/null || true' EXIT
+          READY=0
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:3456/api/health >/dev/null 2>&1; then READY=1; break; fi
+            if ! kill -0 $PID 2>/dev/null; then break; fi
+            sleep 0.5
+          done
+          if [ "$READY" != "1" ]; then
+            echo '--- SBC SERVER STARTUP LOG ---'
+            cat /tmp/sbc-server.log || true
+            exit 1
+          fi
+          curl -fsS http://127.0.0.1:3456/api/health >/tmp/health.json
+          node -e "const h=require('/tmp/health.json'); if(h.satellitePayoutEngine!=='v45') process.exit(1)"
+          curl -fsS http://127.0.0.1:3456/api/config >/tmp/config.json
+          curl -fsS http://127.0.0.1:3456/api/economics >/tmp/economics.json
+          curl -fsS 'http://127.0.0.1:3456/api/sim-market/quotes?symbols=NVDA,MSFT' >/tmp/quotes.json
+          curl -fsS http://127.0.0.1:3456/v45/ >/tmp/v45.html
+          curl -fsS 'http://127.0.0.1:3456/v45/trade.html?id=1' >/tmp/trade.html
+          curl -fsS http://127.0.0.1:3456/v45/leaders.html >/tmp/leaders.html
+          grep -q "CAN'T" /tmp/v45.html
+          grep -q 'TICKET EXCHANGE' /tmp/v45.html
+          grep -q 'QUICK EXECUTION' /tmp/trade.html
+          grep -q 'marketChart' /tmp/trade.html
+          grep -q 'JUMP TO ME' /tmp/leaders.html
+          grep -q 'JUMP TO MONEY LINE' /tmp/leaders.html
+          node -e "const q=require('/tmp/quotes.json'); if(q.length!==2||q.some(x=>x.source!=='sim')) process.exit(1)"
+          SBC_BASE_URL=http://127.0.0.1:3456/api node scripts/v45-smoke.mjs

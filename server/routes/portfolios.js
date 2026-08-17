@@ -4,75 +4,121 @@ const db = require("../db");
 const requireAuth = require("../middleware/requireAuth");
 const { getQuote, getQuotes, MIN_MARKET_CAP } = require("../dataProvider");
 const { totalValueForPortfolio } = require("../portfolioValue");
+const testClock = require("../testClock");
+const { easternParts, isWeekday } = require("../timeHelpers");
 
-const MAX_INITIAL_POSITION_PCT = 0.10; // 10% of portfolio value, checked at time of BUY only — raised from 5%, since a 15-symbol universe at 5% caps total possible deployment at 75%
+const MAX_INITIAL_POSITION_PCT = 0.10;
+const TEST_MODE = process.env.TEST_MODE === "true";
+const TEST_SATELLITE_MINUTES = Number(process.env.TEST_SATELLITE_MINUTES || 20);
+const TEST_MAIN_EVENT_MINUTES = Number(process.env.TEST_MAIN_EVENT_MINUTES || 10);
 
-// "Degen Hours" — Hourly is the one deliberate exception to the 10% max
-// position rule. Everywhere else on the platform, sizing discipline is
-// the whole point; Hourly is explicitly the wild-card mode where you can
-// swing for the fences on a single name. $2B min market cap still applies
-// everywhere, including Hourly — but this is paper trading, nothing here
-// can actually manipulate a real market. It's just which stocks the
-// platform's feed currently includes (established, real companies), not
-// a Degen-specific restriction.
-function isDegenHoursPortfolio(portfolioId) {
-  const satelliteEntry = db
-    .prepare(
-      `SELECT satellites.tier_id FROM satellite_entries
-       JOIN satellites ON satellites.id = satellite_entries.satellite_id
-       WHERE satellite_entries.portfolio_id = ?`
-    )
-    .get(portfolioId);
-  return satelliteEntry?.tier_id === "hourly";
+function satelliteForPortfolio(portfolioId) {
+  return db.prepare(`SELECT satellites.* FROM satellite_entries
+    JOIN satellites ON satellites.id = satellite_entries.satellite_id
+    WHERE satellite_entries.portfolio_id = ?`).get(portfolioId) || null;
 }
 
-// Finds which contest or satellite a portfolio belongs to, for display
-// context ("Morning Session — Aug 12", still open vs resolved, etc).
+function contestForPortfolio(portfolioId) {
+  return db.prepare(`SELECT contests.* FROM contest_entries
+    JOIN contests ON contests.id = contest_entries.contest_id
+    WHERE contest_entries.portfolio_id = ?`).get(portfolioId) || null;
+}
+
+function isDegenHoursPortfolio(portfolioId) {
+  return satelliteForPortfolio(portfolioId)?.tier_id === "hourly";
+}
+
+function regularMarketOpen(now) {
+  if (!isWeekday(now)) return false;
+  const p = easternParts(now);
+  const minutes = Number(p.hour) * 60 + Number(p.minute);
+  return minutes >= 570 && minutes < 960;
+}
+
+function durationMinutes(start, end) {
+  return Math.max(0, (new Date(end).getTime() - new Date(start).getTime()) / 60000);
+}
+
+function isCompressedTestSatellite(satellite) {
+  if (!TEST_MODE || !satellite) return false;
+  return durationMinutes(satellite.opens_at, satellite.locks_at) <= TEST_SATELLITE_MINUTES + 0.25;
+}
+
+function isCompressedTestContest(contest) {
+  if (!TEST_MODE || !contest) return false;
+  return durationMinutes(contest.week_start, contest.week_end) <= TEST_MAIN_EVENT_MINUTES + 0.25;
+}
+
+function tradeAvailability(portfolioId) {
+  const now = testClock.getNow();
+  const satellite = satelliteForPortfolio(portfolioId);
+  if (satellite) {
+    if (satellite.status !== "open") return { allowed:false, reason:"This contest is no longer open for trading.", now };
+    const opens = new Date(satellite.opens_at).getTime();
+    const locks = new Date(satellite.locks_at).getTime();
+    if (now.getTime() < opens || now.getTime() >= locks) return { allowed:false, reason:"This contest is outside its trading window.", now };
+
+    // Compressed TEST_MODE rooms are synthetic QA sessions and may be created
+    // on weekends/after hours. Their own open/lock bounds are authoritative.
+    // Real-duration rooms — including Test Clock simulations of actual market
+    // sessions — still obey normal U.S. equity market hours.
+    if (!isCompressedTestSatellite(satellite) && !regularMarketOpen(now)) {
+      return { allowed:false, reason:"US equity trading is closed. SBC trading resumes at the next regular-market window.", now };
+    }
+    return { allowed:true, now, type:"satellite", source:satellite };
+  }
+
+  const contest = contestForPortfolio(portfolioId);
+  if (contest) {
+    if (contest.status !== "open") return { allowed:false, reason:"The Main Event is no longer open for trading.", now };
+    if (now.getTime() < new Date(contest.week_start).getTime() || now.getTime() >= new Date(contest.week_end).getTime()) {
+      return { allowed:false, reason:"The Main Event is outside its active week.", now };
+    }
+    if (!isCompressedTestContest(contest) && !regularMarketOpen(now)) {
+      return { allowed:false, reason:"US equity trading is closed. The Main Event resumes at the next regular-market open.", now };
+    }
+    return { allowed:true, now, type:"contest", source:contest };
+  }
+  return { allowed:false, reason:"This portfolio is not attached to an active SBC contest.", now };
+}
+
 function contextFor(portfolioId) {
-  const ce = db
-    .prepare(
-      `SELECT contest_entries.*, contests.week_start, contests.week_end, contests.status as contest_status
-       FROM contest_entries JOIN contests ON contests.id = contest_entries.contest_id
-       WHERE portfolio_id = ?`
-    )
-    .get(portfolioId);
-  if (ce) {
+  const contest = contestForPortfolio(portfolioId);
+  if (contest) {
     return {
       type: "contest",
-      sourceId: ce.contest_id,
-      status: ce.contest_status,
-      endsAt: ce.week_end,
+      sourceId: contest.id,
+      status: contest.status,
+      startsAt: contest.week_start,
+      endsAt: contest.week_end,
     };
   }
-  const se = db
-    .prepare(
-      `SELECT satellite_entries.*, satellites.locks_at, satellites.status as satellite_status, satellites.name
-       FROM satellite_entries JOIN satellites ON satellites.id = satellite_entries.satellite_id
-       WHERE portfolio_id = ?`
-    )
-    .get(portfolioId);
-  if (se) {
+  const satellite = satelliteForPortfolio(portfolioId);
+  if (satellite) {
     return {
       type: "satellite",
-      sourceId: se.satellite_id,
-      status: se.satellite_status,
-      endsAt: se.locks_at,
+      sourceId: satellite.id,
+      status: satellite.status,
+      tierId: satellite.tier_id,
+      priceLevel: satellite.price_level,
+      startsAt: satellite.opens_at,
+      endsAt: satellite.locks_at,
+      settlementVersion: satellite.settlement_version || "legacy",
+      settlementError: satellite.settlement_error || null,
     };
   }
-  return { type: "unknown", sourceId: null, status: "unknown", endsAt: null };
+  return { type: "unknown", sourceId: null, status: "unknown", startsAt:null, endsAt: null };
 }
 
 function summarize(portfolio) {
-  const positions = db
-    .prepare("SELECT * FROM positions WHERE portfolio_id = ? AND quantity > 0")
-    .all(portfolio.id);
+  const positions = db.prepare("SELECT * FROM positions WHERE portfolio_id = ? AND quantity > 0").all(portfolio.id);
   const symbols = positions.map((p) => p.symbol);
   const quotes = symbols.length ? getQuotes(symbols) : [];
   const priceMap = Object.fromEntries(quotes.map((q) => [q.symbol, q.price]));
   let marketValue = 0;
   for (const p of positions) marketValue += (priceMap[p.symbol] ?? p.avg_cost) * p.quantity;
   const totalValue = portfolio.cash_balance + marketValue;
-  const context = contextFor(portfolio.id);
+  const availability = tradeAvailability(portfolio.id);
   return {
     id: portfolio.id,
     label: portfolio.label,
@@ -80,30 +126,25 @@ function summarize(portfolio) {
     totalValue: Number(totalValue.toFixed(2)),
     pl: Number((totalValue - 100000).toFixed(2)),
     positionCount: positions.length,
-    context,
+    context: contextFor(portfolio.id),
+    tradingAllowed: availability.allowed,
+    tradingMessage: availability.allowed ? null : availability.reason,
   };
 }
 
-// GET /api/portfolios — all of my portfolios (one per contest/satellite entry)
 router.get("/", requireAuth, (req, res) => {
   const rows = db.prepare("SELECT * FROM portfolios WHERE account_id = ? ORDER BY id DESC").all(req.account.id);
   res.json(rows.map(summarize));
 });
 
-// GET /api/portfolios/:id — full detail: positions with live prices, cash, P&L
 router.get("/:id", requireAuth, (req, res) => {
   const portfolio = db.prepare("SELECT * FROM portfolios WHERE id = ?").get(req.params.id);
-  if (!portfolio || portfolio.account_id !== req.account.id) {
-    return res.status(404).json({ error: "Portfolio not found" });
-  }
+  if (!portfolio || portfolio.account_id !== req.account.id) return res.status(404).json({ error: "Portfolio not found" });
 
-  const positions = db
-    .prepare("SELECT * FROM positions WHERE portfolio_id = ? AND quantity > 0")
-    .all(portfolio.id);
+  const positions = db.prepare("SELECT * FROM positions WHERE portfolio_id = ? AND quantity > 0").all(portfolio.id);
   const symbols = positions.map((p) => p.symbol);
   const quotes = symbols.length ? getQuotes(symbols) : [];
   const priceMap = Object.fromEntries(quotes.map((q) => [q.symbol, q.price]));
-
   let marketValue = 0;
   const enriched = positions.map((p) => {
     const price = priceMap[p.symbol] ?? p.avg_cost;
@@ -118,8 +159,8 @@ router.get("/:id", requireAuth, (req, res) => {
       unrealizedPL: Number(((price - p.avg_cost) * p.quantity).toFixed(2)),
     };
   });
-
   const totalValue = portfolio.cash_balance + marketValue;
+  const availability = tradeAvailability(portfolio.id);
   res.json({
     id: portfolio.id,
     label: portfolio.label,
@@ -128,89 +169,77 @@ router.get("/:id", requireAuth, (req, res) => {
     totalValue: Number(totalValue.toFixed(2)),
     pl: Number((totalValue - 100000).toFixed(2)),
     context: contextFor(portfolio.id),
-    isDegenHours: isDegenHoursPortfolio(portfolio.id), // Hourly — no 10% position cap, see routes/portfolios.js trade route
+    isDegenHours: isDegenHoursPortfolio(portfolio.id),
+    tradingAllowed: availability.allowed,
+    tradingMessage: availability.allowed ? null : availability.reason,
+    serverNow: availability.now.toISOString(),
   });
 });
 
-// POST /api/portfolios/:id/trades — buy/sell within this specific portfolio only
 router.post("/:id/trades", requireAuth, (req, res) => {
   const portfolio = db.prepare("SELECT * FROM portfolios WHERE id = ?").get(req.params.id);
-  if (!portfolio || portfolio.account_id !== req.account.id) {
-    return res.status(404).json({ error: "Portfolio not found" });
-  }
+  if (!portfolio || portfolio.account_id !== req.account.id) return res.status(404).json({ error: "Portfolio not found" });
+
+  const availability = tradeAvailability(portfolio.id);
+  if (!availability.allowed) return res.status(400).json({ code:"TRADING_CLOSED", error:availability.reason });
 
   const { symbol, side, maxAllotment } = req.body || {};
-  let { quantity } = req.body || {};
-
-  if (!symbol || !["buy", "sell"].includes(side)) {
+  let { quantity, percent } = req.body || {};
+  const normalizedSymbol = String(symbol || "").toUpperCase();
+  if (!normalizedSymbol || !["buy", "sell"].includes(side)) {
     return res.status(400).json({ error: "symbol and side ('buy'|'sell') are required" });
   }
 
-  const quote = getQuote(symbol);
+  const quote = getQuote(normalizedSymbol);
   if (!quote) return res.status(404).json({ error: "Unknown symbol" });
-
   const portfolioId = portfolio.id;
+  const position = db.prepare("SELECT * FROM positions WHERE portfolio_id = ? AND symbol = ?").get(portfolioId, normalizedSymbol);
+  const isDegen = isDegenHoursPortfolio(portfolioId);
 
-  // "Buy the max allowed" is inherently racing against a moving price —
-  // the quantity gets computed once, then sits through a review/confirm
-  // step before actually executing, and prices tick continuously. A fixed
-  // tolerance only covers floating-point rounding, not real price drift
-  // during that pause. Structural fix: when maxAllotment is set, IGNORE
-  // whatever quantity the client sent (it's only ever an estimate for
-  // display) and compute the true maximum here, atomically, against the
-  // live price and live portfolio value at the actual moment of execution.
-  if (side === "buy" && maxAllotment) {
-    const existingPosition = db.prepare("SELECT * FROM positions WHERE portfolio_id = ? AND symbol = ?").get(portfolioId, symbol);
-    const existingCostBasis = existingPosition ? existingPosition.avg_cost * existingPosition.quantity : 0;
-    const portfolioValue = totalValueForPortfolio(portfolioId);
-    const isDegenHours = isDegenHoursPortfolio(portfolioId);
+  if (percent != null) {
+    percent = Number(percent);
+    if (![25,50,75,100].includes(percent)) return res.status(400).json({ error:"percent must be 25, 50, 75, or 100" });
     const fresh = db.prepare("SELECT * FROM portfolios WHERE id = ?").get(portfolioId);
-    // Degen Hours: no 10% cap — "100%" genuinely means all your remaining
-    // cash on this one name, exactly as advertised.
-    const room = isDegenHours ? fresh.cash_balance : Math.max(0, portfolioValue * MAX_INITIAL_POSITION_PCT - existingCostBasis);
-    quantity = room / quote.price;
-    if (quantity <= 0) {
-      return res.status(400).json({ error: isDegenHours ? "No cash left to buy more." : `No room left to buy more ${symbol} — already at the 10% max for this position.` });
+    if (side === "sell") {
+      if (!position || position.quantity <= 0) return res.status(400).json({ error:`You don't own ${normalizedSymbol}.` });
+      quantity = position.quantity * (percent / 100);
+    } else if (isDegen) {
+      const spend = fresh.cash_balance * (percent / 100);
+      quantity = spend / quote.price;
+    } else {
+      const portfolioValue = totalValueForPortfolio(portfolioId);
+      const existingCostBasis = position ? position.avg_cost * position.quantity : 0;
+      const targetCostBasis = portfolioValue * MAX_INITIAL_POSITION_PCT * (percent / 100);
+      const additional = Math.max(0, targetCostBasis - existingCostBasis);
+      if (additional <= 0.01) {
+        return res.status(400).json({ error:`${normalizedSymbol} is already at or above the ${percent}% quick-buy target.` });
+      }
+      quantity = additional / quote.price;
     }
+  } else if (side === "buy" && maxAllotment) {
+    const existingCostBasis = position ? position.avg_cost * position.quantity : 0;
+    const portfolioValue = totalValueForPortfolio(portfolioId);
+    const fresh = db.prepare("SELECT * FROM portfolios WHERE id = ?").get(portfolioId);
+    const room = isDegen ? fresh.cash_balance : Math.max(0, portfolioValue * MAX_INITIAL_POSITION_PCT - existingCostBasis);
+    quantity = room / quote.price;
+    if (quantity <= 0) return res.status(400).json({ error: isDegen ? "No cash left to buy more." : `No room left to buy more ${normalizedSymbol}.` });
   }
 
-  if (!quantity || quantity <= 0) {
-    return res.status(400).json({ error: "A positive quantity is required" });
-  }
-
+  quantity = Number(quantity);
+  if (!(quantity > 0)) return res.status(400).json({ error: "A positive quantity is required" });
   const cost = quote.price * quantity;
 
-  // Trading rules — sensible position sizing, not gambling. Only apply to
-  // BUY orders; selling to reduce risk is never restricted. Degen Hours
-  // (Hourly) is the one deliberate exception to the sizing rule — the
-  // $2B market cap floor still applies everywhere, no exceptions. Not a
-  // manipulation safeguard (this is paper trading, nothing real to
-  // manipulate) — just reflects which stocks the platform's feed
-  // currently offers, established companies, no penny stocks.
   if (side === "buy") {
     if (quote.marketCap != null && quote.marketCap < MIN_MARKET_CAP) {
-      return res.status(400).json({
-        error: `${symbol} is below the minimum market cap for this platform ($${(MIN_MARKET_CAP / 1e9).toFixed(0)}B) — no micro-cap plays.`,
-      });
+      return res.status(400).json({ error: `${normalizedSymbol} is below the $${(MIN_MARKET_CAP / 1e9).toFixed(0)}B minimum market cap.` });
     }
-
-    if (!isDegenHoursPortfolio(portfolioId)) {
-      const existingPosition = db
-        .prepare("SELECT * FROM positions WHERE portfolio_id = ? AND symbol = ?")
-        .get(portfolioId, symbol);
-      const existingCostBasis = existingPosition ? existingPosition.avg_cost * existingPosition.quantity : 0;
+    if (!isDegen) {
+      const existingCostBasis = position ? position.avg_cost * position.quantity : 0;
       const portfolioValue = totalValueForPortfolio(portfolioId);
       const maxAllowed = portfolioValue * MAX_INITIAL_POSITION_PCT;
-
-      // maxAllotment orders are computed from these exact same numbers a
-      // few lines up, in the exact same request — this check is a formality
-      // for that path (can't meaningfully fail) but stays fully authoritative
-      // for ordinary quantity-specified buys.
       if (existingCostBasis + cost > maxAllowed + 0.01) {
         const room = Math.max(0, maxAllowed - existingCostBasis);
-        return res.status(400).json({
-          error: `This would put more than 10% of your portfolio into ${symbol} at entry. Max additional buy right now: ~$${room.toFixed(2)}. (A position CAN grow past 10% from price gains — this limit only applies to new buys.)`,
-        });
+        return res.status(400).json({ error: `This would put more than 10% of your portfolio into ${normalizedSymbol} at entry. Max additional buy right now: ~$${room.toFixed(2)}.` });
       }
     }
   }
@@ -218,56 +247,40 @@ router.post("/:id/trades", requireAuth, (req, res) => {
   try {
     db.exec("BEGIN");
     const fresh = db.prepare("SELECT * FROM portfolios WHERE id = ?").get(portfolioId);
-    const position = db
-      .prepare("SELECT * FROM positions WHERE portfolio_id = ? AND symbol = ?")
-      .get(portfolioId, symbol);
-
+    const currentPosition = db.prepare("SELECT * FROM positions WHERE portfolio_id = ? AND symbol = ?").get(portfolioId, normalizedSymbol);
     if (side === "buy") {
       if (cost > fresh.cash_balance + 0.01) throw new Error("INSUFFICIENT_CASH");
       db.prepare("UPDATE portfolios SET cash_balance = cash_balance - ? WHERE id = ?").run(cost, portfolioId);
-      if (position) {
-        const newQty = position.quantity + quantity;
-        const newAvg = (position.avg_cost * position.quantity + cost) / newQty;
-        db.prepare("UPDATE positions SET quantity = ?, avg_cost = ? WHERE id = ?").run(
-          newQty,
-          newAvg,
-          position.id
-        );
+      if (currentPosition) {
+        const newQty = currentPosition.quantity + quantity;
+        const newAvg = (currentPosition.avg_cost * currentPosition.quantity + cost) / newQty;
+        db.prepare("UPDATE positions SET quantity = ?, avg_cost = ? WHERE id = ?").run(newQty, newAvg, currentPosition.id);
       } else {
-        db.prepare(
-          "INSERT INTO positions (portfolio_id, symbol, quantity, avg_cost) VALUES (?, ?, ?, ?)"
-        ).run(portfolioId, symbol, quantity, quote.price);
+        db.prepare("INSERT INTO positions (portfolio_id, symbol, quantity, avg_cost) VALUES (?, ?, ?, ?)")
+          .run(portfolioId, normalizedSymbol, quantity, quote.price);
       }
     } else {
-      if (!position || position.quantity < quantity) throw new Error("INSUFFICIENT_SHARES");
+      if (!currentPosition || currentPosition.quantity + 1e-9 < quantity) throw new Error("INSUFFICIENT_SHARES");
       db.prepare("UPDATE portfolios SET cash_balance = cash_balance + ? WHERE id = ?").run(cost, portfolioId);
-      db.prepare("UPDATE positions SET quantity = quantity - ? WHERE id = ?").run(quantity, position.id);
+      db.prepare("UPDATE positions SET quantity = quantity - ? WHERE id = ?").run(quantity, currentPosition.id);
     }
-
-    db.prepare(
-      "INSERT INTO trades (portfolio_id, symbol, side, quantity, price) VALUES (?, ?, ?, ?, ?)"
-    ).run(portfolioId, symbol, side, quantity, quote.price);
-
+    db.prepare("INSERT INTO trades (portfolio_id, symbol, side, quantity, price) VALUES (?, ?, ?, ?, ?)")
+      .run(portfolioId, normalizedSymbol, side, quantity, quote.price);
     db.exec("COMMIT");
   } catch (e) {
-    db.exec("ROLLBACK");
+    try { db.exec("ROLLBACK"); } catch (_) {}
     if (e.message === "INSUFFICIENT_CASH") return res.status(400).json({ error: "Not enough cash" });
-    if (e.message === "INSUFFICIENT_SHARES")
-      return res.status(400).json({ error: "You don't own enough shares to sell that many" });
+    if (e.message === "INSUFFICIENT_SHARES") return res.status(400).json({ error: "You don't own enough shares to sell that many" });
     throw e;
   }
 
-  res.json({ ok: true, symbol, side, quantity, price: quote.price });
+  res.json({ ok: true, symbol:normalizedSymbol, side, quantity, price: quote.price, percent: percent ?? null });
 });
 
 router.get("/:id/trades", requireAuth, (req, res) => {
   const portfolio = db.prepare("SELECT * FROM portfolios WHERE id = ?").get(req.params.id);
-  if (!portfolio || portfolio.account_id !== req.account.id) {
-    return res.status(404).json({ error: "Portfolio not found" });
-  }
-  const trades = db
-    .prepare("SELECT symbol, side, quantity, price, timestamp FROM trades WHERE portfolio_id = ? ORDER BY timestamp DESC LIMIT 100")
-    .all(portfolio.id);
+  if (!portfolio || portfolio.account_id !== req.account.id) return res.status(404).json({ error: "Portfolio not found" });
+  const trades = db.prepare("SELECT symbol, side, quantity, price, timestamp FROM trades WHERE portfolio_id = ? ORDER BY timestamp DESC LIMIT 100").all(portfolio.id);
   res.json(trades);
 });
 

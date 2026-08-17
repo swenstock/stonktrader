@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180" role="img" aria-labelledby="title desc" shape-rendering="crispEdges">
+  <title id="title">StonkBroker raising the trophy</title>
+  <desc id="desc">Pixel-art StonkBroker in a green sweater and purple tie raising a gold trophy in victory.</desc>
+  <rect width="240" height="180" rx="18" fill="#061018"/>
+  <rect x="8" y="8" width="224" height="164" rx="14" fill="#081722" stroke="#69570f" stroke-width="2"/>
+  <g transform="translate(0,2)">
+    <!-- trophy -->
+    <rect x="101" y="12" width="38" height="8" fill="#ffd93a"/>
+    <rect x="96" y="20" width="48" height="9" fill="#f1b900"/>
+    <rect x="101" y="29" width="38" height="28" fill="#ffc400"/>
+    <rect x="107" y="57" width="26" height="8" fill="#d99500"/>
+    <rect x="112" y="65" width="16" height="9" fill="#b67600"/>
+    <rect x="101" y="74" width="38" height="8" fill="#ffc400"/>
+    <rect x="87" y="24" width="9" height="25" fill="#d99500"/>
+    <rect x="80" y="24" width="12" height="8" fill="#ffc400"/>
+    <rect x="80" y="32" width="7" height="16" fill="#ffc400"/>
+    <rect x="144" y="24" width="9" height="25" fill="#d99500"/>
+    <rect x="148" y="24" width="12" height="8" fill="#ffc400"/>
+    <rect x="153" y="32" width="7" height="16" fill="#ffc400"/>
+    <!-- raised arms -->
+    <rect x="61" y="65" width="14" height="42" fill="#1f6f36"/>
+    <rect x="72" y="54" width="15" height="18" fill="#1f6f36"/>
+    <rect x="79" y="47" width="11" height="13" fill="#875838"/>
+    <rect x="165" y="65" width="14" height="42" fill="#1f6f36"/>
+    <rect x="153" y="54" width="15" height="18" fill="#1f6f36"/>
+    <rect x="150" y="47" width="11" height="13" fill="#875838"/>
+    <!-- horns/hair -->
+    <rect x="93" y="58" width="12" height="8" fill="#372218"/>
+    <rect x="135" y="58" width="12" height="8" fill="#372218"/>
+    <rect x="87" y="51" width="10" height="7" fill="#5f3a22"/>
+    <rect x="143" y="51" width="10" height="7" fill="#5f3a22"/>
+    <rect x="96" y="55" width="48" height="13" fill="#2b1b14"/>
+    <!-- face -->
+    <rect x="96" y="67" width="48" height="41" fill="#8d5b39"/>
+    <rect x="102" y="73" width="9" height="6" fill="#130e0b"/>
+    <rect x="129" y="73" width="9" height="6" fill="#130e0b"/>
+    <rect x="104" y="75" width="4" height="2" fill="#fff"/>
+    <rect x="131" y="75" width="4" height="2" fill="#fff"/>
+    <!-- beard + smile -->
+    <rect x="101" y="87" width="38" height="18" fill="#2b1b14"/>
+    <rect x="108" y="86" width="24" height="8" fill="#8d5b39"/>
+    <rect x="111" y="91" width="18" height="4" fill="#fff"/>
+    <rect x="115" y="95" width="10" height="3" fill="#7b2b28"/>
+    <!-- body -->
+    <rect x="76" y="105" width="88" height="52" fill="#1f6f36"/>
+    <rect x="91" y="105" width="58" height="12" fill="#2e8d46"/>
+    <rect x="111" y="108" width="18" height="10" fill="#e8e8e8"/>
+    <rect x="115" y="117" width="10" height="31" fill="#6f3ba9"/>
+    <rect x="109" y="146" width="22" height="8" fill="#583085"/>
+    <!-- legs -->
+    <rect x="86" y="157" width="27" height="13" fill="#17232d"/>
+    <rect x="127" y="157" width="27" height="13" fill="#17232d"/>
+  </g>
+  <text x="120" y="174" text-anchor="middle" fill="#ffc400" font-family="Arial, sans-serif" font-size="8" font-weight="800" letter-spacing="1.4">WIN THE FLOOR</text>
+</svg>

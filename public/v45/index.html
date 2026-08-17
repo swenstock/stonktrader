@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Stonk Broker Challenge</title>
+  <link rel="stylesheet" href="./v45.css">
+  <link rel="stylesheet" href="./victory.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="brand" data-view="lobby"><span>STONK</span> BROKER CHALLENGE</button>
+  <nav>
+    <button data-view="lobby">LOBBY</button>
+    <button data-view="floor">TRADING FLOOR</button>
+    <button data-view="my">MY CONTESTS</button>
+    <button data-view="exchange">TICKET EXCHANGE</button>
+  </nav>
+  <div class="top-actions">
+    <button id="clockBtn" class="ghost hidden">🧪 TEST CLOCK</button>
+    <button id="authBtn" class="ghost">SIGN IN</button>
+  </div>
+</header>
+
+<div id="statusBar" class="statusbar"><span id="marketMode">SIM DATA</span><span id="serverNow">—</span><span id="userState">BROWSE MODE</span></div>
+
+<main>
+  <section id="view-lobby" class="view active">
+    <div class="hero-grid">
+      <article class="hero-card pitch">
+        <div class="broker-art" aria-hidden="true">
+          <svg viewBox="0 0 16 16" shape-rendering="crispEdges">
+            <rect width="16" height="16" fill="#b8d4e8"/><rect x="4" y="1" width="8" height="2" fill="#f3d25a"/>
+            <rect x="3" y="3" width="10" height="8" fill="#503527"/><rect x="4" y="4" width="8" height="6" fill="#f1c98f"/>
+            <rect x="5" y="6" width="2" height="1" fill="#fff"/><rect x="9" y="6" width="2" height="1" fill="#fff"/>
+            <rect x="6" y="8" width="4" height="1" fill="#5c3926"/><rect x="2" y="11" width="12" height="5" fill="#14232d"/>
+            <rect x="7" y="11" width="2" height="5" fill="#20c45a"/>
+          </svg>
+        </div>
+        <div>
+          <h1>CAN'T<br>AFFORD IT?<br><em>THEN WIN IT.</em></h1>
+          <p class="goldline">COMPETE. WIN TRANSFERABLE TICKETS.<br>EARN YOUR SHOT AT THE STONKBROKER.</p>
+        </div>
+      </article>
+
+      <article class="hero-card funding">
+        <div class="eyebrow">NEXT STONKBROKER MAIN EVENT</div>
+        <div class="fund-title"><span>PRIZE FUND</span><b id="fundPct">0%</b></div>
+        <div class="meter"><i id="fundFill"></i></div>
+        <div class="fund-meta"><span id="fundCurrent">0 STONK</span><span id="fundTarget">Target: 733,332 STONK</span></div>
+        <div class="fund-value"><small>ACTUAL COMMITTED MAIN EVENT RESERVE</small><strong id="fundReserve">0 STONK</strong><span>Ticket resale prices do not change this reserve.</span></div>
+      </article>
+    </div>
+
+    <article class="market-strip">
+      <div class="ticket-icon">🎟️</div>
+      <div class="market-copy"><h2>MAIN EVENT TICKET — LIVE MARKET</h2><p>Earn one in competition or buy one from another player. SBC does not sell Main Event entry.</p></div>
+      <div class="quote-box"><small>HIGHEST BID</small><b id="meBid">—</b></div>
+      <div class="quote-box"><small>LOWEST ASK</small><b id="meAsk">—</b></div>
+    </article>
+
+    <div class="primary-actions">
+      <button class="big green" data-view="floor"><b><img class="victory-mini" src="./victory-broker.svg" alt="">ENTER THE TRADING FLOOR</b><span>Pick your tier. Pick your session. Compete.</span></button>
+      <button class="big blue" data-view="exchange"><b>🎟 ENTER THE TICKET EXCHANGE</b><span>Buy or sell tickets on the open market.</span></button>
+    </div>
+
+    <div class="journey">
+      <div><b><img class="victory-mini" src="./victory-broker.svg" alt="">EARN IT</b><span>Finish in the prize zone.</span></div>
+      <div><b>🎟 PLAY • HOLD • SELL</b><span>Tickets belong to the winner.</span></div>
+      <div><b>👑 WIN THE STONKBROKER</b><span>Main Event is the destination.</span></div>
+    </div>
+
+    <section class="panel">
+      <div class="section-head"><div><small>SIMULATED MARKET FEED</small><h2>THE FLOOR IS MOVING</h2></div><span class="sim-pill">DETERMINISTIC SIM</span></div>
+      <div id="quoteTape" class="quote-tape"></div>
+    </section>
+
+    <section class="panel how">
+      <h2>HOW IT WORKS</h2>
+      <div class="how-grid">
+        <div><i>1</i><b>ENTER THE FLOOR</b><span>Start free or choose a paid tier.</span></div>
+        <div><i>2</i><b>TRADE $100K</b><span>Paper portfolio. Real contest rules.</span></div>
+        <div><i>3</i><b>EARN TICKETS</b><span>Top finishers win transferable entry rights.</span></div>
+        <div><i>4</i><b>WIN THE BROKER</b><span>Earn or buy your way into the Main Event.</span></div>
+      </div>
+    </section>
+  </section>
+
+  <section id="view-floor" class="view">
+    <div class="page-head"><div><small>TRADING FLOOR</small><h1>PICK YOUR SESSION. PICK YOUR TIER.</h1></div><button class="ghost" data-view="lobby">← BACK</button></div>
+    <div id="categoryTabs" class="tabs"></div>
+    <div id="floorGrid" class="floor-grid"></div>
+  </section>
+
+  <section id="view-my" class="view">
+    <div class="page-head"><div><small>COMMAND CENTER</small><h1>MY CONTESTS</h1></div><button id="refreshMy" class="ghost">REFRESH</button></div>
+    <div id="myGate" class="empty-state"></div>
+    <div id="myList" class="my-list"></div>
+  </section>
+
+  <section id="view-exchange" class="view">
+    <div class="page-head"><div><small>PLAYER-TO-PLAYER</small><h1>TICKET EXCHANGE</h1><p>Bids are buyers. Offers are sellers. One order = one ticket.</p></div><button class="ghost" data-view="lobby">← BACK</button></div>
+    <div id="ticketTabs" class="tabs ticket-tabs"></div>
+    <div class="inventory-line" id="inventoryLine">Sign in to see your ticket inventory.</div>
+    <div class="book-summary"><div><small>HIGHEST BID</small><b id="bookBid">—</b></div><div><small>LOWEST ASK</small><b id="bookAsk">—</b></div><div><small>MARKET</small><b id="bookType">MAIN EVENT</b></div></div>
+    <div class="book-actions"><button id="placeBid" class="green">PLACE A BID</button><button id="postOffer" class="blue">POST AN OFFER</button></div>
+    <div class="order-book">
+      <section class="book bid-book"><header><h2>BIDS — SELL INTO THESE</h2><p>Sellers accept a buyer bid.</p></header><div id="bidRows"></div></section>
+      <section class="book ask-book"><header><h2>OFFERS — BUY THESE</h2><p>Buyers take an offer from a seller.</p></header><div id="offerRows"></div></section>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<div id="authModal" class="modal hidden">
+  <div class="modal-card auth-card"><button class="x" data-close="authModal">×</button><small>PLAYER ACCOUNT</small><h2 id="authTitle">SIGN IN</h2>
+    <div class="auth-tabs"><button id="loginTab" class="active">LOG IN</button><button id="signupTab">SIGN UP</button></div>
+    <form id="loginForm"><input id="loginEmail" type="email" placeholder="Email" required><input id="loginPassword" type="password" placeholder="Password" required><button class="green" type="submit">LOG IN</button></form>
+    <form id="signupForm" class="hidden"><input id="signupName" placeholder="Trader handle" required><input id="signupEmail" type="email" placeholder="Email" required><input id="signupPassword" type="password" minlength="8" placeholder="Password — 8+ characters" required><input id="signupReferral" placeholder="Referral code — optional"><button class="green" type="submit">CREATE FREE ACCOUNT</button></form>
+    <p id="authMsg" class="form-msg"></p>
+  </div>
+</div>
+
+<div id="clockModal" class="modal hidden">
+  <div class="modal-card"><button class="x" data-close="clockModal">×</button><small>DEVELOPER / QA TOOL</small><h2>🧪 TEST CLOCK</h2><p>Jump the authoritative SBC clock. Bare times are interpreted as Eastern Time.</p>
+    <label>DATE / TIME — ET<input id="clockInput" type="datetime-local"></label>
+    <div class="preset-row"><button data-clock="2026-08-17T09:30">MON 9:30 OPEN</button><button data-clock="2026-08-17T13:00">1:00 PM</button><button data-clock="2026-08-17T15:25">DEGEN 3:25</button><button data-clock="2026-08-17T15:30">RACE 3:30</button><button data-clock="2026-08-21T15:59">FRI 3:59</button></div>
+    <button id="setClock" class="green">SET TEST CLOCK</button><button id="clearClock" class="ghost">BACK TO REAL TIME</button><button id="fundTest" class="gold">+ 10,000 TEST STONK</button><p id="clockMsg"></p>
+  </div>
+</div>
+
+<div id="welcome" class="welcome hidden">
+  <div class="welcome-card"><img class="victory-art" src="./victory-broker.svg" alt="StonkBroker raising the trophy in victory"><h1>WELCOME TO STONK BROKER<br>CHALLENGE</h1><p>It takes about a minute to learn the whole game: find a contest, choose a tier, build a portfolio, trade it, follow your standing, and use your own game film to get better.</p>
+    <div class="welcome-actions"><button id="skipIntro" class="ghost">SKIP FOR NOW</button><button id="showAround" class="green">SHOW ME AROUND →</button></div>
+    <button id="disableIntro" class="danger">DON'T SHOW THIS INTRO AGAIN</button>
+  </div>
+</div>
+
+<script src="./v45.js"></script>
+<script src="./v45-links.js"></script>
+</body>
+</html>
