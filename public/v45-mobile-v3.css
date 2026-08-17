@@ -30,15 +30,14 @@
   .mobile-step-nav{grid-template-columns:36px 1fr 36px!important;margin-top:6px!important}
   .mobile-step-nav button{height:34px!important;font-size:18px!important}
 
-  /* The destination is already explained above; keep footer as a compact reminder */
-  .footer-card{grid-template-columns:46px 1fr!important;padding:9px!important;column-gap:8px!important;margin-top:8px!important}
-  .footer-card .mobile-footer-broker{width:44px!important;height:44px!important}
-  .footer-card strong{font-size:14px!important;line-height:1.05!important}
-  .footer-card span{font-size:8.5px!important;line-height:1.2!important}
+  /* The destination is already explained above and in step 4. No third repetition. */
+  .footer-card{display:none!important}
 
-  /* Calls to action need one line of explanation, not two paragraphs */
+  /* Calls to action: tier brokers provide the visual map immediately */
   .action{min-height:54px!important;padding:10px 12px!important;font-size:15px!important}
   .action small{font-size:8px!important;line-height:1.2!important}
+  .mobile-floor-brokers{display:flex;gap:4px;margin-top:7px;align-items:center}
+  .mobile-floor-broker{width:30px;height:30px;border-radius:6px;object-fit:cover;image-rendering:pixelated;border:1px solid rgba(255,255,255,.38);background:#a9c8df;box-shadow:0 2px 7px rgba(0,0,0,.2)}
 
   /* Tighten tier/session screens globally */
   .page-head{padding:9px!important}.page-head h1{font-size:20px!important}.page-head p{font-size:8px!important;margin-top:3px!important}
