@@ -1,0 +1,23 @@
+name: Stage 36 Mobile My Contests + How
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  mobile-stage36:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+      - run: npm ci
+      - name: Syntax check Stage 36 mobile layer
+        run: |
+          node --check public/v45-mobile-v7.js
+          node --check scripts/validate-stage36-mobile.js
+      - name: Validate Stage 36 mobile fixes
+        run: node scripts/validate-stage36-mobile.js
