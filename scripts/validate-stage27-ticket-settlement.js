@@ -2,6 +2,7 @@ const fs=require('fs'),path=require('path');
 const settle=fs.readFileSync(path.join(__dirname,'..','public','v45-ticket-settlement-v38.js'),'utf8');
 const css=fs.readFileSync(path.join(__dirname,'..','public','v45-ticket-settlement-v38.css'),'utf8');
 const loader=fs.readFileSync(path.join(__dirname,'..','public','v45-my-tickets-cleanup-v37.js'),'utf8');
+const recent=fs.readFileSync(path.join(__dirname,'..','public','v45-ticket-recent-v40.js'),'utf8');
 function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
 must(settle.includes("const STORE='sbcTicketSettlementV38'")&&settle.includes('st.x[type]'),'prototype ticket fills persist inventory deltas');
 must(settle.includes("settle(type,1,'BUY'")&&settle.includes("settle(type,-1,'SELL'"),'buy adds a ticket and sell removes a ticket');
@@ -14,4 +15,6 @@ must(loader.includes('wireBasketLive')&&loader.includes('updateBasketPreview')&&
 must(settle.includes('showFillConfirm')&&settle.includes('YOU ${side} 1 ${type} TICKET')&&settle.includes('watchRecentFill'),'completed trade creates an explicit bought/sold confirmation popup');
 must(settle.includes("['#bidBook','#askBook']")&&settle.includes("overflow-y','scroll")&&settle.includes('flex-shrink'),'bid and ask books have forced independent scroll viewports with non-shrinking rows');
 must(css.includes('.tm39-book-scroll')&&css.includes('overflow-y:scroll!important')&&css.includes('.tm39-fill-confirm'),'Stage 29 scroll and fill confirmation styles are present');
-console.log('Stage 27/28/29 ticket settlement, live basket, confirmation, and order-book regression checks passed.');
+must(loader.includes('/v45-ticket-recent-v40.js?v=40'),'persistent Recent Trades renderer is loaded');
+must(recent.includes("mine.parentNode.insertBefore(box,mine.nextSibling)")&&recent.includes("const legacy=$('#tm38Recent',mine)")&&recent.includes("const STORE='sbcTicketSettlementV38'"),'Recent Trades is rendered as a sibling outside the replaceable My Orders panel using persisted fills');
+console.log('Stage 27/28/29/30 ticket settlement, live basket, confirmation, order-book, and persistent Recent Trades checks passed.');
