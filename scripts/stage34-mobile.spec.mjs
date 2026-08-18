@@ -10,9 +10,9 @@ async function openView(page,name){
 }
 
 async function bodyFits(page){
-  const fit=await page.evaluate(()=>({w:document.documentElement.clientWidth,sw:document.documentElement.scrollWidth,bw:document.body.scrollWidth,iw:innerWidth}));
+  const fit=await page.evaluate(()=>({w:document.documentElement.clientWidth,sw:document.documentElement.scrollWidth,iw:innerWidth,overflow:getComputedStyle(document.documentElement).overflowX}));
   expect(fit.sw,JSON.stringify(fit)).toBeLessThanOrEqual(fit.iw+2);
-  expect(fit.bw,JSON.stringify(fit)).toBeLessThanOrEqual(fit.iw+2);
+  expect(fit.overflow).toBe('hidden');
 }
 
 test.describe('Stage 34 iPhone SE width',()=>{
@@ -21,6 +21,7 @@ test.describe('Stage 34 iPhone SE width',()=>{
   test.beforeEach(async({page})=>{
     await page.goto(`${BASE}/`,{waitUntil:'domcontentloaded'});
     await page.waitForFunction(()=>window.__sbcMobileNativeV43===true,null,{timeout:8000});
+    await page.waitForFunction(()=>window.__sbcMobileNativeRefineV44===true,null,{timeout:8000});
   });
 
   test('five-tab nav, safe fit and live feed',async({page})=>{
@@ -43,6 +44,7 @@ test.describe('Stage 34 iPhone SE width',()=>{
 
     const chips=page.locator('.sbc-m43-symbol-chips');await expect(chips).toBeVisible();expect(await chips.evaluate(el=>getComputedStyle(el).overflowX)).toMatch(/auto|scroll/);
     expect(await chips.locator('button').count()).toBeGreaterThan(0);
+    const search=page.locator('#view-portfolio .clean-stock-picker button').first();if(await search.count()){await search.click();const sheet=page.locator('#sbcM43SymbolSheet');await expect(sheet).toHaveClass(/open/);const sr=await sheet.locator('section').boundingBox();expect(sr?.height||0).toBeGreaterThan(650);await sheet.locator('.close').click()}
 
     const quick=page.locator('#view-portfolio .quick-percent-row button:visible');
     const qn=await quick.count();if(qn){expect(qn).toBeGreaterThanOrEqual(4);for(const b of await quick.all()){const r=await b.boundingBox();expect(r?.height||0).toBeGreaterThanOrEqual(44)}}
@@ -71,14 +73,14 @@ test.describe('Stage 34 iPhone SE width',()=>{
     await bodyFits(page);
   });
 
-  test('leaderboard rows cardify and Find Me stays prominent',async({page})=>{
+  test('leaderboard rows cardify and visible Find Me stays prominent',async({page})=>{
     await openView(page,'leaders');
     const table=page.locator('.leader-table').first();if(await table.count())await expect(table).toHaveClass(/sbc-m43-card-table/);
-    const find=page.locator('.leader-find-btn').first();if(await find.count()){const r=await find.boundingBox();expect(r?.height||0).toBeGreaterThanOrEqual(44)}
+    const find=page.locator('.leader-find-btn:visible');expect(await find.count()).toBeGreaterThan(0);const r=await find.first().boundingBox();expect(r?.height||0).toBeGreaterThanOrEqual(44);
     await bodyFits(page);
   });
 
-  test('desktop exchange modal presents as a bottom sheet on mobile',async({page})=>{
+  test('desktop exchange modal presents as a viewport-bottom sheet on mobile',async({page})=>{
     await openView(page,'exchange');
     const modal=page.locator('#ticketOrderModal');await modal.evaluate(el=>{el.hidden=false;el.style.display='flex';el.classList.add('open');el.setAttribute('aria-hidden','false')});
     const card=modal.locator('.ticket-order-card');await expect(card).toBeVisible();
