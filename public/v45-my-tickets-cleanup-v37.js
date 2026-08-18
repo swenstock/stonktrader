@@ -5,7 +5,6 @@ const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelecto
 function stripDescription(row){
   const left=$('.inv-left',row);if(!left)return;
   const label=$('b',left);if(!label)return;
-  // Remove raw descriptive text nodes wherever they sit beside the bold ticket label.
   const cleanParent=el=>{if(!el)return;[...el.childNodes].forEach(node=>{
     if(node===label||node.contains?.(label))return;
     if(node.nodeType===Node.TEXT_NODE){if(node.textContent.trim())node.remove();return;}
@@ -13,9 +12,12 @@ function stripDescription(row){
   });};
   cleanParent(label.parentElement);
   cleanParent(left);
-  // If native markup put the description after <b> inside the same wrapper, keep only the bold label there.
   const p=label.parentElement;
   if(p&&p!==left){[...p.childNodes].forEach(node=>{if(node!==label)node.remove();});}
+}
+function ensureSettlement(){
+  if(!document.querySelector('link[data-sbc-ticket-settlement-v38]')){const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-ticket-settlement-v38.css?v=38';l.dataset.sbcTicketSettlementV38='1';document.head.appendChild(l);}
+  if(!window.__sbcTicketSettlementV38&&!document.querySelector('script[data-sbc-ticket-settlement-v38]')){const s=document.createElement('script');s.src='/v45-ticket-settlement-v38.js?v=38';s.dataset.sbcTicketSettlementV38='1';document.head.appendChild(s);}
 }
 function clean(){
   const v=$('#view-exchange');if(!v)return;
@@ -23,7 +25,7 @@ function clean(){
   const box=h?.parentElement;if(!box)return;
   $$('.inv.big-inv',box).forEach(stripDescription);
 }
-function run(){clean();}
+function run(){ensureSettlement();clean();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
 let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(run,60)}).observe(document.documentElement,{childList:true,subtree:true});
 setTimeout(run,250);setTimeout(run,900);setTimeout(run,1800);
