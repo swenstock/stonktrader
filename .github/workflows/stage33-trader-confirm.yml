@@ -1,0 +1,21 @@
+name: Stage 33 Trader Confirm
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-trader-confirm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: Syntax check trader confirmation
+        run: |
+          node --check public/v45-trader-action-confirm-v42.js
+          node --check public/v45-my-tickets-cleanup-v37.js
+          node --check scripts/validate-stage33-trader-confirm.js
+      - name: Validate trader action confirmations
+        run: node scripts/validate-stage33-trader-confirm.js
