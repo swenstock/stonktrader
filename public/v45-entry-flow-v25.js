@@ -19,10 +19,10 @@ function parseLiteral(raw){
 function contextFromTarget(target){
   if(!target)return null;
   const raw=target.getAttribute?.('onclick')||'';
-  let m=raw.match(/openSelectedMCPortfolio\s*\(\s*([^,]+)\s*,\s*([^,]+)\s*,\s*([^\)]+)\)/i);
+  const m=raw.match(/openSelectedMCPortfolio\s*\(\s*([^,]+)\s*,\s*([^,]+)\s*,\s*([^\)]+)\)/i);
   if(m)return {tab:parseLiteral(m[1]),id:parseLiteral(m[2]),isLive:parseLiteral(m[3])};
-  const attrs=[target,...[...target.closest?.('[data-id],[data-contest-id],[data-tab]')?[target.closest('[data-id],[data-contest-id],[data-tab]')]:[]]];
-  for(const el of attrs){
+  const holder=target.closest?.('[data-id],[data-contest-id],[data-tab]');
+  for(const el of [target,holder]){
     if(!el)continue;
     const id=el.dataset?.contestId||el.dataset?.id;
     const tab=el.dataset?.tab;
@@ -32,9 +32,11 @@ function contextFromTarget(target){
 }
 function contextFromGlobals(){
   try{
+    const liveList=typeof MC_LIVE!=='undefined'?MC_LIVE:window.MC_LIVE;
+    const archiveList=typeof MC_ARCHIVE!=='undefined'?MC_ARCHIVE:window.MC_ARCHIVE;
     const view=document.getElementById('view-my');
     const hay=text(view||document.body).toUpperCase();
-    const groups=[['live',window.MC_LIVE,true],['archive',window.MC_ARCHIVE,false]];
+    const groups=[['live',liveList,true],['archive',archiveList,false]];
     let best=null;
     groups.forEach(([tab,list,isLive])=>{
       (Array.isArray(list)?list:[]).forEach(c=>{
@@ -48,8 +50,12 @@ function contextFromGlobals(){
 }
 function selectedContext(){return contextFromTarget(tradeTarget())||contextFromGlobals();}
 function directOpen(ctx){
-  if(!ctx||typeof window.openSelectedMCPortfolio!=='function')return false;
-  try{window.openSelectedMCPortfolio(ctx.tab,ctx.id,ctx.isLive);return true;}catch(_){return false;}
+  if(!ctx)return false;
+  try{
+    const fn=typeof openSelectedMCPortfolio==='function'?openSelectedMCPortfolio:window.openSelectedMCPortfolio;
+    if(typeof fn!=='function')return false;
+    fn(ctx.tab,ctx.id,ctx.isLive);return true;
+  }catch(_){return false;}
 }
 function installTrade(){
   const old=tradeButton();if(!old||old.dataset.entryFlowV25==='1')return;
