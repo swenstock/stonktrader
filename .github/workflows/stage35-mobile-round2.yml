@@ -1,0 +1,23 @@
+name: Stage 35 Mobile Round Two
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  mobile-round-two:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+      - run: npm ci
+      - name: Syntax check Stage 35 mobile layer
+        run: |
+          node --check public/v45-mobile-v6.js
+          node --check scripts/validate-stage35-mobile-round2.js
+      - name: Validate Stage 35 screenshot fixes
+        run: node scripts/validate-stage35-mobile-round2.js
