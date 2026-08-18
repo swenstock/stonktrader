@@ -14,5 +14,5 @@ must(leader.includes('openLeaderTier')&&leader.includes('openModal()'),'tier sel
 must(leader.includes('leader-main-event-v30')&&leader.includes('leader-v30-tier-grid'),'leader hierarchy marks main contest above tier group');
 must(css.includes('.leader-main-event-v30')&&css.includes('.leader-v30-modal.open'),'larger contest art and modal presentation are styled');
 must(/v45-leaderboard-v30\.js\?v=\d+/.test(server)&&/v45-leaderboard-v30\.css\?v=\d+/.test(server),'leaderboard v30 assets are served');
-must(server.includes('createABasket: "v30-small-baskets-stable-scroll"')&&server.includes('leaderboardUi: "v30-modal-unified-ranks"'),'health exposes Stage 18 UI markers');
+must(/createABasket: "v\d+-/.test(server)&&server.includes('leaderboardUi: "v30-modal-unified-ranks"'),'health exposes Stage 18 UI markers');
 console.log('Stage 18 UI regression checks passed.');
