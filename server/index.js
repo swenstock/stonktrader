@@ -16,6 +16,7 @@ const configRoutes = require("./routes/config");
 const economicsRoutes = require("./routes/economics");
 const quoteRoutes = require("./routes/quotes");
 const simulatedMarketRoutes = require("./routes/simulatedMarket");
+const marketQueueRoutes = require("./routes/marketQueueV14");
 const portfolioRoutes = require("./routes/portfolios");
 const quickTicketRoutes = require("./routes/quickTickets");
 const leaderboardRoutes = require("./routes/leaderboard");
@@ -33,6 +34,7 @@ const devRoutes = require("./routes/dev");
 const contestScheduler = require("./contestScheduler");
 const satelliteScheduler = useLegacySatellitePayout ? require("./satelliteScheduler") : require("./satelliteSchedulerV45");
 const marketOpenScheduler = require("./marketOpenScheduler");
+const marketQueueV14 = require("./marketQueueV14");
 const { attachWebSocket } = require("./ws");
 
 const app = express();
@@ -44,6 +46,7 @@ app.use("/api/config", configRoutes);
 app.use("/api/economics", economicsRoutes);
 app.use("/api/quotes", quoteRoutes);
 app.use("/api/sim-market", simulatedMarketRoutes);
+app.use("/api/portfolios", marketQueueRoutes);
 app.use("/api/portfolios", portfolioRoutes);
 app.use("/api/quick-tickets", quickTicketRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
@@ -62,6 +65,7 @@ app.use("/api/dev", devRoutes);
 contestScheduler.start();
 satelliteScheduler.start();
 marketOpenScheduler.start();
+marketQueueV14.start();
 
 app.get("/api/health", (req, res) => res.json({
   ok: true,
@@ -76,13 +80,14 @@ app.get("/api/health", (req, res) => res.json({
   tutorialPrompts: "hard-paused-for-qa",
   myContestEntrySync: "v7",
   tradeCleanup: "v10",
-  createABasket: "stage1-safe",
+  createABasket: "stage2-queue",
+  marketQueue: "v14",
 }));
 
 const TUTORIAL_PAUSE = `<script>(function(){try{var views=['lobby','floor','my','tier','portfolio','exchange','leaders'];localStorage.setItem('sbcDisableMainTutorialV45','1');views.forEach(function(v){localStorage.setItem('sbcDisableViewTutorialV45:'+v,'1');});window.SBC_TUTORIALS_PAUSED=true;}catch(e){window.SBC_TUTORIALS_PAUSED=true;}})();</script>`;
 
-const EXTRA_HEAD = TUTORIAL_PAUSE + '<link rel="stylesheet" href="/v45-mobile-polish.css?v=4"><link rel="stylesheet" href="/v45-mobile-v3.css?v=4"><link rel="stylesheet" href="/v45-mobile-v4.css?v=4"><link rel="stylesheet" href="/v45-desktop-icons.css?v=1"><link rel="stylesheet" href="/v45-usability-v5.css?v=51"><link rel="stylesheet" href="/v45-trade-cleanup-v8.css?v=10"><link rel="stylesheet" href="/v45-quick-ticket-v11.css?v=11">';
-const EXTRA_BODY = '<script src="/v45-mobile-v3.js?v=4"></script><script src="/v45-mobile-v4.js?v=4"></script><script src="/v45-desktop-icons.js?v=1"></script><script src="/v45-usability-v5.js?v=51"></script><script src="/v45-mycontest-entry-sync-v7.js?v=7"></script><script src="/v45-trade-cleanup-v8.js?v=10"></script><script src="/v45-quick-ticket-v11.js?v=11"></script><script src="/v45-basket-stage1.js?v=1"></script>';
+const EXTRA_HEAD = TUTORIAL_PAUSE + '<link rel="stylesheet" href="/v45-mobile-polish.css?v=4"><link rel="stylesheet" href="/v45-mobile-v3.css?v=4"><link rel="stylesheet" href="/v45-mobile-v4.css?v=4"><link rel="stylesheet" href="/v45-desktop-icons.css?v=1"><link rel="stylesheet" href="/v45-usability-v5.css?v=51"><link rel="stylesheet" href="/v45-trade-cleanup-v8.css?v=10"><link rel="stylesheet" href="/v45-quick-ticket-v11.css?v=12">';
+const EXTRA_BODY = '<script src="/v45-mobile-v3.js?v=4"></script><script src="/v45-mobile-v4.js?v=4"></script><script src="/v45-desktop-icons.js?v=1"></script><script src="/v45-usability-v5.js?v=51"></script><script src="/v45-mycontest-entry-sync-v7.js?v=7"></script><script src="/v45-trade-cleanup-v8.js?v=10"></script><script src="/v45-quick-ticket-v11.js?v=12"></script><script src="/v45-basket-stage1.js?v=1"></script><script src="/v45-market-queue-v14.js?v=14"></script>';
 
 let servedShell = exactV45Shell.toString("utf8");
 servedShell = servedShell
@@ -101,5 +106,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Stonk paper trading server running on http://localhost:${PORT}`);
   console.log(`Satellite payout engine: ${satelliteScheduler.engineVersion || "legacy"}`);
-  console.log(`Visible shell: exact V45 + trade cleanup v10 + Create A Basket stage1-safe; tutorials hard-paused`);
+  console.log(`Visible shell: exact V45 + Create A Basket stage2-queue + market queue v14; tutorials hard-paused`);
 });
