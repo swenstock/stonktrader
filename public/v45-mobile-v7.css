@@ -1,0 +1,27 @@
+/* Stage 36 mobile: My Contests recovery + richer How It Works. Desktop untouched. */
+@media(max-width:620px){
+/* If My Contests is hydrated after navigation, make sure its native content owns the page width. */
+#view-my{width:100%!important;max-width:100%!important;min-height:calc(100dvh - 150px)!important;overflow-x:hidden!important}
+#view-my #myContestList,#view-my .mc-list,#view-my .mc-card,#view-my .entry-rack-wrap{max-width:100%!important;width:100%!important}
+#view-my .mc-card{margin-left:0!important;margin-right:0!important}
+
+/* Use the intentional card height to actually teach the ladder. */
+.how.mobile-how-v6 .mobile-how-scroll-v6{align-items:stretch!important}
+.how.mobile-how-v6 .mobile-how-card-v7,.how.mobile-how-v6 .mobile-how-card-v6,.how.mobile-how-v6 .step{min-height:500px!important;display:flex!important;flex-direction:column!important}
+.how.mobile-how-v6 .mobile-step-head{flex:0 0 auto!important}
+.how.mobile-how-v6 .step>p{flex:0 0 auto!important;margin-bottom:10px!important}
+.mobile-how-detail-v7{margin-top:10px;display:grid;gap:9px;flex:1 1 auto;align-content:start}
+.mobile-how-detail-v7>div{padding:11px 12px;border:1px solid #2b4150;border-radius:12px;background:rgba(5,15,22,.72)}
+.mobile-how-detail-v7 small{display:block;color:#ffd341;font-size:10px!important;font-weight:1000;letter-spacing:.1em;line-height:1.15;margin-bottom:4px}
+.mobile-how-detail-v7 p{margin:0!important;color:#d8e2e8;font-size:13px!important;line-height:1.42!important}
+.mobile-how-detail-v7 footer{margin-top:auto;padding-top:10px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #273b48}
+.mobile-how-detail-v7 footer span{color:#8296a2;font-size:10px!important;font-weight:900;letter-spacing:.08em}
+.mobile-how-detail-v7 footer b{color:#63d1ff;font-size:11px!important;letter-spacing:.06em}
+
+/* Keep the existing prize art/detail from colliding with the new teaching rows. */
+.how.mobile-how-v6 .own,.how.mobile-how-v6 .formats,.how.mobile-how-v6 .mini-tiers{flex:0 0 auto!important}
+}
+@media(max-width:380px){
+.how.mobile-how-v6 .mobile-how-card-v7,.how.mobile-how-v6 .mobile-how-card-v6,.how.mobile-how-v6 .step{min-height:520px!important}
+.mobile-how-detail-v7>div{padding:10px}.mobile-how-detail-v7 p{font-size:12.5px!important}
+}
