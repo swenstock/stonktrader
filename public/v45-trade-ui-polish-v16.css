@@ -1,71 +1,102 @@
-/* V45 trade UI polish v16 — larger, cleaner execution ticket */
+/* V45 trade UI polish v20 — compact actions, chart-header symbol selector */
 #view-portfolio .quote-strip{display:none!important}
 
+/* Chart header: symbol selector now lives beside chart controls. */
+#view-portfolio .chart-trade-card .card-head.chart-head-with-selector-v20{
+  display:flex!important;
+  align-items:center!important;
+  gap:7px!important;
+  flex-wrap:wrap!important;
+  margin-bottom:5px!important;
+}
+#view-portfolio .trade-search-row.trade-search-in-chart-v20{
+  display:grid!important;
+  grid-template-columns:minmax(150px,1fr) auto!important;
+  gap:5px!important;
+  width:min(360px,46vw)!important;
+  max-width:360px!important;
+  margin:0 0 0 auto!important;
+  order:8!important;
+}
+#view-portfolio .trade-search-in-chart-v20 select{
+  min-height:32px!important;
+  height:32px!important;
+  padding:4px 8px!important;
+  font-size:10px!important;
+  border-radius:7px!important;
+}
+#view-portfolio .trade-search-in-chart-v20 button{
+  min-height:32px!important;
+  height:32px!important;
+  padding:4px 9px!important;
+  font-size:8px!important;
+  border-radius:7px!important;
+}
+#view-portfolio .chart-type-row,
+#view-portfolio .chart-type-toggle{
+  gap:4px!important;
+  margin-left:0!important;
+}
+#view-portfolio .chart-type-row button,
+#view-portfolio .chart-type-toggle button{
+  min-height:30px!important;
+  height:30px!important;
+  padding:4px 8px!important;
+  font-size:8px!important;
+  border-radius:7px!important;
+}
+
+/* Quick Trade remains readable, but its utility actions no longer dominate the card. */
 #view-portfolio .quick-trade-clean.quick-trade-v16{
   margin-top:8px!important;
-  padding:13px 14px 14px!important;
+  padding:11px 12px 12px!important;
   border-radius:12px!important;
 }
 #view-portfolio .quick-trade-v16 .quick-trade-head{
-  display:grid!important;
-  grid-template-columns:minmax(170px,1fr) minmax(240px,1.35fr) auto!important;
-  gap:10px!important;
-  align-items:center!important;
-  margin-bottom:9px!important;
+  display:flex!important;
+  align-items:flex-start!important;
+  gap:7px!important;
+  flex-wrap:wrap!important;
+  margin-bottom:7px!important;
 }
+#view-portfolio .quick-trade-v16 .quick-trade-head>div:first-child{flex:1 1 170px!important;min-width:150px!important}
 #view-portfolio .quick-trade-v16 .quick-trade-head b{font-size:14px!important;line-height:1.15!important}
 #view-portfolio .quick-trade-v16 .quick-trade-head>div>span{font-size:9px!important;line-height:1.3!important;margin-top:3px!important}
-#view-portfolio .trade-search-row.trade-search-in-quick-v16{
-  display:grid!important;
-  grid-template-columns:minmax(0,1fr) auto!important;
-  gap:7px!important;
-  margin:0!important;
-  width:100%!important;
-  max-width:none!important;
-}
-#view-portfolio .trade-search-in-quick-v16 select{
-  min-height:42px!important;
-  height:42px!important;
-  padding:7px 11px!important;
-  font-size:13px!important;
-  border-radius:9px!important;
-}
-#view-portfolio .trade-search-in-quick-v16 button{
-  min-height:42px!important;
-  height:42px!important;
-  padding:7px 14px!important;
-  font-size:10px!important;
-  border-radius:9px!important;
-}
+#view-portfolio .quick-trade-v16 .available-stocks-v16,
 #view-portfolio .quick-trade-v16 .quick-ticket-launch{
-  min-height:42px!important;
-  padding:8px 14px!important;
-  font-size:11px!important;
-  border-radius:9px!important;
+  min-height:32px!important;
+  height:32px!important;
+  padding:5px 9px!important;
+  font-size:8px!important;
+  border-radius:7px!important;
+  margin-left:0!important;
+  align-self:flex-start!important;
 }
 
 #view-portfolio .quick-trade-v16 .advanced-order-types-v15{
-  margin:10px 0 11px!important;
-  padding:10px!important;
-  border-radius:11px!important;
+  margin:8px 0 9px!important;
+  padding:8px!important;
+  border-radius:10px!important;
 }
-#view-portfolio .quick-trade-v16 .adv-type-row-v15{gap:8px!important}
-#view-portfolio .quick-trade-v16 .adv-type-row-v15>span{font-size:11px!important;margin-right:4px!important}
+#view-portfolio .quick-trade-v16 .adv-type-row-v15{gap:6px!important}
+#view-portfolio .quick-trade-v16 .adv-type-row-v15>span{font-size:10px!important;margin-right:3px!important}
 #view-portfolio .quick-trade-v16 .adv-type-row-v15 button{
-  min-height:42px!important;
-  padding:8px 13px!important;
-  font-size:12px!important;
-  border-radius:9px!important;
+  min-height:36px!important;
+  padding:6px 11px!important;
+  font-size:10px!important;
+  border-radius:8px!important;
 }
-#view-portfolio .quick-trade-v16 .adv-price-row-v15{gap:12px!important;margin-top:10px!important}
-#view-portfolio .quick-trade-v16 .adv-price-row-v15 label{gap:8px!important;font-size:12px!important}
+#view-portfolio .quick-trade-v16 .adv-stop-modes-v15{margin-top:7px!important;padding-top:7px!important;gap:5px!important}
+#view-portfolio .quick-trade-v16 .adv-stop-modes-v15 button{min-height:28px!important;padding:4px 8px!important;font-size:8px!important}
+#view-portfolio .quick-trade-v16 .adv-price-row-v15{gap:10px!important;margin-top:8px!important}
+#view-portfolio .quick-trade-v16 .adv-price-row-v15 label{gap:7px!important;font-size:11px!important}
 #view-portfolio .quick-trade-v16 .adv-price-row-v15 input{
-  width:132px!important;
-  min-height:40px!important;
-  height:40px!important;
-  padding:7px 9px!important;
-  font-size:13px!important;
-  border-radius:9px!important;
+  width:124px!important;
+  min-height:36px!important;
+  height:36px!important;
+  padding:6px 8px!important;
+  font-size:12px!important;
+  border-radius:8px!important;
 }
 
 #view-portfolio .quick-trade-v16 .quick-input-mode{
@@ -88,37 +119,20 @@
   font-size:10px!important;
   border-radius:9px!important;
 }
-#view-portfolio .quick-trade-v16 .percent-help{
-  font-size:9px!important;
-  line-height:1.35!important;
-  margin-top:6px!important;
-  padding:7px 9px!important;
-}
+#view-portfolio .quick-trade-v16 .percent-help{font-size:9px!important;line-height:1.35!important;margin-top:6px!important;padding:7px 9px!important}
 #view-portfolio .quick-trade-v16 .quick-action-row{gap:8px!important;margin-top:8px!important}
-#view-portfolio .quick-trade-v16 .quick-action{
-  min-height:46px!important;
-  height:46px!important;
-  padding:9px 12px!important;
-  font-size:12px!important;
-  border-radius:10px!important;
-}
+#view-portfolio .quick-trade-v16 .quick-action{min-height:46px!important;height:46px!important;padding:9px 12px!important;font-size:12px!important;border-radius:10px!important}
 #view-portfolio .quick-trade-v16 .quick-trade-note,
 #view-portfolio .quick-trade-v16 .trade-cutoff,
-#view-portfolio .quick-trade-v16 .order-error{
-  font-size:9px!important;
-  line-height:1.35!important;
-  margin-top:6px!important;
-  padding:7px 9px!important;
-}
+#view-portfolio .quick-trade-v16 .order-error{font-size:9px!important;line-height:1.35!important;margin-top:6px!important;padding:7px 9px!important}
 
 @media(max-width:900px){
-  #view-portfolio .quick-trade-v16 .quick-trade-head{grid-template-columns:1fr!important}
-  #view-portfolio .quick-trade-v16 .quick-ticket-launch{justify-self:start!important}
+  #view-portfolio .trade-search-row.trade-search-in-chart-v20{width:min(330px,100%)!important;max-width:330px!important;margin-left:0!important}
   #view-portfolio .quick-trade-v16 .quick-input-mode{grid-template-columns:1fr 1fr!important}
 }
 @media(max-width:560px){
-  #view-portfolio .quick-trade-clean.quick-trade-v16{padding:11px!important}
-  #view-portfolio .trade-search-row.trade-search-in-quick-v16{grid-template-columns:1fr!important}
-  #view-portfolio .quick-trade-v16 .adv-type-row-v15{display:grid!important;grid-template-columns:1fr 1fr!important}
+  #view-portfolio .quick-trade-clean.quick-trade-v16{padding:10px!important}
+  #view-portfolio .trade-search-row.trade-search-in-chart-v20{grid-template-columns:1fr auto!important;width:100%!important;max-width:none!important}
+  #view-portfolio .quick-trade-v16 .adv-type-row-v15{display:grid!important;grid-template-columns:repeat(3,1fr)!important}
   #view-portfolio .quick-trade-v16 .adv-type-row-v15>span{grid-column:1/-1!important}
 }
