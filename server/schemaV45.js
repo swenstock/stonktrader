@@ -47,6 +47,18 @@ function run() {
     CREATE INDEX IF NOT EXISTS idx_ticket_bids_buyer
       ON ticket_bids(buyer_account_id, status);
 
+    CREATE TABLE IF NOT EXISTS quick_ticket_lists (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      symbols_json TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(account_id, name)
+    );
+    CREATE INDEX IF NOT EXISTS idx_quick_ticket_lists_account
+      ON quick_ticket_lists(account_id, updated_at DESC);
+
     CREATE TABLE IF NOT EXISTS sbc_reserve_ledger (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       bucket TEXT NOT NULL,
