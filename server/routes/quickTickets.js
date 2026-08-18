@@ -15,13 +15,18 @@ function normalizeSymbols(input) {
 }
 
 function validateSymbols(symbols) {
-  if (symbols.length < MIN_STOCKS) return `Quick Ticket requires at least ${MIN_STOCKS} unique stocks.`;
-  if (symbols.length > MAX_STOCKS) return `Quick Ticket supports up to ${MAX_STOCKS} stocks.`;
+  if (symbols.length < MIN_STOCKS) return `Create A Basket requires at least ${MIN_STOCKS} unique stocks.`;
+  if (symbols.length > MAX_STOCKS) return `Create A Basket supports up to ${MAX_STOCKS} stocks.`;
   const known = new Set(listSymbols().map(s => String(s.symbol).toUpperCase()));
   const invalid = symbols.filter(s => !known.has(s));
-  if (invalid.length) return `Unknown or unavailable symbols: ${invalid.slice(0, 8).join(', ')}${invalid.length > 8 ? '…' : ''}`;
+  if (invalid.length) return `Not available in SBC: ${invalid.slice(0, 8).join(', ')}${invalid.length > 8 ? '…' : ''}`;
   return null;
 }
+
+// Public symbol directory used only for client-side basket validation.
+router.get('/symbols', (req, res) => {
+  res.json(listSymbols().map(s => ({ symbol: s.symbol, name: s.name })));
+});
 
 router.get('/lists', requireAuth, (req, res) => {
   const rows = db.prepare(`SELECT id, name, symbols_json, created_at, updated_at
@@ -38,7 +43,7 @@ router.get('/lists', requireAuth, (req, res) => {
 router.post('/lists', requireAuth, (req, res) => {
   const name = String(req.body?.name || '').trim().slice(0, 60);
   const symbols = normalizeSymbols(req.body?.symbols);
-  if (!name) return res.status(400).json({ error: 'Give this saved list a name.' });
+  if (!name) return res.status(400).json({ error: 'Give this saved basket a name.' });
   const error = validateSymbols(symbols);
   if (error) return res.status(400).json({ error });
 
@@ -58,18 +63,20 @@ router.post('/lists', requireAuth, (req, res) => {
 
 router.delete('/lists/:id', requireAuth, (req, res) => {
   const result = db.prepare('DELETE FROM quick_ticket_lists WHERE id = ? AND account_id = ?').run(req.params.id, req.account.id);
-  if (!result.changes) return res.status(404).json({ error: 'Saved list not found.' });
+  if (!result.changes) return res.status(404).json({ error: 'Saved basket not found.' });
   res.json({ ok: true });
 });
 
-router.post('/preview', requireAuth, (req, res) => {
+// Preview does not mutate account state, so authentication is not required.
+// That prevents a bad/expired UI token from masking a simple invalid-symbol error.
+router.post('/preview', (req, res) => {
   const symbols = normalizeSymbols(req.body?.symbols);
   const error = validateSymbols(symbols);
   if (error) return res.status(400).json({ error });
   const quotes = getQuotes(symbols);
   const bySymbol = new Map(quotes.map(q => [String(q.symbol).toUpperCase(), q]));
   const missing = symbols.filter(s => !bySymbol.has(s));
-  if (missing.length) return res.status(400).json({ error: `No current quote for: ${missing.join(', ')}` });
+  if (missing.length) return res.status(400).json({ error: `No current SBC quote for: ${missing.join(', ')}` });
   const weight = 100 / symbols.length;
   res.json({
     count: symbols.length,
