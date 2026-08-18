@@ -31,7 +31,10 @@ jobs:
           node --check public/v45-entry-actions-v20.js
           node --check public/v45-mycontest-native-position-v27.js
           node --check scripts/validate-native-mycontest-flow.js
+          node --check scripts/inspect-portfolio-native.js
           node --check scripts/v45-smoke.mjs
+      - name: Trace native portfolio flow
+        run: node scripts/inspect-portfolio-native.js
       - name: Validate native My Contests flow
         run: node scripts/validate-native-mycontest-flow.js
       - name: Unit tests
