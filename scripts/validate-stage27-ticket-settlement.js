@@ -18,4 +18,3 @@ must(css.includes('.tm39-book-scroll')&&css.includes('overflow-y:scroll!importan
 must(loader.includes('/v45-ticket-recent-v40.js?v=40'),'persistent Recent Trades renderer is loaded');
 must(recent.includes("mine.parentNode.insertBefore(box,mine.nextSibling)")&&recent.includes("const legacy=$('#tm38Recent',mine)")&&recent.includes("const STORE='sbcTicketSettlementV38'"),'Recent Trades is rendered as a sibling outside the replaceable My Orders panel using persisted fills');
 console.log('Stage 27/28/29/30 ticket settlement, live basket, confirmation, order-book, and persistent Recent Trades checks passed.');
-require('./trace-native-ticket-exchange');
