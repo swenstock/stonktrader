@@ -1,0 +1,23 @@
+const fs=require('fs'),path=require('path');
+const {exactV45Shell}=require('../server/v45ExactShell');
+const html=exactV45Shell.toString('utf8');
+const css=fs.readFileSync(path.join(__dirname,'..','public','v45-mobile-v5.css'),'utf8');
+const js=fs.readFileSync(path.join(__dirname,'..','public','v45-mobile-v5.js'),'utf8');
+const boot=fs.readFileSync(path.join(__dirname,'..','public','v45-mobile-v4.js'),'utf8');
+function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
+['view-portfolio','view-exchange','view-leaders','quick-trade-clean','ticketTypeSelector','bidBook','askBook'].forEach(x=>must(html.includes(x),`exact V45 shell exposes ${x}`));
+must(css.includes('@media(max-width:620px)')&&css.includes('max-width:380px'),'mobile layer covers phone and small-phone widths');
+must(css.includes('overflow-x:hidden!important')&&css.includes('grid-template-columns:1fr!important'),'mobile layer blocks accidental horizontal page scroll and forces single-column layouts');
+must(css.includes('env(safe-area-inset-bottom')&&css.includes('.mobile-bottom-nav-v5'),'bottom nav respects safe-area and is fixed mobile navigation');
+must(css.includes('min-height:48px')&&css.includes('font-size:16px'),'touch targets and input/body typography meet mobile minimums');
+must(js.includes("['lobby','⌂','Lobby']")&&js.includes("['leaders','★','Leaders']"),'five-tab bottom navigation is built');
+must(js.includes("['chart','CHART + TRADE']")&&js.includes("['positions','POSITIONS']")&&js.includes("['analytics','ANALYTICS']"),'trading screen has Chart/Positions/Analytics tabs');
+must(js.includes("sessionStorage.setItem('sbcMobileTradeTabV5'")&&js.includes("sbcMobileScrollV5"),'active trading tab and mobile scroll position persist');
+must(js.includes("window.addEventListener('offline'")&&js.includes("window.addEventListener('online'")&&js.includes('mobile-stale-v5'),'offline/reconnect stale state exists');
+must(css.includes('.mobile-stale-v5 #view-portfolio .quick-action')&&css.includes('pointer-events:none'),'stale market data blocks quick trading');
+must(js.includes("setAttribute('inputmode','decimal')"),'numeric trade inputs request decimal keypad');
+must(js.includes("setAttribute('aria-label'")&&css.includes(':focus-visible'),'icon controls gain labels and keyboard focus remains visible');
+must(css.includes('.tm35-market-modal')&&css.includes('align-items:flex-end'),'exchange modals become mobile bottom sheets');
+must(css.includes('#view-leaders .leader-row')&&css.includes('.mobile-data-card-v5'),'leaderboard/table rows have mobile card treatment');
+must(boot.includes('/v45-mobile-v5.css?v=5')&&boot.includes('/v45-mobile-v5.js?v=5'),'already-served mobile v4 bootstrap loads v5 assets');
+console.log('Stage 34 mobile native-app checks passed.');
