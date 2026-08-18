@@ -4,13 +4,16 @@
   window.__sbcTradeUiPolishV16=true;
   const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 
-  function removeDuplicateQuoteInfo(card){
+  function hideDuplicateQuoteInfo(card){
     if(!card)return;
-    $$('.quote-strip',card).forEach(el=>el.remove());
-    // Defensive cleanup for the older shell block even if its class changes.
+    // Native renderPortfolio()/refreshTradeTicket() still writes into quoteSymbolLabel,
+    // quotePrice and quotePosition. Keep those nodes alive; hide the duplicate block only.
+    $$('.quote-strip',card).forEach(el=>el.classList.add('trade-native-hidden-v28'));
     [...card.children].forEach(el=>{
       const text=(el.textContent||'').replace(/\s+/g,' ').toUpperCase();
-      if(text.includes('CURRENT POSITION')&&text.includes('PRICE')&&!el.querySelector('.symbol-chart'))el.remove();
+      if(text.includes('CURRENT POSITION')&&text.includes('PRICE')&&!el.querySelector('.symbol-chart')){
+        el.classList.add('trade-native-hidden-v28');
+      }
     });
   }
 
@@ -30,7 +33,7 @@
     const card=$('.chart-trade-card',view);
     const quick=$('.quick-trade-clean',view);
     if(!quick)return;
-    removeDuplicateQuoteInfo(card);
+    hideDuplicateQuoteInfo(card);
     moveSymbolToChartHeader(view,card);
     quick.classList.add('quick-trade-v16','quick-trade-v20');
   }
