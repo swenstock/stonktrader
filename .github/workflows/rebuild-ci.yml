@@ -62,6 +62,7 @@ jobs:
           curl -fsS http://127.0.0.1:3456/api/config >/tmp/config.json
           curl -fsS http://127.0.0.1:3456/api/economics >/tmp/economics.json
           curl -fsS 'http://127.0.0.1:3456/api/sim-market/quotes?symbols=NVDA,MSFT' >/tmp/quotes.json
+          curl -fsS http://127.0.0.1:3456/ >/tmp/enhanced.html
           curl -fsS http://127.0.0.1:3456/v45/ >/tmp/v45.html
           curl -fsS 'http://127.0.0.1:3456/v45/trade.html?id=1' >/tmp/trade.html
           curl -fsS http://127.0.0.1:3456/v45/leaders.html >/tmp/leaders.html
@@ -71,7 +72,7 @@ jobs:
           grep -q 'marketChart' /tmp/trade.html
           grep -q 'JUMP TO ME' /tmp/leaders.html
           grep -q 'JUMP TO MONEY LINE' /tmp/leaders.html
-          grep -q 'v45-mycontest-native-position-v27.js' /tmp/v45.html
-          if grep -q 'v45-entry-flow-v25.js' /tmp/v45.html; then echo 'legacy entry flow still injected'; exit 1; fi
+          grep -q 'v45-mycontest-native-position-v27.js' /tmp/enhanced.html
+          if grep -q 'v45-entry-flow-v25.js' /tmp/enhanced.html; then echo 'legacy entry flow still injected'; exit 1; fi
           node -e "const q=require('/tmp/quotes.json'); if(q.length!==2||q.some(x=>x.source!=='sim')) process.exit(1)"
           SBC_BASE_URL=http://127.0.0.1:3456/api node scripts/v45-smoke.mjs
