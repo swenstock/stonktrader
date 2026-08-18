@@ -24,6 +24,7 @@ jobs:
           node --check public/v45/v45-links.js
           node --check public/v45/trade.js
           node --check public/v45/leaders.js
+          node --check public/v45-mycontest-entry-sync-v7.js
           node --check public/v45-advanced-orders-v15.js
           node --check public/v45-trade-ui-polish-v16.js
           node --check public/v45-basket-builder-v19.js
