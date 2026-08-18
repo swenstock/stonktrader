@@ -80,7 +80,7 @@ app.get("/api/health", (req, res) => res.json({
   desktopIcons: "v1",
   usability: "v5.1-stable",
   tutorialPrompts: "hard-paused-for-qa",
-  myContestEntrySync: "v7",
+  myContestEntrySync: "v8-current-entry-helper",
   tradeCleanup: "v10",
   createABasket: "v19-two-column-degen",
   marketQueue: "v14-degen-targets",
@@ -88,19 +88,19 @@ app.get("/api/health", (req, res) => res.json({
   tradeUiPolish: "v20-chart-selector",
   headerStocks: "v16",
   entryActions: "v20",
-  entryTradeHandoff: "v25-direct-open",
-  myContestPosition: "v25-adaptive-broker-position",
+  entryTradeHandoff: "v26-trusted-current-entry",
+  myContestPosition: "stable-broker-position",
 }));
 
 const TUTORIAL_PAUSE = `<script>(function(){try{var views=['lobby','floor','my','tier','portfolio','exchange','leaders'];localStorage.setItem('sbcDisableMainTutorialV45','1');views.forEach(function(v){localStorage.setItem('sbcDisableViewTutorialV45:'+v,'1');});window.SBC_TUTORIALS_PAUSED=true;}catch(e){window.SBC_TUTORIALS_PAUSED=true;}})();</script>`;
 
 const EXTRA_HEAD = TUTORIAL_PAUSE + '<link rel="stylesheet" href="/v45-mobile-polish.css?v=4"><link rel="stylesheet" href="/v45-mobile-v3.css?v=4"><link rel="stylesheet" href="/v45-mobile-v4.css?v=4"><link rel="stylesheet" href="/v45-desktop-icons.css?v=1"><link rel="stylesheet" href="/v45-usability-v5.css?v=51"><link rel="stylesheet" href="/v45-trade-cleanup-v8.css?v=10"><link rel="stylesheet" href="/v45-quick-ticket-v11.css?v=12"><link rel="stylesheet" href="/v45-advanced-orders-v15.css?v=20"><link rel="stylesheet" href="/v45-trade-ui-polish-v16.css?v=20"><link rel="stylesheet" href="/v45-header-stocks-v16.css?v=16"><link rel="stylesheet" href="/v45-basket-builder-v19.css?v=19"><link rel="stylesheet" href="/v45-entry-actions-v20.css?v=20">';
-const EXTRA_BODY = '<script src="/v45-mobile-v3.js?v=4"></script><script src="/v45-mobile-v4.js?v=4"></script><script src="/v45-desktop-icons.js?v=1"></script><script src="/v45-usability-v5.js?v=51"></script><script src="/v45-mycontest-entry-sync-v7.js?v=7"></script><script src="/v45-trade-cleanup-v8.js?v=10"></script><script src="/v45-quick-ticket-v11.js?v=12"></script><script src="/v45-basket-stage1.js?v=1"></script><script src="/v45-market-queue-v14.js?v=14"></script><script src="/v45-advanced-orders-v15.js?v=20"></script><script src="/v45-trade-ui-polish-v16.js?v=20"></script><script src="/v45-header-stocks-v16.js?v=16"></script><script src="/v45-basket-builder-v19.js?v=19"></script><script src="/v45-entry-actions-v20.js?v=20"></script><script src="/v45-entry-flow-v25.js?v=25"></script>';
+const EXTRA_BODY = '<script src="/v45-mobile-v3.js?v=4"></script><script src="/v45-mobile-v4.js?v=4"></script><script src="/v45-desktop-icons.js?v=1"></script><script src="/v45-usability-v5.js?v=51"></script><script src="/v45-mycontest-entry-sync-v7.js?v=8"></script><script src="/v45-trade-cleanup-v8.js?v=10"></script><script src="/v45-quick-ticket-v11.js?v=12"></script><script src="/v45-basket-stage1.js?v=1"></script><script src="/v45-market-queue-v14.js?v=14"></script><script src="/v45-advanced-orders-v15.js?v=20"></script><script src="/v45-trade-ui-polish-v16.js?v=20"></script><script src="/v45-header-stocks-v16.js?v=16"></script><script src="/v45-basket-builder-v19.js?v=19"></script><script src="/v45-entry-actions-v20.js?v=20"></script><script src="/v45-entry-flow-v25.js?v=26"></script>';
 
 let servedShell = exactV45Shell.toString("utf8");
 servedShell = servedShell
   .replace('function maybeShowFirstVisitTutorial(){', 'function maybeShowFirstVisitTutorial(){ return; /* QA HARD PAUSE */')
-  .replace('function maybeShowContextTutorial(view){', 'function maybeShowContextTutorial(view){ return; /* QA HARD PAUSE */')
+  .replace('function maybeShowContextTutorial(view){', 'function maybeShowContextTutorial(){ return; /* QA HARD PAUSE */')
   .replace("</head>", `${EXTRA_HEAD}</head>`)
   .replace("</body>", `${EXTRA_BODY}</body>`);
 const exactV45WithEnhancements = Buffer.from(servedShell, "utf8");
@@ -114,5 +114,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Stonk paper trading server running on http://localhost:${PORT}`);
   console.log(`Satellite payout engine: ${satelliteScheduler.engineVersion || "legacy"}`);
-  console.log(`Visible shell: exact V45 + Create A Basket v19 + compact stop family + chart-header symbol selector v20 + entry actions v20 + direct entry open / adaptive My Contests position v25; tutorials hard-paused`);
+  console.log(`Visible shell: exact V45 + Create A Basket v19 + compact stop family + chart-header symbol selector v20 + entry actions v20 + trusted current-entry open / stable My Contests position; tutorials hard-paused`);
 });
