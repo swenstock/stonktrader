@@ -52,8 +52,7 @@ test.describe('Stage 34 iPhone SE width',()=>{
       const sheet=page.locator('#sbcM43SymbolSheet');await expect(sheet).toHaveClass(/open/);
       const sr=await sheet.locator('section').boundingBox();expect(sr?.height||0).toBeGreaterThan(650);
       await sheet.locator('.close').click();
-      await expect(sheet).not.toHaveClass(/open/,{timeout:1500});
-      await expect(sheet).toBeHidden();
+      await expect(sheet).toHaveCount(0,{timeout:1500});
     }
 
     const quick=page.locator('#view-portfolio .quick-percent-row button:visible');
