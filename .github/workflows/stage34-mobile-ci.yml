@@ -17,6 +17,7 @@ jobs:
         run: |
           node --check public/v45-mobile-v4.js
           node --check public/v45-mobile-native-v43.js
+          node --check public/v45-mobile-native-refine-v44.js
           node --check scripts/validate-stage34-mobile.js
       - name: Validate Stage 34 mobile invariants
         run: node scripts/validate-stage34-mobile.js
@@ -33,7 +34,9 @@ jobs:
           for i in {1..20}; do curl -fsS http://127.0.0.1:3457/api/health >/dev/null 2>&1 && break; sleep .5; done
           curl -fsS http://127.0.0.1:3457/v45-mobile-native-v43.css?v=43 | grep -q 'Mobile Native V43'
           curl -fsS http://127.0.0.1:3457/v45-mobile-native-v43.js?v=43 | grep -q '__sbcMobileNativeV43'
-          curl -fsS http://127.0.0.1:3457/v45-mobile-v4.js?v=4 | grep -q 'v45-mobile-native-v43.js?v=43'
+          curl -fsS http://127.0.0.1:3457/v45-mobile-native-refine-v44.css?v=44 | grep -q 'Mobile Native V44'
+          curl -fsS http://127.0.0.1:3457/v45-mobile-native-refine-v44.js?v=44 | grep -q '__sbcMobileNativeRefineV44'
+          curl -fsS http://127.0.0.1:3457/v45-mobile-v4.js?v=4 | grep -q 'v45-mobile-native-refine-v44.js?v=44'
   mobile-browser:
     runs-on: ubuntu-latest
     timeout-minutes: 15
