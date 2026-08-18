@@ -38,6 +38,7 @@ jobs:
           node --check public/v45-my-tickets-cleanup-v37.js
           node --check public/v45-ticket-settlement-v38.js
           node --check public/v45-ticket-recent-v40.js
+          node --check public/v45-ticket-native-hooks-v41.js
           node --check scripts/validate-native-mycontest-flow.js
           node --check scripts/validate-stage17-ui.js
           node --check scripts/validate-stage18-ui.js
@@ -48,6 +49,7 @@ jobs:
           node --check scripts/validate-stage25-basket.js
           node --check scripts/validate-stage26-my-tickets.js
           node --check scripts/validate-stage27-ticket-settlement.js
+          node --check scripts/validate-stage31-ticket-native.js
           node --check scripts/v45-smoke.mjs
       - name: Validate native My Contests flow
         run: node scripts/validate-native-mycontest-flow.js
@@ -69,6 +71,8 @@ jobs:
         run: node scripts/validate-stage26-my-tickets.js
       - name: Validate Stage 27 ticket settlement
         run: node scripts/validate-stage27-ticket-settlement.js
+      - name: Validate Stage 31 native ticket exchange lifecycle
+        run: node scripts/validate-stage31-ticket-native.js
       - name: Unit tests
         run: npm test
       - name: Server/API/frontend smoke test
