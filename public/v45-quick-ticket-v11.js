@@ -101,10 +101,14 @@
 
   async function submitBasket(){
     const btn=$('#qtSubmit',modal);btn.disabled=true;const pid=portfolioId();const buys=state.review.rows.filter(r=>r.spend>.01&&r.quantity>0);
-    let done=0;try{
-      for(const r of buys){btn.textContent=`BUYING ${++done} OF ${buys.length}…`;await api(`/portfolios/${pid}/trades`,{method:'POST',body:JSON.stringify({symbol:r.symbol,side:'buy',quantity:r.quantity})});}
+    let completed=0;
+    try{
+      for(const r of buys){btn.textContent=`BUYING ${completed+1} OF ${buys.length}…`;await api(`/portfolios/${pid}/trades`,{method:'POST',body:JSON.stringify({symbol:r.symbol,side:'buy',quantity:r.quantity})});completed++;}
       $('#qtBody',modal).innerHTML=`<section class="qt-success"><div>✓</div><h3>QUICK TICKET COMPLETE</h3><p>${buys.length} equal-weight buy orders were executed.</p><button type="button" id="qtDone">RETURN TO PORTFOLIO</button></section>`;$('#qtDone',modal).onclick=()=>location.reload();setTimeout(()=>location.reload(),1400);
-    }catch(e){alert(`Quick Ticket stopped after ${Math.max(0,done-1)} successful orders. ${e.message}`);btn.disabled=false;btn.textContent='SUBMIT REMAINING ORDERS';}
+    }catch(e){
+      $('#qtBody',modal).innerHTML=`<section class="qt-success qt-partial"><div>!</div><h3>QUICK TICKET STOPPED</h3><p>${completed} of ${buys.length} orders completed before the server rejected the next order.<br>${esc(e.message)}</p><button type="button" id="qtDone">REFRESH PORTFOLIO</button></section>`;
+      $('#qtDone',modal).onclick=()=>location.reload();
+    }
   }
 
   async function saveCurrentList(){
