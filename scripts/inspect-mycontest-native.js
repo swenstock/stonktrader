@@ -19,14 +19,18 @@ function functionBody(name){
     if(ch==='{')depth++;
     else if(ch==='}' && --depth===0)return shell.slice(start,i+1);
   }
-  return shell.slice(start,start+3000);
+  return shell.slice(start,start+5000);
 }
 
-for(const name of ['openSelectedMCPortfolio','beginPortfolioFlow','confirmRulesGate','renderPortfolio','selectMCEntry','showView']){
+for(const name of [
+  'openSelectedMCPortfolio','beginPortfolioFlow','openRulesGateForContext','confirmRulesGate',
+  'renderPortfolio','renderHoldings','renderPortfolioCharts','renderSymbolChart','renderQueuedOrders',
+  'renderTradeHistory','refreshTradeTicket','currentPortfolio','selectMCEntry','showView'
+]){
   console.log(`\n===== ${name} =====\n${functionBody(name)}\n`);
 }
 
-for(const phrase of ['TRADE THIS ENTRY','rulesGate','confirmRulesGate()','openSelectedMCPortfolio(']){
+for(const phrase of ['TRADE THIS ENTRY','rulesGate','confirmRulesGate()','openSelectedMCPortfolio(','CURRENT POSITION','quote-strip']){
   console.log(`\n===== occurrences: ${phrase} =====`);
   let at=0,count=0;
   while((at=shell.indexOf(phrase,at))>=0 && count<12){
