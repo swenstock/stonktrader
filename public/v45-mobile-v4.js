@@ -2,6 +2,12 @@
   const mq=window.matchMedia('(max-width:620px)');
   if(!mq.matches) return;
 
+  function loadV5(){
+    if(!document.querySelector('link[data-sbc-mobile-v5]')){const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-mobile-v5.css?v=5';l.dataset.sbcMobileV5='1';document.head.appendChild(l);}
+    if(!window.__sbcMobileV5&&!document.querySelector('script[data-sbc-mobile-v5]')){const s=document.createElement('script');s.src='/v45-mobile-v5.js?v=5';s.dataset.sbcMobileV5='1';document.head.appendChild(s);}
+  }
+  loadV5();
+
   function stripFloorIcons(){
     document.querySelectorAll('.mobile-floor-icons').forEach(x=>x.remove());
   }
@@ -51,8 +57,8 @@
     });
 
     const tabs=document.createElement('div');tabs.className='mobile-book-tabs';
-    const bidBtn=document.createElement('button');bidBtn.type='button';bidBtn.textContent='BIDS';
-    const askBtn=document.createElement('button');askBtn.type='button';askBtn.textContent='OFFERS';
+    const bidBtn=document.createElement('button');bidBtn.type='button';bidBtn.textContent='BIDS';bidBtn.setAttribute('aria-label','Show bids');
+    const askBtn=document.createElement('button');askBtn.type='button';askBtn.textContent='OFFERS';askBtn.setAttribute('aria-label','Show offers');
     tabs.append(bidBtn,askBtn);books.parentNode.insertBefore(tabs,books);
     const bid=books.querySelector('.bid-book');const ask=books.querySelector('.ask-book');
     function show(which){
@@ -60,6 +66,7 @@
       ask?.classList.toggle('mobile-book-active',which==='ask');
       bidBtn.classList.toggle('active',which==='bid');
       askBtn.classList.toggle('active',which==='ask');
+      bidBtn.setAttribute('aria-selected',String(which==='bid'));askBtn.setAttribute('aria-selected',String(which==='ask'));
     }
     bidBtn.onclick=()=>show('bid');askBtn.onclick=()=>show('ask');show('bid');
 
@@ -73,15 +80,15 @@
 
     const recent=document.querySelector('#view-exchange .orderbook');
     if(recent){
-      const toggle=document.createElement('button');toggle.className='mobile-recent-toggle';toggle.type='button';toggle.textContent='RECENT SALES ▾';
+      const toggle=document.createElement('button');toggle.className='mobile-recent-toggle';toggle.type='button';toggle.textContent='RECENT SALES ▾';toggle.setAttribute('aria-expanded','false');
       recent.parentNode.insertBefore(toggle,recent);
       recent.classList.add('mobile-collapsed');
-      toggle.onclick=()=>{recent.classList.toggle('mobile-collapsed');toggle.textContent=recent.classList.contains('mobile-collapsed')?'RECENT SALES ▾':'RECENT SALES ▴';};
+      toggle.onclick=()=>{recent.classList.toggle('mobile-collapsed');const open=!recent.classList.contains('mobile-collapsed');toggle.textContent=open?'RECENT SALES ▴':'RECENT SALES ▾';toggle.setAttribute('aria-expanded',String(open));};
     }
 
     const inv=document.querySelector('#view-exchange .portfolio h2');if(inv)inv.textContent='MY TICKETS';
   }
 
-  const start=()=>{stripFloorIcons();setupExchange();};
+  const start=()=>{loadV5();stripFloorIcons();setupExchange();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
