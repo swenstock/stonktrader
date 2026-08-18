@@ -17,6 +17,8 @@ jobs:
           node-version: '22.x'
           cache: npm
       - run: npm ci
+      - name: Trace Stage 24 exchange/auth
+        run: node scripts/trace-stage24-exchange.js
       - name: Syntax check JavaScript
         run: |
           find server -name '*.js' -print0 | xargs -0 -n1 node --check
