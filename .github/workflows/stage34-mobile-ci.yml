@@ -1,0 +1,75 @@
+name: Stage 34 Mobile App CI
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  mobile-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+      - run: npm ci
+      - name: Syntax check Stage 34 runtime
+        run: |
+          node --check public/v45-mobile-v4.js
+          node --check public/v45-mobile-native-v43.js
+          node --check public/v45-mobile-native-refine-v44.js
+          node --check scripts/validate-stage34-mobile.js
+      - name: Validate Stage 34 mobile invariants
+        run: node scripts/validate-stage34-mobile.js
+      - name: Verify mobile assets are servable
+        env:
+          TEST_MODE: 'true'
+          PAYOUT_ENGINE_V45: 'true'
+          DB_PATH: /tmp/sbc-stage34-static.db
+          PORT: '3457'
+        run: |
+          node server/index.js >/tmp/sbc-stage34-static.log 2>&1 &
+          PID=$!
+          trap 'kill $PID 2>/dev/null || true' EXIT
+          for i in {1..20}; do curl -fsS http://127.0.0.1:3457/api/health >/dev/null 2>&1 && break; sleep .5; done
+          curl -fsS http://127.0.0.1:3457/v45-mobile-native-v43.css?v=43 | grep -q 'Mobile Native V43'
+          curl -fsS http://127.0.0.1:3457/v45-mobile-native-v43.js?v=43 | grep -q '__sbcMobileNativeV43'
+          curl -fsS http://127.0.0.1:3457/v45-mobile-native-refine-v44.css?v=44 | grep -q 'Mobile Native V44'
+          curl -fsS http://127.0.0.1:3457/v45-mobile-native-refine-v44.js?v=44 | grep -q '__sbcMobileNativeRefineV44'
+          curl -fsS http://127.0.0.1:3457/v45-mobile-v4.js?v=4 | grep -q 'v45-mobile-native-refine-v44.js?v=44'
+  mobile-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+      - run: npm ci
+      - name: Install browser test runtime
+        run: |
+          npm install --no-save @playwright/test@1.55.0
+          npx playwright install chromium
+      - name: Start SBC test server
+        env:
+          TEST_MODE: 'true'
+          PAYOUT_ENGINE_V45: 'true'
+          DB_PATH: /tmp/sbc-stage34-browser.db
+          PORT: '3458'
+        run: |
+          nohup node server/index.js >/tmp/sbc-stage34-browser.log 2>&1 &
+          echo $! >/tmp/sbc-stage34-browser.pid
+          READY=0
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:3458/api/health >/dev/null 2>&1; then READY=1; break; fi
+            sleep .5
+          done
+          if [ "$READY" != "1" ]; then cat /tmp/sbc-stage34-browser.log; exit 1; fi
+      - name: Run 375px mobile browser regression
+        env:
+          SBC_MOBILE_BASE_URL: http://127.0.0.1:3458
+        run: npx playwright test scripts/stage34-mobile.spec.mjs --workers=1 --reporter=line
+      - name: Show server log on failure
+        if: failure()
+        run: cat /tmp/sbc-stage34-browser.log || true

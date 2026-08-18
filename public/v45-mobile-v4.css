@@ -1,71 +1,10 @@
-/* Mobile v4: simplify CTAs and make exchange choose -> market -> act. */
-@media(max-width:620px){
-  .mobile-floor-icons{display:none!important}
-  .action.green{min-height:54px!important}
-
-  /* Exchange hero gets out of the way. */
-  #view-exchange .exchange-hero{padding:10px!important;margin-bottom:8px!important}
-  #view-exchange .exchange-hero h1{font-size:22px!important;margin:0!important}
-  #view-exchange .exchange-hero p{font-size:8.5px!important;line-height:1.25!important;margin:4px 0 0!important}
-
-  .mobile-exchange-focus{padding:10px!important;margin:8px 0!important}
-  .mobile-exchange-selected{display:grid;grid-template-columns:54px 1fr;gap:10px;align-items:center}
-  .mobile-exchange-art{width:54px;height:54px;border:1px solid #40586a;border-radius:10px;background:#0a1620;overflow:hidden;display:grid;place-items:center;font-size:28px;color:#ffc928}
-  .mobile-exchange-art img{width:100%;height:100%;object-fit:cover;image-rendering:pixelated}
-  .mobile-exchange-selected small{display:block;color:#8093a0;font-size:7px;font-weight:1000;letter-spacing:.08em}
-  .mobile-exchange-selected b{display:block;color:#fff;font-size:17px;line-height:1.05;margin-top:2px}
-  .mobile-exchange-selected span{display:block;color:#aab9c2;font-size:8px;margin-top:3px}
-  .mobile-exchange-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:8px}
-  .mobile-exchange-stats .sum{padding:7px 5px!important;min-width:0!important}
-  .mobile-exchange-stats .sum span{font-size:6.5px!important;white-space:nowrap}
-  .mobile-exchange-stats .sum b{font-size:14px!important}
-
-  /* Ticket chooser = small complete chips, not a huge market wall. */
-  #view-exchange .ticket-type-selector{display:flex!important;gap:6px!important;margin:7px 0 8px!important;padding:0 0 4px!important;overflow-x:auto!important;scroll-snap-type:x proximity;scrollbar-width:none}
-  #view-exchange .ticket-type-selector::-webkit-scrollbar{display:none}
-  #view-exchange .ticket-type-selector button{flex:0 0 auto!important;min-height:42px!important;padding:5px 8px!important;gap:6px!important;border-radius:10px!important;scroll-snap-align:start}
-  #view-exchange .ticket-filter-art{width:28px!important;height:28px!important;border-radius:7px!important}
-  #view-exchange .ticket-filter-name{font-size:7.5px!important}
-  #view-exchange .ticket-filter-count{font-size:6.5px!important;margin-top:1px!important}
-
-  #view-exchange #marketTicketTitle{font-size:17px!important;margin:0!important}
-  #view-exchange .card-head{align-items:flex-end!important;margin-bottom:7px!important}
-  #view-exchange .card-head>span{font-size:7px!important}
-  #view-exchange .ticket-market-grid{display:block!important;margin-top:0!important}
-  #view-exchange .book-side{display:none!important}
-  #view-exchange .book-side.mobile-book-active{display:block!important}
-  .mobile-book-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:4px 0 7px}
-  .mobile-book-tabs button{height:36px;border:1px solid #31495a;border-radius:9px;background:#071019;color:#92a4b0;font-size:9px;font-weight:1000}
-  .mobile-book-tabs button.active{background:#14220e;color:#75ef6e;border-color:#4da94a}
-  .mobile-book-tabs button:nth-child(2).active{background:#2c1210;color:#ff8279;border-color:#a64f48}
-  #view-exchange .book-side-head{padding:8px 10px!important}
-  #view-exchange .book-side-head b{font-size:11px!important}
-  #view-exchange .book-side-head span{display:none!important}
-  #view-exchange .book-row{padding:9px 10px!important;gap:7px!important}
-  #view-exchange .book-tier-art{width:40px!important;height:40px!important}
-  #view-exchange .book-row strong{font-size:11px!important}
-  #view-exchange .book-row small{font-size:7.5px!important;margin-top:2px!important}
-  #view-exchange .book-price{font-size:16px!important}
-  #view-exchange .book-row button{min-width:68px!important;min-height:34px!important;padding:6px 8px!important;font-size:8px!important}
-
-  /* Actions are the point of the screen. */
-  #view-exchange .market-actions-v22{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;margin-top:8px!important}
-  #view-exchange .market-actions-v22 button{min-height:42px!important;padding:8px!important;font-size:8px!important;line-height:1.15!important}
-  #view-exchange .market-explainer{margin-top:6px!important;padding:7px 8px!important;font-size:7.5px!important;line-height:1.25!important;text-align:center}
-
-  /* Secondary info stays available but no longer dominates. */
-  #view-exchange .exchange-layout{display:block!important;margin-top:8px!important}
-  .mobile-recent-toggle{width:100%;height:36px;border:1px solid #2d4352;border-radius:9px;background:#071019;color:#aebbc4;font-size:8px;font-weight:1000;margin-bottom:6px}
-  #view-exchange .orderbook.mobile-collapsed{display:none!important}
-  #view-exchange .orderbook{padding:9px!important;margin-bottom:7px!important}
-  #view-exchange .orderbook h2{font-size:13px!important;margin:0 0 6px!important}
-  #view-exchange .portfolio{padding:9px!important;margin-top:0!important}
-  #view-exchange .portfolio h2{font-size:13px!important;margin:0 0 6px!important}
-  #view-exchange .big-inv{padding:6px 0!important}
-  #view-exchange .inv-art{width:36px!important;height:36px!important}
-  #view-exchange .big-inv b{font-size:10px!important}
-  #view-exchange .big-inv span{font-size:7px!important;line-height:1.2!important}
-  #view-exchange .big-inv button{min-width:72px!important;min-height:34px!important;font-size:8px!important}
-  #view-exchange .back-floor-cta{padding:9px 10px!important;font-size:9px!important;margin-top:7px!important}
-  #view-exchange .back-floor-cta span{font-size:7px!important;margin-top:2px!important}
+/*
+ * Legacy Mobile v4 compatibility shell.
+ * Stage 34 (Mobile Native V43/V44) now owns phone layout, exchange tabs,
+ * touch targets, typography, sheets, and safe areas. Keeping the old
+ * high-specificity 7–8px / 34px exchange overrides here would fight the
+ * native-app layer, so only artifact suppression remains.
+ */
+@media (max-width:760px){
+  .mobile-floor-icons,.mobile-book-tabs,.mobile-exchange-focus,.mobile-recent-toggle{display:none!important}
 }
