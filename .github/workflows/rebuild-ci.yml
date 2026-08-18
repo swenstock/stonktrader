@@ -32,6 +32,7 @@ jobs:
           node --check public/v45-mycontest-native-position-v27.js
           node --check public/v45-view-landings-v29.js
           node --check public/v45-leaderboard-v30.js
+          node --check public/v45-leaderboard-order-v31.js
           node --check scripts/validate-native-mycontest-flow.js
           node --check scripts/validate-stage17-ui.js
           node --check scripts/validate-stage18-ui.js
@@ -66,7 +67,7 @@ jobs:
             exit 1
           fi
           curl -fsS http://127.0.0.1:3456/api/health >/tmp/health.json
-          node -e "const h=require('/tmp/health.json'); if(h.satellitePayoutEngine!=='v45'||h.entryTradeHandoff!=='native-shell'||h.tradeUiPolish!=='v28-dom-safe-quote-hide'||h.createABasket!=='v30-small-baskets-stable-scroll'||h.viewLandings!=='v29-stale-scroll-cancel'||h.leaderboardUi!=='v30-modal-unified-ranks') process.exit(1)"
+          node -e "const h=require('/tmp/health.json'); if(h.satellitePayoutEngine!=='v45'||h.entryTradeHandoff!=='native-shell'||h.tradeUiPolish!=='v28-dom-safe-quote-hide'||h.createABasket!=='v30-small-baskets-stable-scroll'||h.viewLandings!=='v29-stale-scroll-cancel'||h.leaderboardUi!=='v30-modal-unified-ranks'||h.leaderboardOrder!=='v31-contest-first') process.exit(1)"
           curl -fsS http://127.0.0.1:3456/api/config >/tmp/config.json
           curl -fsS http://127.0.0.1:3456/api/economics >/tmp/economics.json
           curl -fsS 'http://127.0.0.1:3456/api/sim-market/quotes?symbols=NVDA,MSFT' >/tmp/quotes.json
@@ -86,6 +87,7 @@ jobs:
           grep -q 'v45-view-landings-v29.js?v=29' /tmp/enhanced.html
           grep -q 'v45-leaderboard-v30.js?v=30' /tmp/enhanced.html
           grep -q 'v45-leaderboard-v30.css?v=30' /tmp/enhanced.html
+          grep -q 'v45-leaderboard-order-v31.js?v=31' /tmp/enhanced.html
           if grep -q 'v45-entry-flow-v25.js' /tmp/enhanced.html; then echo 'legacy entry flow still injected'; exit 1; fi
           node -e "const q=require('/tmp/quotes.json'); if(q.length!==2||q.some(x=>x.source!=='sim')) process.exit(1)"
           SBC_BASE_URL=http://127.0.0.1:3456/api node scripts/v45-smoke.mjs
