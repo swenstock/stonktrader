@@ -17,6 +17,7 @@ const economicsRoutes = require("./routes/economics");
 const quoteRoutes = require("./routes/quotes");
 const simulatedMarketRoutes = require("./routes/simulatedMarket");
 const marketQueueRoutes = require("./routes/marketQueueV14");
+const advancedOrdersV15Routes = require("./routes/advancedOrdersV15");
 const portfolioRoutes = require("./routes/portfolios");
 const quickTicketRoutes = require("./routes/quickTickets");
 const leaderboardRoutes = require("./routes/leaderboard");
@@ -46,6 +47,7 @@ app.use("/api/config", configRoutes);
 app.use("/api/economics", economicsRoutes);
 app.use("/api/quotes", quoteRoutes);
 app.use("/api/sim-market", simulatedMarketRoutes);
+app.use("/api/advanced-orders-v15", advancedOrdersV15Routes);
 app.use("/api/portfolios", marketQueueRoutes);
 app.use("/api/portfolios", portfolioRoutes);
 app.use("/api/quick-tickets", quickTicketRoutes);
@@ -82,12 +84,13 @@ app.get("/api/health", (req, res) => res.json({
   tradeCleanup: "v10",
   createABasket: "stage2-queue",
   marketQueue: "v14",
+  advancedOrders: "v15-safe",
 }));
 
 const TUTORIAL_PAUSE = `<script>(function(){try{var views=['lobby','floor','my','tier','portfolio','exchange','leaders'];localStorage.setItem('sbcDisableMainTutorialV45','1');views.forEach(function(v){localStorage.setItem('sbcDisableViewTutorialV45:'+v,'1');});window.SBC_TUTORIALS_PAUSED=true;}catch(e){window.SBC_TUTORIALS_PAUSED=true;}})();</script>`;
 
-const EXTRA_HEAD = TUTORIAL_PAUSE + '<link rel="stylesheet" href="/v45-mobile-polish.css?v=4"><link rel="stylesheet" href="/v45-mobile-v3.css?v=4"><link rel="stylesheet" href="/v45-mobile-v4.css?v=4"><link rel="stylesheet" href="/v45-desktop-icons.css?v=1"><link rel="stylesheet" href="/v45-usability-v5.css?v=51"><link rel="stylesheet" href="/v45-trade-cleanup-v8.css?v=10"><link rel="stylesheet" href="/v45-quick-ticket-v11.css?v=12">';
-const EXTRA_BODY = '<script src="/v45-mobile-v3.js?v=4"></script><script src="/v45-mobile-v4.js?v=4"></script><script src="/v45-desktop-icons.js?v=1"></script><script src="/v45-usability-v5.js?v=51"></script><script src="/v45-mycontest-entry-sync-v7.js?v=7"></script><script src="/v45-trade-cleanup-v8.js?v=10"></script><script src="/v45-quick-ticket-v11.js?v=12"></script><script src="/v45-basket-stage1.js?v=1"></script><script src="/v45-market-queue-v14.js?v=14"></script>';
+const EXTRA_HEAD = TUTORIAL_PAUSE + '<link rel="stylesheet" href="/v45-mobile-polish.css?v=4"><link rel="stylesheet" href="/v45-mobile-v3.css?v=4"><link rel="stylesheet" href="/v45-mobile-v4.css?v=4"><link rel="stylesheet" href="/v45-desktop-icons.css?v=1"><link rel="stylesheet" href="/v45-usability-v5.css?v=51"><link rel="stylesheet" href="/v45-trade-cleanup-v8.css?v=10"><link rel="stylesheet" href="/v45-quick-ticket-v11.css?v=12"><link rel="stylesheet" href="/v45-advanced-orders-v15.css?v=15">';
+const EXTRA_BODY = '<script src="/v45-mobile-v3.js?v=4"></script><script src="/v45-mobile-v4.js?v=4"></script><script src="/v45-desktop-icons.js?v=1"></script><script src="/v45-usability-v5.js?v=51"></script><script src="/v45-mycontest-entry-sync-v7.js?v=7"></script><script src="/v45-trade-cleanup-v8.js?v=10"></script><script src="/v45-quick-ticket-v11.js?v=12"></script><script src="/v45-basket-stage1.js?v=1"></script><script src="/v45-market-queue-v14.js?v=14"></script><script src="/v45-advanced-orders-v15.js?v=15"></script>';
 
 let servedShell = exactV45Shell.toString("utf8");
 servedShell = servedShell
@@ -106,5 +109,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Stonk paper trading server running on http://localhost:${PORT}`);
   console.log(`Satellite payout engine: ${satelliteScheduler.engineVersion || "legacy"}`);
-  console.log(`Visible shell: exact V45 + Create A Basket stage2-queue + market queue v14; tutorials hard-paused`);
+  console.log(`Visible shell: exact V45 + Create A Basket stage2-queue + market queue v14 + advanced orders v15-safe; tutorials hard-paused`);
 });
