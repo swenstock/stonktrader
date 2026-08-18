@@ -10,6 +10,6 @@ must(!basket.includes("api(`/portfolios/${id}`"),'basket no longer requires back
 must(basket.includes("p.queued.push(order)")&&basket.includes("p.holdings[r.symbol]"),'basket writes to native V45 queued/live portfolio state');
 must(landing.includes("NORMAL_TOP=new Set(['lobby','floor','tier','portfolio','exchange','leaders'])"),'major views have normalized top landings');
 must(landing.includes('setTimeout(resetTop,500)'),'landing reset cancels late stale smooth scroll');
-must(server.includes('v45-basket-builder-v19.js?v=29'),'native basket v29 is served');
+must(/v45-basket-builder-v19\.js\?v=(?:29|30)/.test(server),'native basket enhancement is served');
 must(server.includes('v45-view-landings-v29.js?v=29'),'view landing v29 is served');
 console.log('Stage 17 UI regression checks passed.');
