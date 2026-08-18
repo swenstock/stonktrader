@@ -1,0 +1,39 @@
+/* Stage 34 / Mobile Native V44 refinements */
+@media (max-width:760px){
+  /* Remaining desktop grids become clean phone stacks. */
+  #view-lobby .event-grid,#view-lobby .hero-grid,#view-floor .event-grid,#view-floor .floor-grid,#view-floor #floorGrid,
+  #view-my .portfolio-grid,#view-my #myContestCards,#view-tier .event-grid,#view-tier .contest-grid,
+  .contest-list,.session-grid,.bottom-trade-grid{grid-template-columns:1fr!important}
+  #view-floor .event-grid>* ,#view-floor #floorGrid>* ,#view-my .portfolio-grid>* ,#view-tier .contest-grid>*{min-width:0!important;width:100%!important;max-width:100%!important}
+
+  /* Category/tier selectors are deliberate swipe carousels, never wrapped button walls. */
+  #view-floor .category-tabs,#view-floor .floor-tabs,.tier-tabs,.leader-event-tabs{
+    display:flex!important;gap:8px!important;overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x proximity!important;
+    padding:2px 1px 8px!important;scrollbar-width:none!important;white-space:nowrap!important;
+  }
+  #view-floor .category-tabs::-webkit-scrollbar,#view-floor .floor-tabs::-webkit-scrollbar,.tier-tabs::-webkit-scrollbar,.leader-event-tabs::-webkit-scrollbar{display:none}
+  #view-floor .category-tabs button,#view-floor .floor-tabs button,.tier-tabs button,.leader-event-tabs button{flex:0 0 auto!important;min-height:48px!important;scroll-snap-align:start;margin:0!important}
+
+  /* My Contests: one meaningful card per row and readable metrics. */
+  #view-my .mc-card,#view-my .portfolio-card,#view-my .my-contest-card{width:100%!important;max-width:100%!important;border-radius:14px!important;padding:12px!important;gap:10px!important}
+  #view-my .metric b,#view-my .mc-metric b{font-size:18px!important}
+  #view-my .metric small,#view-my .mc-metric small{font-size:10px!important}
+
+  /* Queued/history cards stay readable even with long symbols/order detail. */
+  .queue-card,.history-card{padding:10px!important;width:100%!important;min-width:0!important}
+  .queue-card .order-list,.history-card .order-list{min-width:0!important;overflow:visible!important}
+  .queue-card .order-row,.history-card .order-row{grid-template-columns:minmax(0,1fr) auto!important;white-space:normal!important}
+
+  /* More mobile tables opt into the same labeled-card grammar. */
+  #view-lobby .sbc-m43-card-table,#view-exchange .sbc-m43-card-table{width:100%!important}
+
+  /* Reconnected position changed while the phone was away. */
+  .sbc-m43-position-card.sbc-m43-reconnect-flash{border-color:#70c8ff!important;background:#0a2231!important}
+
+  /* Keep the connection pill clear of sticky action rows on the trade screen. */
+  #view-portfolio[style*="display: block"]~#sbcM43Connection{bottom:calc(var(--m43-nav-h) + env(safe-area-inset-bottom) + 68px)}
+
+  /* Large system text may wrap instead of clipping. */
+  .sbc-m43-position-card,.book-row,.order-row,.market-summary .sum,.port-stat,.mobile-bottom-nav button{min-width:0!important;overflow-wrap:anywhere}
+  .book-row b,.book-row strong,.order-row b,.port-stat b{max-width:100%;overflow-wrap:anywhere}
+}
