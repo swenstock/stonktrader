@@ -36,6 +36,7 @@ jobs:
           node --check scripts/validate-native-mycontest-flow.js
           node --check scripts/validate-stage17-ui.js
           node --check scripts/validate-stage18-ui.js
+          node --check scripts/validate-stage19-order.js
           node --check scripts/v45-smoke.mjs
       - name: Validate native My Contests flow
         run: node scripts/validate-native-mycontest-flow.js
@@ -43,6 +44,8 @@ jobs:
         run: node scripts/validate-stage17-ui.js
       - name: Validate Stage 18 leaderboard and basket polish
         run: node scripts/validate-stage18-ui.js
+      - name: Validate Stage 19 leaderboard order
+        run: node scripts/validate-stage19-order.js
       - name: Unit tests
         run: npm test
       - name: Server/API/frontend smoke test
