@@ -28,7 +28,7 @@ jobs:
           node --check public/v45-trade-ui-polish-v16.js
           node --check public/v45-basket-builder-v19.js
           node --check public/v45-entry-actions-v20.js
-          node --check public/v45-entry-trade-position-v23.js
+          node --check public/v45-entry-flow-v25.js
           node --check scripts/v45-smoke.mjs
       - name: Unit tests
         run: npm test
