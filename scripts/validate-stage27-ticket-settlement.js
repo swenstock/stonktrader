@@ -11,4 +11,7 @@ must(loader.includes('/v45-ticket-settlement-v38.js?v=38')&&loader.includes('/v4
 must(!settle.includes("root.id==='ticketOrderModal'&&/^SELL\\b/.test(title)"),'posting an offer is not misclassified as a completed sell');
 must(loader.includes('normalizeExchangePost')&&loader.includes('LIST ${old.replace'),'native SELL/POST offer wording is normalized so v36 adds it to the ask book');
 must(loader.includes('wireBasketLive')&&loader.includes('updateBasketPreview')&&loader.includes("r.onchange=e=>{if(typeof commit==='function')commit.call(r,e);}"),'basket allocation percentages update live while dragging and commit on release');
-console.log('Stage 27/28 ticket settlement and live basket regression checks passed.');
+must(settle.includes('showFillConfirm')&&settle.includes('YOU ${side} 1 ${type} TICKET')&&settle.includes('watchRecentFill'),'completed trade creates an explicit bought/sold confirmation popup');
+must(settle.includes("['#bidBook','#askBook']")&&settle.includes("overflow-y','scroll")&&settle.includes('flex-shrink'),'bid and ask books have forced independent scroll viewports with non-shrinking rows');
+must(css.includes('.tm39-book-scroll')&&css.includes('overflow-y:scroll!important')&&css.includes('.tm39-fill-confirm'),'Stage 29 scroll and fill confirmation styles are present');
+console.log('Stage 27/28/29 ticket settlement, live basket, confirmation, and order-book regression checks passed.');
