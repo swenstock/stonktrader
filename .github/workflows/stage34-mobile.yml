@@ -1,0 +1,24 @@
+name: Stage 34 Mobile Native App
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+      - run: npm ci
+      - name: Syntax check mobile layer
+        run: |
+          node --check public/v45-mobile-v4.js
+          node --check public/v45-mobile-v5.js
+          node --check scripts/validate-stage34-mobile.js
+      - name: Validate Stage 34 mobile contract
+        run: node scripts/validate-stage34-mobile.js
