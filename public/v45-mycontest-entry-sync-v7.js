@@ -59,16 +59,43 @@
     };
   }
 
+  function currentContest(){
+    try{
+      const view=document.getElementById('view-my');
+      const hay=String(view?.textContent||'').replace(/\s+/g,' ').toUpperCase();
+      let best=null;
+      [['live',MC_LIVE,true],['archive',MC_ARCHIVE,false]].forEach(([tab,list,isLive])=>{
+        (Array.isArray(list)?list:[]).forEach(c=>{
+          if(!c||!c.name)return;
+          const name=String(c.name).trim();
+          if(!name||!hay.includes(name.toUpperCase()))return;
+          if(!best||name.length>best.score)best={tab,id:c.id,isLive,score:name.length};
+        });
+      });
+      return best&&{tab:best.tab,id:best.id,isLive:best.isLive};
+    }catch(_){return null;}
+  }
+
   function install(){
-    if(typeof window.openSelectedMCPortfolio!=='function' || window.openSelectedMCPortfolio.__entrySyncV7)return;
-    const original=window.openSelectedMCPortfolio;
+    if(typeof window.openSelectedMCPortfolio!=='function' || window.openSelectedMCPortfolio.__entrySyncV8)return;
+    const original=window.openSelectedMCPortfolio.__entrySyncOriginal || window.openSelectedMCPortfolio;
     function synced(tab,id,isLive){
       const bundle=buildContext(tab,id,isLive);
       if(bundle)seedFromContest(bundle);
+      synced.__lastArgs={tab,id,isLive};
       return original.apply(this,arguments);
     }
     synced.__entrySyncV7=true;
+    synced.__entrySyncV8=true;
+    synced.__entrySyncOriginal=original;
     window.openSelectedMCPortfolio=synced;
+
+    window.__sbcOpenCurrentMyContestEntry=function(){
+      const ctx=currentContest()||synced.__lastArgs;
+      if(!ctx)return false;
+      try{synced(ctx.tab,ctx.id,ctx.isLive);return true;}catch(_){return false;}
+    };
+    window.__sbcCurrentMyContestContext=currentContest;
   }
 
   function start(){install();setTimeout(install,300);setTimeout(install,1200);}
