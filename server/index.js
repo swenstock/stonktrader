@@ -17,6 +17,7 @@ const economicsRoutes = require("./routes/economics");
 const quoteRoutes = require("./routes/quotes");
 const simulatedMarketRoutes = require("./routes/simulatedMarket");
 const portfolioRoutes = require("./routes/portfolios");
+const quickTicketRoutes = require("./routes/quickTickets");
 const leaderboardRoutes = require("./routes/leaderboard");
 const leaderboardV45Routes = require("./routes/leaderboardV45");
 const contestRoutes = require("./routes/contests");
@@ -44,6 +45,7 @@ app.use("/api/economics", economicsRoutes);
 app.use("/api/quotes", quoteRoutes);
 app.use("/api/sim-market", simulatedMarketRoutes);
 app.use("/api/portfolios", portfolioRoutes);
+app.use("/api/quick-tickets", quickTicketRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
 app.use("/api/leaderboard-v45", leaderboardV45Routes);
 app.use("/api/contests", contestRoutes);
@@ -74,6 +76,7 @@ app.get("/api/health", (req, res) => res.json({
   tutorialPrompts: "hard-paused-for-qa",
   myContestEntrySync: "v7",
   tradeCleanup: "v10",
+  quickTicket: "v11",
 }));
 
 // QA hard pause. V45 checks for literal string '1', so set the exact values it
@@ -82,8 +85,8 @@ app.get("/api/health", (req, res) => res.json({
 // the verified shell for later re-enable.
 const TUTORIAL_PAUSE = `<script>(function(){try{var views=['lobby','floor','my','tier','portfolio','exchange','leaders'];localStorage.setItem('sbcDisableMainTutorialV45','1');views.forEach(function(v){localStorage.setItem('sbcDisableViewTutorialV45:'+v,'1');});window.SBC_TUTORIALS_PAUSED=true;}catch(e){window.SBC_TUTORIALS_PAUSED=true;}})();</script>`;
 
-const EXTRA_HEAD = TUTORIAL_PAUSE + '<link rel="stylesheet" href="/v45-mobile-polish.css?v=4"><link rel="stylesheet" href="/v45-mobile-v3.css?v=4"><link rel="stylesheet" href="/v45-mobile-v4.css?v=4"><link rel="stylesheet" href="/v45-desktop-icons.css?v=1"><link rel="stylesheet" href="/v45-usability-v5.css?v=51"><link rel="stylesheet" href="/v45-trade-cleanup-v8.css?v=10">';
-const EXTRA_BODY = '<script src="/v45-mobile-v3.js?v=4"></script><script src="/v45-mobile-v4.js?v=4"></script><script src="/v45-desktop-icons.js?v=1"></script><script src="/v45-usability-v5.js?v=51"></script><script src="/v45-mycontest-entry-sync-v7.js?v=7"></script><script src="/v45-trade-cleanup-v8.js?v=10"></script>';
+const EXTRA_HEAD = TUTORIAL_PAUSE + '<link rel="stylesheet" href="/v45-mobile-polish.css?v=4"><link rel="stylesheet" href="/v45-mobile-v3.css?v=4"><link rel="stylesheet" href="/v45-mobile-v4.css?v=4"><link rel="stylesheet" href="/v45-desktop-icons.css?v=1"><link rel="stylesheet" href="/v45-usability-v5.css?v=51"><link rel="stylesheet" href="/v45-trade-cleanup-v8.css?v=10"><link rel="stylesheet" href="/v45-quick-ticket-v11.css?v=11">';
+const EXTRA_BODY = '<script src="/v45-mobile-v3.js?v=4"></script><script src="/v45-mobile-v4.js?v=4"></script><script src="/v45-desktop-icons.js?v=1"></script><script src="/v45-usability-v5.js?v=51"></script><script src="/v45-mycontest-entry-sync-v7.js?v=7"></script><script src="/v45-trade-cleanup-v8.js?v=10"></script><script src="/v45-quick-ticket-v11.js?v=11"></script>';
 
 let servedShell = exactV45Shell.toString("utf8");
 servedShell = servedShell
@@ -102,5 +105,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Stonk paper trading server running on http://localhost:${PORT}`);
   console.log(`Satellite payout engine: ${satelliteScheduler.engineVersion || "legacy"}`);
-  console.log(`Visible shell: exact V45 + mobile v4 + desktop icons v1 + usability v5.1 + My Contests sync v7 + trade cleanup v10; tutorials hard-paused`);
+  console.log(`Visible shell: exact V45 + mobile v4 + desktop icons v1 + usability v5.1 + My Contests sync v7 + trade cleanup v10 + Quick Ticket v11; tutorials hard-paused`);
 });
