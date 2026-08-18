@@ -57,7 +57,8 @@
     position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;margin:0!important;
   }
   .ticket-order-modal.open,.record-modal.open,.ai-analysis-modal.open,.allocation-modal.open,.findme-modal.open,.standing-modal.open,.entry-confirm-modal.open,.entry-success.open,.test-clock-modal.open,.ta42-confirm,.tm39-fill-confirm{display:flex!important;align-items:flex-end!important;justify-content:center!important}
-  /* v35 desktop exchange CSS centered its direct child with margin:auto!important. */
+  /* v35 desktop exchange CSS centered its direct child and padded the overlay. */
+  .tm35-market-modal.open{padding:0!important;align-items:flex-end!important;justify-content:center!important}
   .tm35-market-modal.open>.ticket-order-card,
   .tm35-market-modal.open>.record-card,
   .tm35-market-modal.open>section,
