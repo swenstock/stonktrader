@@ -167,6 +167,21 @@ function createOffer(req, res) {
 router.post('/', requireAuth, createOffer); // legacy
 router.post('/offers', requireAuth, createOffer); // V45
 
+// Seller reprices an active offer. The ticket remains locked/listed.
+router.patch('/offers/:id', requireAuth, (req, res) => {
+  const listing = db.prepare(`
+    SELECT ticket_listings.*, tickets.ticket_type
+    FROM ticket_listings JOIN tickets ON tickets.id = ticket_listings.ticket_id
+    WHERE ticket_listings.id = ?
+  `).get(req.params.id);
+  if (!listing || listing.seller_account_id !== req.account.id) return res.status(404).json({ error: 'Offer not found' });
+  if (listing.status !== 'active') return res.status(400).json({ error: 'Only active offers can be repriced' });
+  const price = Math.round(Number(req.body?.askPrice ?? req.body?.price));
+  if (!Number.isFinite(price) || price <= 0) return res.status(400).json({ error: 'askPrice must be a positive number' });
+  db.prepare('UPDATE ticket_listings SET ask_price = ? WHERE id = ?').run(price, listing.id);
+  res.json({ ok: true, id: listing.id, ticketType: listing.ticket_type, askPrice: price });
+});
+
 function buyOffer(req, res) {
   const listing = db.prepare('SELECT * FROM ticket_listings WHERE id = ?').get(req.params.id);
   if (!listing || listing.status !== 'active') return res.status(404).json({ error: 'Offer not available' });
@@ -229,6 +244,33 @@ router.post('/bids', requireAuth, (req, res) => {
     custodian.debit(req.account.id, price, 'ticket_bid_hold', { referenceType: 'ticket_bid', referenceId: info.lastInsertRowid });
     db.exec('COMMIT');
     res.json({ ok: true, id: info.lastInsertRowid, ticketType, bidPrice: price });
+  } catch (err) {
+    try { db.exec('ROLLBACK'); } catch (_) {}
+    throw err;
+  }
+});
+
+// Buyer reprices an active bid. Adjust the held STONK by only the difference.
+router.patch('/bids/:id', requireAuth, (req, res) => {
+  const bid = db.prepare('SELECT * FROM ticket_bids WHERE id = ?').get(req.params.id);
+  if (!bid || bid.buyer_account_id !== req.account.id) return res.status(404).json({ error: 'Bid not found' });
+  if (bid.status !== 'active') return res.status(400).json({ error: 'Only active bids can be repriced' });
+  const price = Math.round(Number(req.body?.bidPrice ?? req.body?.price));
+  if (!Number.isFinite(price) || price <= 0) return res.status(400).json({ error: 'bidPrice must be a positive number' });
+  const oldPrice = Number(bid.bid_price);
+  const delta = price - oldPrice;
+  if (delta > 0 && custodian.getBalance(req.account.id) < delta) return res.status(400).json({ error: 'Not enough STONK to raise this bid' });
+
+  try {
+    db.exec('BEGIN');
+    if (delta > 0) {
+      custodian.debit(req.account.id, delta, 'ticket_bid_hold_increase', { referenceType: 'ticket_bid', referenceId: bid.id });
+    } else if (delta < 0) {
+      custodian.credit(req.account.id, Math.abs(delta), 'ticket_bid_hold_release', { referenceType: 'ticket_bid', referenceId: bid.id });
+    }
+    db.prepare('UPDATE ticket_bids SET bid_price = ? WHERE id = ?').run(price, bid.id);
+    db.exec('COMMIT');
+    res.json({ ok: true, id: bid.id, ticketType: bid.ticket_type, bidPrice: price, holdDelta: delta });
   } catch (err) {
     try { db.exec('ROLLBACK'); } catch (_) {}
     throw err;
