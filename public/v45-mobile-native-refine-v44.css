@@ -52,6 +52,18 @@
   .leader-table.sbc-m43-card-table{min-width:0!important;width:100%!important}
   #view-leaders .leader-details{overflow-x:hidden!important}
 
+  /* Every simple modal is physically anchored to the phone viewport. */
+  .ticket-order-modal,.record-modal,.ai-analysis-modal,.rules-gate,.allocation-modal,.findme-modal,.standing-modal,.entry-confirm-modal,.entry-success,.test-clock-modal,.ta42-confirm,.tm39-fill-confirm{
+    position:fixed!important;inset:0!important;width:100vw!important;height:100dvh!important;max-width:none!important;max-height:none!important;margin:0!important;
+  }
+  .ticket-order-modal.open,.record-modal.open,.ai-analysis-modal.open,.allocation-modal.open,.findme-modal.open,.standing-modal.open,.entry-confirm-modal.open,.entry-success.open,.test-clock-modal.open,.ta42-confirm,.tm39-fill-confirm{display:flex!important;align-items:flex-end!important;justify-content:center!important}
+
+  /* Stock search is the deliberate full-screen picker requested for mobile. */
+  #sbcM43SymbolSheet{align-items:stretch!important;background:#04080c!important}
+  #sbcM43SymbolSheet>section{height:100dvh!important;max-height:100dvh!important;border-radius:0!important;border:0!important;padding-top:calc(14px + env(safe-area-inset-top))!important}
+  #sbcM43SymbolSheet .handle{display:none!important}
+  #sbcM43SymbolResults{padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+
   /* Reconnected position changed while the phone was away. */
   .sbc-m43-position-card.sbc-m43-reconnect-flash{border-color:#70c8ff!important;background:#0a2231!important}
 
