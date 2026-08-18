@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 if(window.__sbcTraderActionConfirmV42)return;window.__sbcTraderActionConfirmV42=true;
-let timer=null;
+let timer=null,suppressSuccessAlertUntil=0;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>`$${Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 const qty=n=>Number(n||0).toLocaleString(undefined,{maximumFractionDigits:4});
@@ -29,9 +29,12 @@ function showAdvanced(body){
   const side=String(body?.side||'').toUpperCase(),symbol=String(body?.symbol||'').toUpperCase(),type=String(body?.orderType||'ORDER').replace('_',' ').toUpperCase();
   if(!symbol||!side)return;
   const size=body.percent?`${body.percent}% sizing`:body.quantity?`${qty(body.quantity)} shares`:'';
+  suppressSuccessAlertUntil=Date.now()+1200;
   show({eyebrow:'ORDER PLACED',title:`${type} ${side} • ${symbol}`,detail:advancedDetail(body),subdetail:size?`${size} • Waiting for trigger/execution.`:'Waiting for trigger/execution.',icon:'📝'});
 }
 window.SBCTradeConfirmV42={show,showAdvanced,close};
+const nativeAlert=window.alert.bind(window);
+window.alert=function(message){if(Date.now()<suppressSuccessAlertUntil&&/accepted|order placed|advanced order/i.test(String(message||'')))return;return nativeAlert(message);};
 const nativeFetch=window.fetch.bind(window);
 window.fetch=async function(input,init){
   const url=urlOf(input),method=methodOf(input,init),body=parseBody(init),response=await nativeFetch(input,init);
