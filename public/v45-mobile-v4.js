@@ -6,7 +6,11 @@
     if(!document.querySelector('link[data-sbc-mobile-v5]')){const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-mobile-v5.css?v=5';l.dataset.sbcMobileV5='1';document.head.appendChild(l);}
     if(!window.__sbcMobileV5&&!document.querySelector('script[data-sbc-mobile-v5]')){const s=document.createElement('script');s.src='/v45-mobile-v5.js?v=5';s.dataset.sbcMobileV5='1';document.head.appendChild(s);}
   }
-  loadV5();
+  function loadV6(){
+    if(!document.querySelector('link[data-sbc-mobile-v6]')){const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-mobile-v6.css?v=6';l.dataset.sbcMobileV6='1';document.head.appendChild(l);}
+    if(!window.__sbcMobileV6&&!document.querySelector('script[data-sbc-mobile-v6]')){const s=document.createElement('script');s.src='/v45-mobile-v6.js?v=6';s.dataset.sbcMobileV6='1';document.head.appendChild(s);}
+  }
+  loadV5();loadV6();
 
   function stripFloorIcons(){
     document.querySelectorAll('.mobile-floor-icons').forEach(x=>x.remove());
@@ -89,6 +93,6 @@
     const inv=document.querySelector('#view-exchange .portfolio h2');if(inv)inv.textContent='MY TICKETS';
   }
 
-  const start=()=>{loadV5();stripFloorIcons();setupExchange();};
+  const start=()=>{loadV5();loadV6();stripFloorIcons();setupExchange();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
