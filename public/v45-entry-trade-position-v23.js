@@ -12,9 +12,6 @@ function rulesDialog(){
   return nodes.filter(visible).find(el=>/\bRULES\b/i.test(text(el)))||null;
 }
 function affirmative(btn){return /CONTINUE|ACCEPT|AGREE|UNDERSTAND|GOT IT|ENTER|PROCEED|START|TRADE|^OK$|OKAY|LET'S GO|I'M READY/i.test(text(btn));}
-function retryTradeUntilOpen(){
-  [180,420,760,1150,1600].forEach(ms=>setTimeout(()=>=>{},ms));
-}
 function retryTrade(){
   [180,420,760,1150,1600].forEach(ms=>setTimeout(()=>{
     if(portfolioVisible())return;
