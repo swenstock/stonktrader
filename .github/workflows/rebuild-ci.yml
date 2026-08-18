@@ -30,7 +30,10 @@ jobs:
           node --check public/v45-basket-builder-v19.js
           node --check public/v45-entry-actions-v20.js
           node --check public/v45-entry-flow-v25.js
+          node --check scripts/trace-v45-shell.js
           node --check scripts/v45-smoke.mjs
+      - name: Trace exact V45 shell
+        run: node scripts/trace-v45-shell.js
       - name: Unit tests
         run: npm test
       - name: Server/API/frontend smoke test
