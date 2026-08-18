@@ -1,0 +1,82 @@
+/* Stage 34 mobile native-app pass. Desktop untouched. */
+@media(max-width:620px){
+:root{--mnav:72px;--mspace:12px;--mtap:48px}
+html{font-size:16px;-webkit-text-size-adjust:100%}
+html,body{width:100%;max-width:100%;overflow-x:hidden!important}
+body{font-size:16px!important;line-height:1.45;padding-bottom:calc(var(--mnav) + env(safe-area-inset-bottom,0px))!important}
+.shell{width:100%!important;max-width:100%!important;padding:0 12px calc(94px + env(safe-area-inset-bottom,0px))!important}
+.top{position:sticky!important;top:0;z-index:500;background:rgba(3,9,14,.96);backdrop-filter:blur(16px);padding-top:env(safe-area-inset-top,0px);height:auto!important;min-height:56px!important}
+.top .nav,.top nav{display:none!important}
+.panel,.card,.orderbook,.portfolio,.mc-card{border-radius:16px!important}
+button,a,[role=button],input,select{font-size:16px!important;touch-action:manipulation}
+button,a,[role=button]{min-height:44px;min-width:44px}
+input,select{min-height:48px!important}
+input[type=number],input[type=text],input[type=search]{font-size:16px!important}
+
+/* Fixed five-tab mobile nav */
+.mobile-bottom-nav-v5{position:fixed;left:0;right:0;bottom:0;z-index:1200;height:calc(var(--mnav) + env(safe-area-inset-bottom,0px));padding:7px 6px calc(7px + env(safe-area-inset-bottom,0px));display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:rgba(4,11,17,.98);border-top:1px solid #273946;box-shadow:0 -10px 30px rgba(0,0,0,.35);backdrop-filter:blur(18px)}
+.mobile-bottom-nav-v5 button{border:0;background:transparent;color:#8fa2ad;border-radius:12px;min-width:0!important;min-height:54px!important;padding:5px 2px!important;display:grid;place-items:center;align-content:center;gap:2px;font-weight:900}
+.mobile-bottom-nav-v5 button i{font-style:normal;font-size:21px;line-height:1}.mobile-bottom-nav-v5 button span{font-size:10px!important;line-height:1;white-space:nowrap}.mobile-bottom-nav-v5 button.active{color:#ffd341;background:#17212a}
+
+/* Single-column and no accidental horizontal tables */
+.hero,.actions,.event-grid,.exchange-layout,.ticket-market-grid,.leader-podium,.mc-hero,.session-grid,.floor-clean-grid:not(.mobile-carousel-v5){grid-template-columns:1fr!important}
+.leader-details,.leader-table,.positions-table,.position-table,table{max-width:100%!important}
+#view-leaders .leader-details{overflow:visible!important}
+#view-leaders .leader-table{min-width:0!important;width:100%!important;display:block!important}
+#view-leaders .leader-table>*,#view-leaders .leader-row{width:100%!important}
+
+/* Trading app header and tabs */
+#view-portfolio{padding-bottom:calc(86px + env(safe-area-inset-bottom,0px))}
+.mobile-trade-context-v5{position:sticky;top:56px;z-index:460;margin:0 -12px 8px;padding:8px 12px;background:rgba(6,15,22,.96);border-bottom:1px solid #263946;display:grid;grid-template-columns:1fr auto auto;gap:9px;align-items:center;backdrop-filter:blur(14px)}
+.mobile-trade-context-v5 b{font-size:20px!important;line-height:1}.mobile-trade-context-v5 span,.mobile-trade-context-v5 small{font-size:11px!important;color:#9cafba}.mobile-trade-context-v5 .stale{color:#ffb347!important}
+.mobile-trade-tabs-v5{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 12px;position:sticky;top:105px;z-index:450;background:#050d13;padding:6px 0}
+.mobile-trade-tabs-v5 button{min-height:46px!important;border:1px solid #304654;border-radius:12px;background:#0a151d;color:#9eb0bb;font-size:12px!important;font-weight:1000}.mobile-trade-tabs-v5 button.active{background:#17261b;border-color:#4f9f54;color:#7cf078}
+#view-portfolio [data-mobile-trade-panel-v5]{display:none!important}
+#view-portfolio [data-mobile-trade-panel-v5].mobile-active-v5{display:block!important}
+#view-portfolio .chart-wrap,#view-portfolio .chart-card,#view-portfolio canvas{max-width:100%!important}
+#view-portfolio .quick-trade-clean{margin-top:10px!important;padding:12px!important;border-radius:16px!important}
+#view-portfolio .quick-action{min-height:54px!important;font-size:16px!important}
+#view-portfolio .quick-percent-row{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:8px!important}
+#view-portfolio .quick-percent-row button{min-height:48px!important;padding:8px 2px!important}
+#view-portfolio .quick-input-mode{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+#view-portfolio .quick-input-mode button{min-height:48px!important}
+#view-portfolio .trade-search-row{display:flex!important;overflow-x:auto!important;gap:8px!important;padding-bottom:6px;scrollbar-width:none;white-space:nowrap}.trade-search-row::-webkit-scrollbar{display:none}
+#view-portfolio .trade-search-row button,#view-portfolio .trade-search-row select{flex:0 0 auto;min-height:44px!important}
+.mobile-stale-v5 #view-portfolio .quick-action{opacity:.45!important;pointer-events:none!important}
+.mobile-stale-badge-v5{display:none}.mobile-stale-v5 .mobile-stale-badge-v5{display:inline-flex;color:#ffb347!important;font-weight:900}
+
+/* Position/table content becomes cards */
+.mobile-cardified-v5{display:grid!important;grid-template-columns:1fr!important;gap:10px!important;overflow:visible!important}
+.mobile-data-card-v5{display:grid!important;grid-template-columns:1fr auto;gap:5px 12px;padding:12px!important;border:1px solid #263b49;border-radius:14px;background:#08131b;min-width:0!important}
+.mobile-data-card-v5 b,.mobile-data-card-v5 strong{font-size:16px!important}.mobile-data-card-v5 span,.mobile-data-card-v5 small{font-size:13px!important;line-height:1.35}.mobile-data-card-v5 .gain:before{content:'▲ ';}.mobile-data-card-v5 .loss:before{content:'▼ ';}
+
+/* Exchange: Bids / Offers only one at a time, full tap rows */
+#view-exchange .exchange-hero p,#view-exchange .market-explainer,#view-exchange .big-inv span{font-size:14px!important;line-height:1.4!important}
+#view-exchange .ticket-type-selector{gap:8px!important}#view-exchange .ticket-type-selector button{min-height:52px!important;padding:8px 10px!important}
+#view-exchange .ticket-filter-name{font-size:12px!important}#view-exchange .ticket-filter-count{font-size:11px!important}
+.mobile-book-tabs button{min-height:48px!important;font-size:13px!important}
+#view-exchange .book-row{grid-template-columns:minmax(0,1fr) auto!important;padding:12px!important;gap:10px!important;min-height:68px!important;border-radius:12px;margin-bottom:8px;background:#08131b}
+#view-exchange .book-row button{min-width:96px!important;min-height:48px!important;font-size:12px!important}
+#view-exchange .book-price{font-size:18px!important}
+#view-exchange .market-actions-v22{position:sticky;bottom:calc(var(--mnav) + env(safe-area-inset-bottom,0px));z-index:440;background:#050d13;padding:8px 0;margin-top:8px!important}.market-actions-v22 button{min-height:52px!important;font-size:12px!important}
+
+/* Leader rows/cards and find-me */
+#view-leaders .leader-row,#view-leaders .leader-table .row{display:grid!important;grid-template-columns:50px 1fr auto!important;gap:8px 10px!important;align-items:center;padding:12px!important;margin:0 0 8px!important;border:1px solid #263b49;border-radius:14px;background:#08131b;min-width:0!important}
+#view-leaders button{min-height:48px!important}.mobile-find-me-v5{position:sticky;bottom:calc(var(--mnav) + 8px + env(safe-area-inset-bottom,0px));z-index:430;width:100%;min-height:50px!important}
+
+/* Desktop modals become sheets */
+.tm35-market-modal,.modal,.overlay,[role=dialog].modal{align-items:flex-end!important;padding:0!important}
+.tm35-market-modal>*,.modal>*,.overlay>.modal-card,.overlay>.card,[role=dialog].modal>*{width:100%!important;max-width:100%!important;max-height:86dvh!important;border-radius:20px 20px 0 0!important;margin:0!important;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))!important;overflow-y:auto!important}
+.tm35-market-modal>*:before,.mobile-sheet-v5:before{content:'';display:block;width:42px;height:5px;border-radius:999px;background:#526673;margin:7px auto 10px}
+#ta42Confirm,#tm39FillConfirm{align-items:flex-end!important;padding:0!important}#ta42Confirm section,#tm39FillConfirm section{width:100%!important;max-width:100%!important;border-radius:20px 20px 0 0!important;margin:0!important;padding-bottom:calc(18px + env(safe-area-inset-bottom,0px))!important}
+
+/* Typography reset: undo legacy 6-9px mobile text */
+.page-head p,.tier-hero p,.session p,.session-right span,.statement span,.step>p,.action small,.mc-title span,.mc-pos-card span,.mc-pos-card .click-hint,.pro-ai-card p,.mc-pro-card p,#view-exchange .card-head>span,#view-exchange .book-row small,#view-exchange .market-explainer,#view-exchange .big-inv span{font-size:13px!important;line-height:1.4!important}
+.page-head h1{font-size:24px!important}.session h3,.mc-title strong{font-size:17px!important}.mc-pos-card strong{font-size:16px!important}.mc-pos-card b{font-size:14px!important}
+
+/* Accessibility / fit */
+:focus-visible{outline:3px solid #ffd341!important;outline-offset:2px!important}
+img{max-width:100%}.sr-only-v5{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@supports(padding:max(0px)){.mobile-bottom-nav-v5{padding-left:max(6px,env(safe-area-inset-left));padding-right:max(6px,env(safe-area-inset-right))}}
+}
+@media(max-width:380px){.shell{padding-left:10px!important;padding-right:10px!important}.mobile-trade-context-v5{margin-left:-10px;margin-right:-10px;padding-left:10px;padding-right:10px}.mobile-bottom-nav-v5 button span{font-size:9px!important}}
