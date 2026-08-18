@@ -27,10 +27,13 @@
 
   function setType(ticket,type){
     ticket.dataset.advType=type;
-    $$('[data-adv-type]',ticket).forEach(b=>b.classList.toggle('active',b.dataset.advType===type));
-    const limit=$('.adv-limit-v15',ticket),stop=$('.adv-stop-v15',ticket);
-    if(limit)limit.hidden=!['limit','stop_limit'].includes(type);
-    if(stop)stop.hidden=!['stop','stop_limit'].includes(type);
+    $$('[data-adv-type]',ticket).forEach(b=>b.classList.toggle('active',b.dataset.advType===type || (b.dataset.advType==='stop'&&type==='stop_limit')));
+    $$('[data-stop-mode]',ticket).forEach(b=>b.classList.toggle('active',b.dataset.stopMode===type));
+    const stopFamily=['stop','stop_limit'].includes(type);
+    const stopModes=$('.adv-stop-modes-v15',ticket),limit=$('.adv-limit-v15',ticket),stop=$('.adv-stop-v15',ticket);
+    if(stopModes)stopModes.hidden=!stopFamily;
+    if(stop)stop.hidden=!stopFamily;
+    if(limit)limit.hidden=!(type==='limit'||type==='stop_limit');
   }
   function ensureControls(){
     const ticket=$('#view-portfolio .quick-trade-clean');
@@ -42,9 +45,10 @@
     ticket.dataset.advPercent='50';
     const wrap=document.createElement('div');
     wrap.className='advanced-order-types-v15';
-    wrap.innerHTML=`<div class="adv-type-row-v15"><span>ORDER TYPE</span><button type="button" data-adv-type="market" class="active">MARKET</button><button type="button" data-adv-type="limit">LIMIT</button><button type="button" data-adv-type="stop">STOP</button><button type="button" data-adv-type="stop_limit">STOP LIMIT</button></div><div class="adv-price-row-v15"><label class="adv-limit-v15" hidden>LIMIT $ <input type="number" inputmode="decimal" min="0" step="0.01" class="adv-limit-price-v15" placeholder="0.00"></label><label class="adv-stop-v15" hidden>STOP $ <input type="number" inputmode="decimal" min="0" step="0.01" class="adv-stop-price-v15" placeholder="0.00"></label></div>`;
+    wrap.innerHTML=`<div class="adv-type-row-v15"><span>ORDER TYPE</span><button type="button" data-adv-type="market" class="active">MARKET</button><button type="button" data-adv-type="limit">LIMIT</button><button type="button" data-adv-type="stop">STOP</button></div><div class="adv-stop-modes-v15" hidden><span>STOP ORDER</span><button type="button" data-stop-mode="stop" class="active">STOP</button><button type="button" data-stop-mode="stop_limit">STOP LIMIT</button></div><div class="adv-price-row-v15"><label class="adv-limit-v15" hidden>LIMIT $ <input type="number" inputmode="decimal" min="0" step="0.01" class="adv-limit-price-v15" placeholder="0.00"></label><label class="adv-stop-v15" hidden>STOP $ <input type="number" inputmode="decimal" min="0" step="0.01" class="adv-stop-price-v15" placeholder="0.00"></label></div>`;
     anchor.parentElement.insertBefore(wrap,anchor);
     $$('[data-adv-type]',wrap).forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();setType(ticket,b.dataset.advType);}));
+    $$('[data-stop-mode]',wrap).forEach(b=>b.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();setType(ticket,b.dataset.stopMode);}));
     $$('.quick-input-mode button',ticket).forEach(b=>b.addEventListener('click',()=>{ticket.dataset.advMode=/share/i.test(b.textContent||'')?'shares':'percent';}));
     $$('.quick-percent-row button',ticket).forEach(b=>b.addEventListener('click',()=>{const n=Number(((b.textContent||'').match(/\d+/)||[])[0]);if(n)ticket.dataset.advPercent=String(n);}));
     ticket.addEventListener('click',interceptAdvanced,true);
@@ -59,7 +63,7 @@
     if(!btn)return;
     const ticket=e.currentTarget;
     const type=ticket.dataset.advType||'market';
-    if(type==='market')return; // proven Stage 2 path handles ordinary market orders
+    if(type==='market')return;
     e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
     const pid=portfolioId(),symbol=symbolFor(),side=/sell/i.test(btn.textContent||'')?'sell':'buy';
     if(!pid)return alert('This portfolio could not be identified. Refresh the page and try again.');
