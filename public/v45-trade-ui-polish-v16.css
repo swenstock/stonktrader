@@ -1,5 +1,7 @@
-/* V45 trade UI polish v20 — compact actions, chart-header symbol selector */
-#view-portfolio .quote-strip{display:none!important}
+/* V45 trade UI polish v28 — compact actions, chart-header selector, native DOM-safe quote hiding */
+#view-portfolio .quote-strip,
+#view-portfolio .trade-native-hidden-v28,
+#view-portfolio .quick-quote-box{display:none!important}
 
 /* Chart header: symbol selector now lives beside chart controls. */
 #view-portfolio .chart-trade-card .card-head.chart-head-with-selector-v20{
