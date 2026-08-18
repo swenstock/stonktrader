@@ -24,7 +24,7 @@ jobs:
           node --check public/v45/v45-links.js
           node --check public/v45/trade.js
           node --check public/v45/leaders.js
-          node --check public/v45-basket-builder-v18.js
+          node --check public/v45-basket-builder-v19.js
           node --check scripts/v45-smoke.mjs
       - name: Unit tests
         run: npm test
