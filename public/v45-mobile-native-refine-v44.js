@@ -14,16 +14,16 @@ function flashChangedPositions(){
 function normalizeInputs(){if(!mobile())return;$$('#view-portfolio input[type="number"],#view-exchange input[type="number"],#view-portfolio input[type="text"],#view-exchange input[type="text"]').forEach(i=>{if(!i.inputMode)i.inputMode='decimal'});}
 function blockNewTradeButtons(block){if(!mobile())return;$$('#view-portfolio .quick-action,#view-portfolio #submitTradeBtn').forEach(b=>{if(block){if(!b.disabled){b.disabled=true;b.dataset.m44NetworkDisabled='1'}b.setAttribute('aria-disabled','true')}else if(b.dataset.m44NetworkDisabled==='1'){b.disabled=false;b.removeAttribute('data-m44-network-disabled');b.removeAttribute('aria-disabled')}});}
 function enforceNetworkTruth(){if(!mobile())return;const body=document.body,badge=$('#sbcM43Connection');if(!navigator.onLine){body.classList.add('sbc-m43-stale');body.classList.remove('sbc-m43-reconnecting');if(badge)badge.textContent='OFFLINE';blockNewTradeButtons(true);return}const blocked=body.classList.contains('sbc-m43-stale')||body.classList.contains('sbc-m43-reconnecting');blockNewTradeButtons(blocked);}
-function destroySymbolSheet(e){const close=e.target.closest?.('#sbcM43SymbolSheet .close');if(!close)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();$('#sbcM43SymbolSheet')?.remove();}
+function killSymbolSheet(e){e?.preventDefault?.();e?.stopPropagation?.();e?.stopImmediatePropagation?.();$('#sbcM43SymbolSheet')?.remove();}
+function wireSymbolClose(){const close=$('#sbcM43SymbolSheet .close');if(!close||close.dataset.m44Wired)return;close.dataset.m44Wired='1';close.addEventListener('pointerup',killSymbolSheet,true);close.addEventListener('click',killSymbolSheet,true);close.onclick=killSymbolSheet;}
 function destroySymbolSheetOnEscape(e){if(e.key!=='Escape'||!$('#sbcM43SymbolSheet'))return;e.preventDefault();$('#sbcM43SymbolSheet')?.remove();}
-function run(){if(!mobile())return;normalizeInputs();enforceNetworkTruth()}
+function run(){if(!mobile())return;wireSymbolClose();normalizeInputs();enforceNetworkTruth()}
 function schedule(){clearTimeout(timer);timer=setTimeout(run,250)}
-document.addEventListener('click',destroySymbolSheet,true);
 document.addEventListener('keydown',destroySymbolSheetOnEscape,true);
 addEventListener('offline',()=>{rememberPositions();setTimeout(enforceNetworkTruth,0);setTimeout(enforceNetworkTruth,150)});
 addEventListener('online',()=>{const wait=()=>{if(!mobile())return;const badge=$('#sbcM43Connection');if(badge&&/LIVE DATA|SERVER LIVE/.test(badge.textContent||'')){flashChangedPositions();return}setTimeout(wait,350)};setTimeout(wait,500)});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)rememberPositions();else{const wait=()=>{const badge=$('#sbcM43Connection');if(badge&&/LIVE DATA|SERVER LIVE/.test(badge.textContent||'')){flashChangedPositions();return}setTimeout(wait,350)};setTimeout(wait,500)}});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
-new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
+new MutationObserver(()=>{wireSymbolClose();schedule()}).observe(document.documentElement,{childList:true,subtree:true});
 setInterval(enforceNetworkTruth,500);
 })();
