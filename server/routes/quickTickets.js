@@ -4,7 +4,7 @@ const db = require('../db');
 const requireAuth = require('../middleware/requireAuth');
 const { getQuotes, listSymbols } = require('../dataProvider');
 
-const MIN_STOCKS = 10;
+const MIN_STOCKS = 1;
 const MAX_STOCKS = 100;
 
 function normalizeSymbols(input) {
@@ -15,7 +15,7 @@ function normalizeSymbols(input) {
 }
 
 function validateSymbols(symbols) {
-  if (symbols.length < MIN_STOCKS) return `Create A Basket requires at least ${MIN_STOCKS} unique stocks.`;
+  if (symbols.length < MIN_STOCKS) return `Create A Basket requires at least ${MIN_STOCKS} unique stock.`;
   if (symbols.length > MAX_STOCKS) return `Create A Basket supports up to ${MAX_STOCKS} stocks.`;
   const known = new Set(listSymbols().map(s => String(s.symbol).toUpperCase()));
   const invalid = symbols.filter(s => !known.has(s));
