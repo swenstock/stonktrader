@@ -14,18 +14,43 @@
   #view-floor .category-tabs::-webkit-scrollbar,#view-floor .floor-tabs::-webkit-scrollbar,.tier-tabs::-webkit-scrollbar,.leader-event-tabs::-webkit-scrollbar{display:none}
   #view-floor .category-tabs button,#view-floor .floor-tabs button,.tier-tabs button,.leader-event-tabs button{flex:0 0 auto!important;min-height:48px!important;scroll-snap-align:start;margin:0!important}
 
+  /* Undo the old 'information per inch' typography. */
+  #view-lobby .pitch-copy p{font-size:14px!important;line-height:1.45!important}
+  #view-lobby .event-kicker{font-size:11px!important}
+  #view-lobby .fund-meta,#view-lobby .usd-prize small,#view-lobby .usd-prize span{font-size:12px!important;line-height:1.4!important}
+  #view-lobby .quote-title span,#view-lobby .statement span,#view-lobby .price-ref{font-size:12px!important;line-height:1.4!important}
+  #view-lobby .step>p{font-size:14px!important;line-height:1.5!important}
+  #view-lobby .mini-tier b,#view-lobby .mini-tier span,#view-lobby .format{font-size:12px!important}
+  #view-lobby .action small{font-size:12px!important;line-height:1.35!important}
+
+  #view-tier .tier-hero p,#view-tier .session p{font-size:14px!important;line-height:1.45!important}
+  #view-tier .session-preview span{font-size:12px!important;line-height:1.4!important}
+  #view-tier .session-preview b{font-size:13px!important}
+  #view-tier .pill,#view-tier .time-chip{font-size:11px!important;padding:6px 8px!important}
+  #view-tier .session-right span{font-size:12px!important}
+  #view-tier .session-right button,#view-tier .session-side button,#view-tier .session-side button.secondary{min-height:48px!important;font-size:13px!important;padding:10px!important}
+
   /* My Contests: one meaningful card per row and readable metrics. */
   #view-my .mc-card,#view-my .portfolio-card,#view-my .my-contest-card{width:100%!important;max-width:100%!important;border-radius:14px!important;padding:12px!important;gap:10px!important}
   #view-my .metric b,#view-my .mc-metric b{font-size:18px!important}
-  #view-my .metric small,#view-my .mc-metric small{font-size:10px!important}
+  #view-my .metric small,#view-my .mc-metric small{font-size:11px!important}
+  #view-my .mc-title strong{font-size:15px!important}#view-my .mc-title span{font-size:12px!important}
+  #view-my .mc-score-pill{font-size:11px!important;padding:7px 9px!important}
+  #view-my .mc-fun-card .fun-copy small{font-size:12px!important}
+  #view-my .mc-position-grid{grid-template-columns:1fr!important;gap:8px!important}
+  #view-my .mc-pos-card{padding:11px!important}#view-my .mc-pos-card strong{font-size:15px!important}#view-my .mc-pos-card span{font-size:12px!important}#view-my .mc-pos-card b{font-size:14px!important}#view-my .mc-pos-card .click-hint{font-size:10px!important}
+  #view-my .mc-clean-actions button,#view-my .pro-ai-card button,#view-my .mc-pro-card button{min-height:48px!important;font-size:13px!important}
+  #view-my .pro-ai-card p,#view-my .mc-pro-card p{font-size:13px!important;line-height:1.45!important}
 
   /* Queued/history cards stay readable even with long symbols/order detail. */
   .queue-card,.history-card{padding:10px!important;width:100%!important;min-width:0!important}
   .queue-card .order-list,.history-card .order-list{min-width:0!important;overflow:visible!important}
   .queue-card .order-row,.history-card .order-row{grid-template-columns:minmax(0,1fr) auto!important;white-space:normal!important}
 
-  /* More mobile tables opt into the same labeled-card grammar. */
+  /* More mobile tables opt into the same labeled-card grammar; kill old 420px leaderboard floor. */
   #view-lobby .sbc-m43-card-table,#view-exchange .sbc-m43-card-table{width:100%!important}
+  .leader-table.sbc-m43-card-table{min-width:0!important;width:100%!important}
+  #view-leaders .leader-details{overflow-x:hidden!important}
 
   /* Reconnected position changed while the phone was away. */
   .sbc-m43-position-card.sbc-m43-reconnect-flash{border-color:#70c8ff!important;background:#0a2231!important}
