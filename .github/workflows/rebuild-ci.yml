@@ -33,7 +33,10 @@ jobs:
           node --check public/v45-view-landings-v29.js
           node --check scripts/validate-native-mycontest-flow.js
           node --check scripts/validate-stage17-ui.js
+          node --check scripts/inspect-leader-native.js
           node --check scripts/v45-smoke.mjs
+      - name: Trace native leaderboard flow
+        run: node scripts/inspect-leader-native.js
       - name: Validate native My Contests flow
         run: node scripts/validate-native-mycontest-flow.js
       - name: Validate basket context and view landings
