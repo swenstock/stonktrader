@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
 const BASE=process.env.SBC_MOBILE_BASE_URL||'http://127.0.0.1:3458';
 
+test.setTimeout(20000);
+
 async function openView(page,name){
   await page.evaluate((v)=>{
     try{ if(typeof showView==='function'){ showView(v); return; } }catch(_){}
@@ -44,7 +46,15 @@ test.describe('Stage 34 iPhone SE width',()=>{
 
     const chips=page.locator('.sbc-m43-symbol-chips');await expect(chips).toBeVisible();expect(await chips.evaluate(el=>getComputedStyle(el).overflowX)).toMatch(/auto|scroll/);
     expect(await chips.locator('button').count()).toBeGreaterThan(0);
-    const search=page.locator('#view-portfolio .clean-stock-picker button').first();if(await search.count()){await search.click();const sheet=page.locator('#sbcM43SymbolSheet');await expect(sheet).toHaveClass(/open/);const sr=await sheet.locator('section').boundingBox();expect(sr?.height||0).toBeGreaterThan(650);await sheet.locator('.close').click()}
+    const search=page.locator('#view-portfolio .clean-stock-picker button').first();
+    if(await search.count()){
+      await search.click();
+      const sheet=page.locator('#sbcM43SymbolSheet');await expect(sheet).toHaveClass(/open/);
+      const sr=await sheet.locator('section').boundingBox();expect(sr?.height||0).toBeGreaterThan(650);
+      await sheet.locator('.close').click();
+      await expect(sheet).not.toHaveClass(/open/,{timeout:1500});
+      await expect(sheet).toBeHidden();
+    }
 
     const quick=page.locator('#view-portfolio .quick-percent-row button:visible');
     const qn=await quick.count();if(qn){expect(qn).toBeGreaterThanOrEqual(4);for(const b of await quick.all()){const r=await b.boundingBox();expect(r?.height||0).toBeGreaterThanOrEqual(44)}}
@@ -73,10 +83,13 @@ test.describe('Stage 34 iPhone SE width',()=>{
     await bodyFits(page);
   });
 
-  test('leaderboard rows cardify and visible Find Me stays prominent',async({page})=>{
+  test('leaderboard tier popup keeps Find Me prominent and rows cardified',async({page})=>{
     await openView(page,'leaders');
-    const table=page.locator('.leader-table').first();if(await table.count())await expect(table).toHaveClass(/sbc-m43-card-table/);
-    const find=page.locator('.leader-find-btn:visible');expect(await find.count()).toBeGreaterThan(0);const r=await find.first().boundingBox();expect(r?.height||0).toBeGreaterThanOrEqual(44);
+    const firstTier=page.locator('#view-leaders [onclick*="openLeaderTier"]').first();
+    if(await firstTier.count())await firstTier.click();else await page.evaluate(()=>typeof openLeaderTier==='function'&&openLeaderTier('runner'));
+    const modal=page.locator('#leaderV30Modal');await expect(modal).toHaveClass(/open/,{timeout:3000});
+    const table=modal.locator('.leader-table').first();await expect(table).toHaveClass(/sbc-m43-card-table/);
+    const find=modal.locator('.leader-find-btn:visible');expect(await find.count()).toBeGreaterThan(0);const r=await find.first().boundingBox();expect(r?.height||0).toBeGreaterThanOrEqual(44);
     await bodyFits(page);
   });
 
