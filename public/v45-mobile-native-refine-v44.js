@@ -3,7 +3,7 @@
 if(window.__sbcMobileNativeRefineV44)return;window.__sbcMobileNativeRefineV44=true;
 const mq=matchMedia('(max-width:760px)');
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
-let positionBefore={},timer=null;
+let positionBefore={},timer=null,symbolSheetClosed=false;
 function mobile(){return mq.matches}
 function symbolOfRow(r){return (r?.querySelector('td')?.textContent||'').trim().toUpperCase()}
 function snapshotPositions(){const out={};$$('#portfolioHoldings tr').forEach(r=>{const sym=symbolOfRow(r);if(sym)out[sym]=(r.textContent||'').replace(/\s+/g,' ').trim()});return out}
@@ -22,12 +22,17 @@ function enforceNetworkTruth(){
   if(!navigator.onLine){body.classList.add('sbc-m43-stale');body.classList.remove('sbc-m43-reconnecting');if(badge)badge.textContent='OFFLINE';blockNewTradeButtons(true);return}
   const blocked=body.classList.contains('sbc-m43-stale')||body.classList.contains('sbc-m43-reconnecting');blockNewTradeButtons(blocked);
 }
-function run(){if(!mobile())return;normalizeInputs();enforceNetworkTruth()}
+function enforceSymbolSheet(){const sheet=$('#sbcM43SymbolSheet');if(!mobile()||!sheet)return;if(symbolSheetClosed&&sheet.classList.contains('open')){sheet.classList.remove('open');sheet.setAttribute('aria-hidden','true')}}
+function closeSymbolSheetHard(e){const close=e.target.closest?.('#sbcM43SymbolSheet .close');if(!close)return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();symbolSheetClosed=true;const sheet=$('#sbcM43SymbolSheet');sheet?.classList.remove('open');sheet?.setAttribute('aria-hidden','true');queueMicrotask(enforceSymbolSheet);setTimeout(enforceSymbolSheet,50)}
+function allowSymbolSheetOpen(e){const search=e.target.closest?.('#view-portfolio .clean-stock-picker button');if(search)symbolSheetClosed=false}
+function run(){if(!mobile())return;normalizeInputs();enforceNetworkTruth();enforceSymbolSheet()}
 function schedule(){clearTimeout(timer);timer=setTimeout(run,250)}
+document.addEventListener('click',allowSymbolSheetOpen,true);
+document.addEventListener('click',closeSymbolSheetHard,true);
 addEventListener('offline',()=>{rememberPositions();setTimeout(enforceNetworkTruth,0);setTimeout(enforceNetworkTruth,150)});
 addEventListener('online',()=>{const wait=()=>{if(!mobile())return;const badge=$('#sbcM43Connection');if(badge&&/LIVE DATA|SERVER LIVE/.test(badge.textContent||'')){flashChangedPositions();return}setTimeout(wait,350)};setTimeout(wait,500)});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)rememberPositions();else{const wait=()=>{const badge=$('#sbcM43Connection');if(badge&&/LIVE DATA|SERVER LIVE/.test(badge.textContent||'')){flashChangedPositions();return}setTimeout(wait,350)};setTimeout(wait,500)}});
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
-new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
+new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['class','aria-hidden']});
 setInterval(enforceNetworkTruth,500);
 })();
