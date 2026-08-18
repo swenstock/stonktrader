@@ -1,0 +1,94 @@
+/* Stage 35 mobile round two — screenshot-driven cleanup. Desktop untouched. */
+@media(max-width:620px){
+/* Lobby: one story, one CTA, no decorative overflow. */
+.mobile-floor-brokers{display:none!important}
+.statement.mobile-redundant-path-v6,.mobile-redundant-path-v6{display:none!important}
+.how.mobile-how-v6{overflow:hidden!important;padding:14px 0 14px!important}
+.how.mobile-how-v6 .how-title,.how.mobile-how-v6>.price-ref{padding-left:14px!important;padding-right:14px!important}
+.how.mobile-how-v6 .mobile-how-scroll-v6{display:flex!important;gap:10px!important;overflow-x:auto!important;overflow-y:hidden!important;scroll-snap-type:x mandatory!important;scroll-padding:14px!important;padding:8px 14px 10px!important;margin:0!important;scrollbar-width:none!important}
+.how.mobile-how-v6 .mobile-how-scroll-v6::-webkit-scrollbar{display:none!important}
+.how.mobile-how-v6 .mobile-how-card-v6,.how.mobile-how-v6 .step{display:block!important;flex:0 0 min(86vw,360px)!important;width:min(86vw,360px)!important;scroll-snap-align:center!important;min-height:210px!important;padding:16px!important;border-radius:16px!important}
+.how.mobile-how-v6 .mobile-step-head{grid-template-columns:64px 1fr!important;gap:12px!important}
+.how.mobile-how-v6 .mobile-step-broker{width:64px!important;height:64px!important}
+.how.mobile-how-v6 .step>p{font-size:15px!important;line-height:1.45!important;margin-top:12px!important}
+.mobile-step-nav.mobile-v6-retired,.mobile-v6-retired{display:none!important}
+
+/* Replace the oversized native contest hero with a compact app header. */
+#view-portfolio .mobile-native-contest-hero-v6{display:none!important}
+.mobile-contest-header-v6{display:grid;grid-template-columns:76px minmax(0,1fr);gap:10px 12px;align-items:center;margin:8px 0 10px;padding:12px;border:1px solid #2c4352;border-radius:16px;background:#07121a}
+.mobile-contest-art-v6{width:76px;height:76px;border-radius:14px;overflow:hidden;border:1px solid #4a6576;background:#a8c6d9;grid-row:1/2}
+.mobile-contest-art-v6 img{width:100%!important;height:100%!important;object-fit:cover!important;image-rendering:pixelated}
+.mobile-contest-copy-v6{min-width:0}
+.mobile-contest-copy-v6>small{display:block;color:#69e970;font-size:11px!important;font-weight:1000;letter-spacing:.1em;margin-bottom:3px}
+.mobile-contest-copy-v6 h1{font-size:23px!important;line-height:1.08!important;margin:0!important;letter-spacing:-.02em;overflow-wrap:anywhere}
+.mobile-contest-copy-v6>span{display:block;color:#96a8b3;font-size:12px!important;line-height:1.35;margin-top:5px}
+.mobile-contest-actions-v6{grid-column:1/-1;display:grid;grid-template-columns:52px 1fr;gap:8px}
+.mobile-contest-actions-v6 button{min-height:46px!important;border-radius:11px!important;font-size:13px!important;font-weight:1000!important}
+
+/* Retire Stage 34's dead top tabs/context. */
+#view-portfolio #mobileTradeTabsV5,#view-portfolio #mobileTradeContextV5{display:none!important}
+
+/* Trade first: quick trade appears before a compact chart. */
+#view-portfolio .chart-trade-card.mobile-chart-trade-v6{display:flex!important;flex-direction:column!important;max-width:100%!important;overflow:hidden!important;padding:10px!important}
+#view-portfolio .chart-trade-card.mobile-chart-trade-v6>.card-head{order:1!important;margin-bottom:8px!important}
+#view-portfolio .chart-trade-card.mobile-chart-trade-v6>.mobile-quick-trade-v6{order:2!important;display:block!important;margin:0 0 10px!important;padding:12px!important;border:1px solid #315066!important;background:#071620!important}
+#view-portfolio .chart-trade-card.mobile-chart-trade-v6>*:not(.card-head):not(.mobile-quick-trade-v6){order:3}
+#view-portfolio .mobile-quick-trade-v6 .quick-trade-head{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;margin-bottom:8px!important}
+#view-portfolio .mobile-quick-trade-v6 .quick-trade-head>div:first-child{min-width:0!important}
+#view-portfolio .mobile-quick-trade-v6 .quick-trade-head b{font-size:18px!important}
+#view-portfolio .mobile-quick-trade-v6 .quick-trade-head>div>span{font-size:13px!important;line-height:1.35!important}
+#view-portfolio .mobile-quick-trade-v6 .quick-ticket-launch,#view-portfolio .mobile-quick-trade-v6 .mobile-basket-cta-v6{width:100%!important;min-height:48px!important;height:auto!important;margin:0!important;font-size:14px!important;padding:9px 12px!important;border-radius:10px!important}
+#view-portfolio .mobile-quick-trade-v6 .advanced-order-types-v15{margin:8px 0!important;padding:8px!important}
+#view-portfolio .mobile-quick-trade-v6 .adv-type-row-v15{grid-template-columns:repeat(3,1fr)!important;gap:7px!important}
+#view-portfolio .mobile-quick-trade-v6 .adv-type-row-v15>span{grid-column:1/-1!important;font-size:12px!important}
+#view-portfolio .mobile-quick-trade-v6 .adv-type-row-v15 button,#view-portfolio .mobile-quick-trade-v6 .quick-input-mode button,#view-portfolio .mobile-quick-trade-v6 .quick-percent-row button{min-height:46px!important;height:auto!important;font-size:13px!important}
+#view-portfolio .mobile-quick-trade-v6 .quick-action-row{display:grid!important;grid-template-columns:1fr 1fr!important;gap:10px!important;margin-top:10px!important}
+#view-portfolio .mobile-quick-trade-v6 .quick-action{display:flex!important;align-items:center!important;justify-content:center!important;min-height:56px!important;height:auto!important;font-size:17px!important;font-weight:1000!important}
+
+/* Chart controls should inform, not dominate. */
+#view-portfolio .chart-type-row,#view-portfolio .chart-type-toggle{display:flex!important;gap:7px!important;margin:2px 0 6px!important}
+#view-portfolio .chart-type-row button,#view-portfolio .chart-type-toggle button{min-width:0!important;min-height:42px!important;height:42px!important;padding:6px 12px!important;font-size:12px!important;border-radius:10px!important}
+#view-portfolio .chart-time-row,#view-portfolio .chart-controls,#view-portfolio .indicator-row{max-width:100%!important;overflow-x:auto!important;white-space:nowrap!important;scrollbar-width:none!important}
+#view-portfolio .chart-time-row::-webkit-scrollbar,#view-portfolio .chart-controls::-webkit-scrollbar,#view-portfolio .indicator-row::-webkit-scrollbar{display:none!important}
+#view-portfolio .chart-time-row button,#view-portfolio .chart-controls button,#view-portfolio .indicator-row button{min-width:44px!important;min-height:42px!important;height:42px!important;font-size:11px!important;padding:5px 8px!important}
+#view-portfolio #marketChart,#view-portfolio .chart-trade-card canvas{width:100%!important;max-width:100%!important;height:230px!important;max-height:230px!important}
+#view-portfolio .chart-wrap,#view-portfolio .symbol-chart,#view-portfolio .chart-stage,#view-portfolio .chart-canvas-wrap{max-height:270px!important;min-height:0!important;overflow:hidden!important}
+#view-portfolio .trade-search-row.trade-search-in-chart-v20{width:100%!important;max-width:none!important;grid-template-columns:1fr auto!important;gap:8px!important;margin:0!important}
+#view-portfolio .trade-search-in-chart-v20 select,#view-portfolio .trade-search-in-chart-v20 button{min-height:44px!important;height:44px!important;font-size:14px!important}
+
+/* Native desktop holdings table is replaced by a scalable positions launcher + sheet. */
+#view-portfolio .mobile-native-holdings-v6{display:none!important}
+.mobile-positions-launch-v6{margin:10px 0 14px}
+.mobile-positions-launch-v6>button{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;text-align:left;padding:14px 15px!important;min-height:82px!important;border:1px solid #2d4757;border-radius:16px;background:#08141c;color:#fff}
+.mobile-positions-launch-v6 small{display:block;color:#7e96a4;font-size:10px!important;font-weight:900;letter-spacing:.1em}
+.mobile-positions-launch-v6 b{display:block;font-size:18px!important;line-height:1.1;margin-top:2px}
+.mobile-positions-launch-v6 [data-v6-pos-summary]{display:block;color:#9fb0ba;font-size:12px!important;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mobile-positions-launch-v6>button>strong{font-size:24px!important;color:#58c8ff;white-space:nowrap}
+.mobile-positions-sheet-v6{position:fixed;inset:0;z-index:2147482500;background:rgba(0,0,0,.66);display:flex;align-items:flex-end;justify-content:center}
+.mobile-positions-sheet-v6[hidden]{display:none!important}
+.mobile-positions-sheet-v6>section{width:100%;max-width:620px;max-height:84dvh;display:flex;flex-direction:column;background:#07111a;border:1px solid #304958;border-bottom:0;border-radius:22px 22px 0 0;padding:8px 12px calc(14px + env(safe-area-inset-bottom,0px));box-shadow:0 -20px 60px rgba(0,0,0,.55)}
+.mobile-sheet-grab-v6{width:44px;height:5px;border-radius:999px;background:#536976;margin:0 auto 9px;flex:0 0 auto}
+.mobile-positions-sheet-v6 header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 2px 8px;flex:0 0 auto}
+.mobile-positions-sheet-v6 header small{font-size:10px!important;color:#7e96a4;font-weight:900;letter-spacing:.1em}
+.mobile-positions-sheet-v6 h2{font-size:22px!important;margin:0!important}.mobile-positions-sheet-v6 header button{width:48px!important;height:48px!important;border-radius:12px!important}
+.mobile-positions-sheet-v6 input[type=search]{flex:0 0 auto;width:100%;min-height:48px!important;margin-bottom:10px;padding:9px 12px;border-radius:12px}
+.mobile-position-list-v6{overflow-y:auto;overscroll-behavior:contain;padding:0 1px 12px;display:grid;gap:8px}
+.mobile-position-card-v6{border:1px solid #293f4e;border-radius:14px;background:#0a1720;padding:12px;display:grid;gap:8px}
+.mobile-position-main-v6,.mobile-position-meta-v6,.mobile-position-detail-v6{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.mobile-position-main-v6 b{font-size:18px!important}.mobile-position-main-v6 strong{font-size:17px!important}.mobile-position-card-v6.gain .mobile-position-main-v6 strong:before{content:'▲ ';}.mobile-position-card-v6.loss .mobile-position-main-v6 strong:before{content:'▼ '}
+.mobile-position-card-v6.gain .mobile-position-main-v6 strong{color:#69ec68}.mobile-position-card-v6.loss .mobile-position-main-v6 strong{color:#ff756d}
+.mobile-position-meta-v6 span,.mobile-position-detail-v6 span{font-size:12px!important;color:#9eb0ba}.mobile-position-detail-v6{padding-top:7px;border-top:1px solid #20333f}
+.mobile-position-card-v6>button{width:100%;min-height:46px!important;border-radius:10px!important;font-size:13px!important;font-weight:1000!important}
+.mobile-position-empty-v6{padding:30px 12px;text-align:center;color:#91a4af;font-size:14px}
+body.mobile-position-sheet-open-v6{overflow:hidden!important}
+
+/* Find Me now targets the actual user row in the modal scroller. */
+@keyframes mobileFindFlashV6{0%,100%{box-shadow:0 0 0 rgba(91,206,250,0)}35%{box-shadow:0 0 0 4px rgba(91,206,250,.55),0 0 30px rgba(91,206,250,.35)}}
+.mobile-find-flash-v6{animation:mobileFindFlashV6 1.15s ease-out!important}
+#leaderV30Modal .leader-find-btn,#leaderV30Modal [data-v30-jump="you"],#globalLeader .leader-find-btn{min-height:52px!important;font-size:15px!important}
+}
+@media(max-width:380px){
+.mobile-contest-header-v6{grid-template-columns:68px minmax(0,1fr);padding:10px}.mobile-contest-art-v6{width:68px;height:68px}.mobile-contest-copy-v6 h1{font-size:21px!important}
+#view-portfolio #marketChart,#view-portfolio .chart-trade-card canvas{height:210px!important;max-height:210px!important}
+.how.mobile-how-v6 .mobile-how-card-v6,.how.mobile-how-v6 .step{flex-basis:88vw!important;width:88vw!important}
+}
