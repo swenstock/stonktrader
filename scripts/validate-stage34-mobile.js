@@ -1,0 +1,33 @@
+const fs=require('fs'),path=require('path');
+const {exactV45Shell}=require('../server/v45ExactShell');
+const css=fs.readFileSync(path.join(__dirname,'..','public','v45-mobile-native-v43.css'),'utf8');
+const js=fs.readFileSync(path.join(__dirname,'..','public','v45-mobile-native-v43.js'),'utf8');
+const loader=fs.readFileSync(path.join(__dirname,'..','public','v45-mobile-v4.js'),'utf8');
+const shell=exactV45Shell.toString('utf8');
+function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
+
+must(/@media \(max-width:760px\)/.test(css),'mobile native layer is gated away from desktop');
+must(css.includes('env(safe-area-inset-bottom)')&&css.includes('env(safe-area-inset-top)'),'safe areas protect notch and gesture zones');
+must(css.includes('.mobile-bottom-nav')&&css.includes('position:fixed!important')&&css.includes('repeat(5,minmax(0,1fr))'),'five-tab bottom nav is fixed and evenly sized');
+must((shell.match(/mobile-bottom-nav[\s\S]{0,1200}?showView\(/)||[]).length>0&&['lobby','floor','my','exchange','leaders'].every(v=>shell.includes(`showView('${v}')`)),'exact shell preserves all five native navigation destinations');
+must(js.includes('sbc-m43-trade-tabs')&&['trade','positions','analytics'].every(x=>js.includes(`'${x}'`)),'portfolio has Chart+Trade, Positions, and Analytics mobile tabs');
+must(js.includes('sbcM43PositionCards')&&js.includes('data-m43-trade-pos'),'native holdings are represented as expandable mobile position cards');
+must(css.includes('.sbc-m43-symbol-chips')&&css.includes('overflow-x:auto')&&js.includes('sbcM43SymbolSheet'),'ticker row is an intentional horizontal chip carousel with searchable picker');
+must(css.includes('.quick-action-row')&&css.includes('position:sticky!important')&&css.includes('bottom:calc(var(--m43-nav-h)'),'high-frequency trade actions stay in thumb reach above bottom navigation');
+must(css.includes('.quick-percent-row')&&css.includes('repeat(4,1fr)')&&css.includes('min-height:48px'),'25/50/75/100 trade sizing is a large four-button row');
+must(js.includes('sbc-m43-exchange-tabs')&&js.includes("data-side=\"bid\"")&&js.includes("data-side=\"ask\""),'ticket exchange uses dedicated Bids / Offers tabs');
+must(css.includes('.sbc-m43-card-table')&&js.includes('labelTable(table)'),'mobile data tables are converted to labeled cards');
+must(css.includes('.leader-find-btn')&&css.includes('min-height:52px'),'Find Me remains a prominent mobile leaderboard action');
+must(css.includes('align-items:flex-end!important')&&js.includes('wireSwipeSheet'),'desktop dialogs become bottom sheets with swipe-down behavior');
+must(js.includes("new WebSocket(wsUrl())")&&js.includes("/ws")&&js.includes("QUOTE FEED STALE"),'mobile independently monitors the live quote WebSocket and marks stale data');
+must(js.includes('setTradingBlocked')&&js.includes("b.disabled=true")&&js.includes("next!=='live'"),'stock trading is blocked while the live feed is stale or reconnecting');
+must(js.includes("addEventListener('offline'")&&js.includes("addEventListener('online'")&&js.includes("visibilitychange"),'offline, reconnect, and OS background/resume states are handled');
+must(js.includes('sessionStorage')&&js.includes('saveContext')&&js.includes('restoreContext'),'mobile tab and scroll context survive background/resume');
+must(css.includes('.sbc-m43-gain:before')&&css.includes('.sbc-m43-loss:before'),'P&L uses arrows in addition to color');
+must(js.includes('labelIconButtons')&&js.includes("setAttribute('aria-label'"),'icon-only buttons receive accessible names');
+must(css.includes('font-size:16px!important')&&css.includes('min-height:48px'),'mobile typography and form controls prevent iOS focus zoom and tiny targets');
+must(css.includes('scroll-snap-type:x mandatory')&&css.includes('#analyticsDock'),'analytics become swipeable cards rather than a long chart stack');
+must(loader.includes('/v45-mobile-native-v43.css?v=43')&&loader.includes('/v45-mobile-native-v43.js?v=43'),'existing mobile loader boots the new cache-busted layer');
+must(!loader.includes('function setupExchange'),'legacy mobile exchange DOM rewrite is retired to avoid fighting native V43 tabs');
+must(!js.includes('innerHTML=`<table')&&!js.includes('removeChild(document.querySelector(\'#portfolioHoldings\'))'),'mobile presentation does not destroy native portfolio mechanics');
+console.log('Stage 34 mobile native-app invariant checks passed.');
