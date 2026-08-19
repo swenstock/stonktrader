@@ -1,0 +1,25 @@
+const fs=require('fs'),path=require('path');
+const root=path.join(__dirname,'..');
+const ui=fs.readFileSync(path.join(root,'public','v45-desktop-trading-v45.js'),'utf8');
+const css=fs.readFileSync(path.join(root,'public','v45-desktop-refine-v46.css'),'utf8');
+const basket=fs.readFileSync(path.join(root,'public','v45-basket-builder-v19.js'),'utf8');
+const server=fs.readFileSync(path.join(root,'server','index.js'),'utf8');
+function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
+must(ui.includes("head.after(headerMetrics)")&&ui.includes('contest-metrics-strip-v46'),'rank/prize/time strip sits directly below Weekly Portfolio header');
+must(ui.includes('positions-kpis-v45')&&ui.includes('[value,cash,pnl]'),'portfolio value/cash/P&L remain directly associated with Current Positions');
+must(ui.includes('positions-helper-retired-v46')&&css.includes('.positions-helper-retired-v46{display:none!important}'),'redundant Current Positions helper copy is retired');
+must(ui.includes("b.textContent='SELL ALL'")&&ui.includes('SELL ALL POSITIONS?')&&ui.includes('CONFIRM SELL ALL'),'Current Positions exposes Sell All with explicit confirmation');
+must(ui.includes("p.cash=Number(p.cash||0)+(shares*price)")&&ui.includes('delete p.holdings[symbol]')&&ui.includes("p.history.unshift({side:'SELL'"),'confirmed live Sell All liquidates holdings, returns proceeds to cash and records activity');
+must(ui.includes("ctx.mode==='reserve'")&&ui.includes("p.queued.push({side:'SELL'")&&ui.includes("side:'QUEUE'"),'Sell All queues sells for reserve-mode contest entries');
+must(basket.includes('cashPct:100')&&basket.includes('[25,33,50,75,100]')&&basket.includes('bb19CashPct'),'basket supports preset and custom percent-of-available-cash execution sizing');
+must(basket.includes('cashBudget=available*(state.cashPct/100)')&&basket.includes('Math.min(1,cashBudget/raw)'),'basket cash percentage changes actual order sizing rather than only display copy');
+must(basket.includes('function normalizeTo100()')&&basket.includes('function equalWeight()')&&basket.includes('function resetDefaults()'),'basket has rebalance-to-100, equal-weight and reset-default operations');
+must(basket.includes('REBALANCE TO 100%')&&basket.includes('EQUAL WEIGHT')&&basket.includes('RESET DEFAULT %'),'basket exposes all three recovery controls');
+must(basket.includes('UNDERALLOCATED')&&basket.includes('FULLY ALLOCATED')&&basket.includes('OVERALLOCATED'),'basket allocation status is explicit');
+must(basket.includes('REVIEW BASKET ORDER')&&basket.includes('SUBMIT BASKET ORDER'),'basket primary review/submit calls to action are explicit');
+must(css.includes('#bb19Create{min-height:52px')&&css.includes('#bb19Submit{min-height:54px'),'basket order buttons are materially larger');
+must(css.includes('.desktop-order-grid-v45{grid-template-columns:minmax(0,1fr) minmax(0,1fr)')&&css.includes('.adv-type-row-v15{grid-template-columns:repeat(4'),'Quick Trade order type and order size are tightened into balanced desktop panels');
+must(css.includes('.sell-all-confirm-v46')&&css.includes('position:fixed'),'Sell All confirmation is a proper centered modal');
+must(server.includes('/v45-basket-builder-v19.js?v=46')&&server.includes('/v45-desktop-trading-v45.js?v=46')&&server.includes('/v45-desktop-refine-v46.css?v=46'),'Stage 41 assets are cache-busted and served');
+must(server.includes('basketControls: "v46-cash-sizing-rebalance"')&&server.includes('desktopTrading: "v46-workspace-sell-all-basket-sizing"'),'health exposes Stage 41 basket and desktop refinements');
+console.log('Stage 41 desktop refinement checks passed.');
