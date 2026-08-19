@@ -1,0 +1,20 @@
+name: Stage 37 Basket Loader
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  basket-loader:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Syntax check Stage 37 loader
+        run: |
+          node --check public/v45-basket-loader-v43.js
+          node --check scripts/validate-stage37-basket-loader.js
+      - name: Validate Stage 37 basket loader
+        run: node scripts/validate-stage37-basket-loader.js
