@@ -1,0 +1,20 @@
+const fs=require('fs'),path=require('path');
+const root=path.join(__dirname,'..');
+const guard=fs.readFileSync(path.join(root,'public','v45-portfolio-header-v44.js'),'utf8');
+const server=fs.readFileSync(path.join(root,'server','index.js'),'utf8');
+function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
+must(guard.includes('__sbcPortfolioHeaderV44'),'header guard has version sentinel');
+must(guard.includes("window.matchMedia('(max-width:620px)').matches")&&guard.includes('return;'),'desktop header guard leaves mobile presentation alone');
+must(guard.includes("rows.length===1")&&guard.includes("badges.length===1")&&guard.includes("rules.length===1")&&guard.includes("arts.length===1"),'canonical header requires one row, badge, rules button and broker art');
+must(guard.includes("$$('.trade-head-title-row',head).forEach(r=>r.remove())"),'repair removes prior duplicated title rows');
+must(guard.includes("$$('.trade-rule-badge,.trade-rule-review,.tier-broker-title-art',head).forEach(x=>x.remove())"),'repair removes duplicated rules and broker art');
+must(guard.includes("$$('.trade-head-copy',head).forEach(x=>x.classList.remove('trade-head-copy'))"),'repair clears contaminated header-copy classes');
+must(guard.includes("portfolio-header-v44")&&guard.includes("header-row-sentinel-v16"),'repair rebuilds one canonical row compatible with existing header layers');
+must(guard.includes("attributeFilter:['class']")&&guard.includes('MutationObserver'),'guard watches the class contamination that caused repeated renders');
+const cleanup=server.indexOf('/v45-trade-cleanup-v8.js?v=10');
+const stocks=server.indexOf('/v45-header-stocks-v16.js?v=16');
+const header=server.indexOf('/v45-portfolio-header-v44.js?v=44');
+const basket=server.indexOf('/v45-basket-loader-v43.js?v=43');
+must(cleanup>=0&&stocks>cleanup&&header>stocks&&basket>header,'served shell loads header guard after legacy header layers and before basket enhancements');
+must(server.includes('portfolioHeader: "v44-idempotent-dedupe"'),'health reports Stage 38 portfolio header guard');
+console.log('Stage 38 portfolio header regression checks passed.');
