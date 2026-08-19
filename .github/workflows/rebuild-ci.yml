@@ -39,6 +39,8 @@ jobs:
           node --check public/v45-ticket-settlement-v38.js
           node --check public/v45-ticket-recent-v40.js
           node --check public/v45-ticket-native-hooks-v41.js
+          node --check public/v45-native-orders-v45.js
+          node --check public/v45-desktop-trading-v45.js
           node --check scripts/validate-native-mycontest-flow.js
           node --check scripts/validate-stage17-ui.js
           node --check scripts/validate-stage18-ui.js
@@ -50,6 +52,8 @@ jobs:
           node --check scripts/validate-stage26-my-tickets.js
           node --check scripts/validate-stage27-ticket-settlement.js
           node --check scripts/validate-stage31-ticket-native.js
+          node --check scripts/validate-stage39-desktop-trading.js
+          node --check scripts/validate-stage41-desktop-refine.js
           node --check scripts/v45-smoke.mjs
       - name: Validate native My Contests flow
         run: node scripts/validate-native-mycontest-flow.js
@@ -73,6 +77,10 @@ jobs:
         run: node scripts/validate-stage27-ticket-settlement.js
       - name: Validate Stage 31 native ticket exchange lifecycle
         run: node scripts/validate-stage31-ticket-native.js
+      - name: Validate desktop trading workspace
+        run: node scripts/validate-stage39-desktop-trading.js
+      - name: Validate Stage 41 desktop refinement
+        run: node scripts/validate-stage41-desktop-refine.js
       - name: Unit tests
         run: npm test
       - name: Server/API/frontend smoke test
@@ -97,7 +105,7 @@ jobs:
             exit 1
           fi
           curl -fsS http://127.0.0.1:3456/api/health >/tmp/health.json
-          node -e "const h=require('/tmp/health.json'); if(h.satellitePayoutEngine!=='v45'||h.entryTradeHandoff!=='native-shell'||h.tradeUiPolish!=='v28-dom-safe-quote-hide'||h.createABasket!=='v31-any-count-auto-rebalance'||h.viewLandings!=='v29-stale-scroll-cancel'||h.leaderboardUi!=='v30-modal-unified-ranks'||h.leaderboardOrder!=='v31-contest-first'||h.leaderboardPortraits!=='native-card-sizing'||h.leaderboardPlacement!=='v34-popup-only'||h.ticketExchangeControls!=='v36-prototype-orders-ticket-actions-scroll'||h.myTicketsCleanup!=='v37-raw-text-removed') process.exit(1)"
+          node -e "const h=require('/tmp/health.json'); if(h.satellitePayoutEngine!=='v45'||h.entryTradeHandoff!=='native-shell'||h.tradeUiPolish!=='v28-dom-safe-quote-hide'||h.createABasket!=='v31-any-count-auto-rebalance'||h.viewLandings!=='v29-stale-scroll-cancel'||h.leaderboardUi!=='v30-modal-unified-ranks'||h.leaderboardOrder!=='v31-contest-first'||h.leaderboardPortraits!=='native-card-sizing'||h.leaderboardPlacement!=='v34-popup-only'||h.ticketExchangeControls!=='v36-prototype-orders-ticket-actions-scroll'||h.myTicketsCleanup!=='v37-raw-text-removed'||h.basketControls!=='v46-cash-sizing-rebalance'||h.desktopTrading!=='v46-workspace-sell-all-basket-sizing') process.exit(1)"
           curl -fsS http://127.0.0.1:3456/api/config >/tmp/config.json
           curl -fsS http://127.0.0.1:3456/api/economics >/tmp/economics.json
           curl -fsS 'http://127.0.0.1:3456/api/sim-market/quotes?symbols=NVDA,MSFT' >/tmp/quotes.json
@@ -113,7 +121,9 @@ jobs:
           grep -q 'JUMP TO MONEY LINE' /tmp/leaders.html
           grep -q 'v45-mycontest-native-position-v27.js' /tmp/enhanced.html
           grep -q 'v45-trade-ui-polish-v16.js?v=28' /tmp/enhanced.html
-          grep -q 'v45-basket-builder-v19.js?v=31' /tmp/enhanced.html
+          grep -q 'v45-basket-builder-v19.js?v=46' /tmp/enhanced.html
+          grep -q 'v45-desktop-trading-v45.js?v=46' /tmp/enhanced.html
+          grep -q 'v45-desktop-refine-v46.css?v=46' /tmp/enhanced.html
           grep -q 'v45-view-landings-v29.js?v=29' /tmp/enhanced.html
           grep -q 'v45-leaderboard-v30.js?v=30' /tmp/enhanced.html
           grep -q 'v45-leaderboard-v30.css?v=34' /tmp/enhanced.html
