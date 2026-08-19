@@ -1,16 +1,18 @@
-/* Stage 45 — stabilize chart interaction and use the full desktop workspace. */
+/* Stage 45/46 — stable chart interaction and full desktop workspace. */
 @media(min-width:901px){
 #view-portfolio .stage45-retire-v50{display:none!important}
 #view-portfolio .stage45-scale-v50{display:flex;align-items:center;gap:6px;margin-right:auto;flex-wrap:wrap}
 #view-portfolio .stage45-scale-v50>span{min-width:132px;color:#7896a4;font-size:7px;font-weight:1000;letter-spacing:.045em;white-space:nowrap}
 #view-portfolio .stage45-scale-v50 button{min-height:34px;padding:6px 10px;border:1px solid #31566a;border-radius:8px;background:#071721;color:#d8edf7;font-size:8px;font-weight:1000;cursor:pointer}
 #view-portfolio .stage45-scale-v50 button:hover{border-color:#4dbbf2;background:#0b2b3b;color:#fff}
-#view-portfolio .stage45-chart-viewport-v50{position:relative!important;overflow:hidden!important;cursor:grab!important;touch-action:none!important}
+#view-portfolio .stage45-chart-viewport-v50{position:relative!important;overflow:hidden!important;cursor:grab!important;touch-action:none!important;overscroll-behavior:contain!important;width:100%!important;max-width:none!important}
 #view-portfolio .stage45-chart-viewport-v50.is-panning-v50{cursor:grabbing!important}
 #view-portfolio .stage45-wide-chart-card-v50{width:100%!important;max-width:none!important;justify-self:stretch!important;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box!important}
-#view-portfolio .stage45-wide-chart-card-v50.stage43-chart-order-v48{grid-template-columns:minmax(0,1.62fr) minmax(390px,.68fr)!important;gap:18px!important}
+#view-portfolio .stage45-wide-chart-card-v50.stage43-chart-order-v48{grid-template-columns:minmax(0,1fr) minmax(460px,520px)!important;gap:18px!important}
 #view-portfolio .stage45-wide-chart-card-v50>*:not(.quick-trade-clean):not(.card-head):not(.desktop-chart-tools-popover-v45){min-width:0!important}
-#view-portfolio .stage45-oe-v50{width:min(100%,540px)!important;max-width:540px!important;justify-self:center!important;align-self:start!important}
+#view-portfolio .stage45-wide-chart-card-v50 .symbol-chart,#view-portfolio .stage45-wide-chart-card-v50 .chart-canvas{width:100%!important;max-width:none!important;justify-self:stretch!important}
+#view-portfolio .stage45-wide-chart-card-v50 .symbol-chart canvas,#view-portfolio .stage45-wide-chart-card-v50 .symbol-chart svg,#view-portfolio .stage45-wide-chart-card-v50 .chart-canvas canvas,#view-portfolio .stage45-wide-chart-card-v50 .chart-canvas svg{display:block!important;width:100%!important;max-width:none!important;height:auto!important}
+#view-portfolio .stage45-oe-v50{width:min(100%,520px)!important;max-width:520px!important;justify-self:center!important;align-self:start!important}
 #view-portfolio .stage45-workspace-v50{width:100%!important;max-width:none!important}
 #view-portfolio .contest-metrics-strip-v46,#view-portfolio .header-metrics-v45{display:grid!important;grid-template-columns:repeat(3,minmax(150px,205px)) minmax(260px,1fr)!important;gap:8px!important;align-items:stretch!important;width:100%!important}
 #view-portfolio .stage45-analysis-kpis-v50{grid-column:4!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;min-width:0!important}
@@ -18,7 +20,8 @@
 #view-portfolio .stage43-analysis-bottom-v48{display:none!important}
 }
 @media(min-width:901px) and (max-width:1250px){
-#view-portfolio .stage45-wide-chart-card-v50.stage43-chart-order-v48{grid-template-columns:minmax(0,1.35fr) minmax(360px,.75fr)!important}
+#view-portfolio .stage45-wide-chart-card-v50.stage43-chart-order-v48{grid-template-columns:1fr!important}
+#view-portfolio .stage45-oe-v50{grid-column:1!important;max-width:720px!important;width:min(100%,720px)!important}
 #view-portfolio .contest-metrics-strip-v46,#view-portfolio .header-metrics-v45{grid-template-columns:repeat(3,minmax(140px,1fr))!important}
 #view-portfolio .stage45-analysis-kpis-v50{grid-column:1/-1!important}
 }
