@@ -1,0 +1,51 @@
+/* Stage 43 — streamlined chart + contextual OE. Desktop only. */
+@media(min-width:901px){
+#view-portfolio .stage43-chart-v48{position:relative!important}
+#view-portfolio .desktop-chart-head-actions-v45,#view-portfolio .stage43-old-tools-retired-v48{display:none!important}
+#view-portfolio .stage43-chart-controls-v48{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin:4px 0 10px;padding:0 2px}
+#view-portfolio .stage43-chart-controls-v48 label{display:flex;align-items:center;gap:7px}
+#view-portfolio .stage43-chart-controls-v48 label>span{font-size:7px;font-weight:1000;letter-spacing:.07em;color:#7894a2}
+#view-portfolio .stage43-chart-controls-v48 select{min-width:112px;min-height:38px;padding:7px 32px 7px 10px;border:1px solid #31566a;border-radius:9px;background:#071721;color:#e8f6fc;font-size:9px;font-weight:1000;cursor:pointer}
+#view-portfolio .stage43-chart-tools-v48{position:relative}
+#view-portfolio .stage43-chart-tools-v48>summary{list-style:none;display:flex;align-items:center;gap:8px;min-height:38px;padding:7px 12px;border:1px solid #31566a;border-radius:9px;background:#071721;color:#d9edf7;font-size:9px;font-weight:1000;cursor:pointer}
+#view-portfolio .stage43-chart-tools-v48>summary::-webkit-details-marker{display:none}
+#view-portfolio .stage43-tools-menu-v48{position:absolute;right:0;top:44px;z-index:80;width:330px;padding:10px;border:1px solid #355d70;border-radius:11px;background:#06141d;box-shadow:0 18px 50px rgba(0,0,0,.55)}
+#view-portfolio .stage43-tools-menu-v48 section{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:7px}
+#view-portfolio .stage43-tools-menu-v48 section:first-child{margin-top:0;grid-template-columns:repeat(2,minmax(0,1fr))}
+#view-portfolio .stage43-tools-menu-v48 small{grid-column:1/-1;font-size:7px;font-weight:1000;letter-spacing:.07em;color:#7894a2}
+#view-portfolio .stage43-tools-menu-v48 button{min-height:34px;border:1px solid #2f5264;border-radius:7px;background:#071923;color:#bcd0da;font-size:8px;font-weight:1000;cursor:pointer}
+#view-portfolio .stage43-tools-menu-v48 button:hover,#view-portfolio .stage43-tools-menu-v48 button.active{border-color:#4dbbf2;background:#0b2b3b;color:#fff}
+#view-portfolio .stage43-native-chart-toolbar-v48,#view-portfolio .stage43-native-chart-type-v48{position:absolute!important;width:1px!important;height:1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;clip-path:inset(50%)!important;white-space:nowrap!important}
+#view-portfolio .stage43-duplicate-chart-label-v48{display:none!important}
+
+#view-portfolio .stage43-chart-order-v48{grid-template-columns:minmax(0,1.08fr) minmax(470px,.92fr)!important;gap:14px!important;align-items:start!important}
+#view-portfolio .stage43-centered-oe-v48{width:min(100%,620px)!important;justify-self:center!important;margin:0 auto!important;padding:12px!important;border-radius:12px!important}
+#view-portfolio .stage43-centered-oe-v48 .quick-trade-head{gap:14px!important;margin-bottom:8px!important}
+#view-portfolio .stage43-basket-launch-v48{min-width:250px!important;min-height:56px!important;padding:11px 24px!important;font-size:11px!important;font-weight:1000!important;letter-spacing:.045em!important}
+#view-portfolio .stage43-centered-oe-v48 .desktop-order-grid-v45{gap:10px!important}
+#view-portfolio .stage43-centered-oe-v48 .desktop-order-type-v45,#view-portfolio .stage43-centered-oe-v48 .desktop-order-size-v45{padding:10px!important;border-radius:10px!important}
+#view-portfolio .stage43-centered-oe-v48 .adv-type-row-v15{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+
+#view-portfolio .stage43-price-window-v48{position:relative;margin:10px 0;padding:11px;border:1px solid #3b6579;border-radius:11px;background:#071923;box-shadow:0 14px 34px rgba(0,0,0,.26)}
+#view-portfolio .stage43-price-window-v48[hidden]{display:none!important}
+#view-portfolio .stage43-price-window-v48>header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px;padding-bottom:8px;border-bottom:1px solid #294b5c}
+#view-portfolio .stage43-price-window-v48>header small{display:block;font-size:6px;font-weight:1000;letter-spacing:.08em;color:#7895a3}
+#view-portfolio .stage43-price-window-v48>header b{display:block;margin-top:2px;font-size:12px;color:#e9f7fd}
+#view-portfolio .stage43-price-window-v48>header button{width:32px;height:32px;border:1px solid #34586a;border-radius:8px;background:#06141c;color:#d7ebf5;cursor:pointer}
+#view-portfolio .stage43-price-fields-v48 .adv-price-row-v15{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:8px!important;margin:0!important;padding:0!important;border:0!important;background:transparent!important}
+#view-portfolio .stage43-price-fields-v48 .adv-price-row-v15 label{display:flex!important;align-items:center!important;gap:8px!important;min-height:46px!important;padding:8px 10px!important;border:1px solid #31576a!important;border-radius:9px!important;background:#06141d!important;color:#b9d4e0!important;font-size:8px!important;font-weight:1000!important}
+#view-portfolio .stage43-price-fields-v48 .adv-price-row-v15 label[hidden]{display:none!important}
+#view-portfolio .stage43-price-fields-v48 .adv-price-row-v15 input{flex:1!important;min-width:0!important;height:34px!important;border:1px solid #355b6d!important;border-radius:7px!important;background:#081a24!important;color:#fff!important;padding:6px 8px!important;font-size:12px!important}
+
+#view-portfolio .stage43-analysis-bottom-v48{margin-top:12px;padding:12px;border:1px solid #1d3b49;border-radius:12px;background:#06131b}
+#view-portfolio .stage43-analysis-bottom-v48>header{margin-bottom:8px}
+#view-portfolio .stage43-analysis-bottom-v48>header small{font-size:7px;font-weight:1000;letter-spacing:.08em;color:#76909d}
+#view-portfolio .stage43-analysis-bottom-v48>header h3{margin:3px 0 0;font-size:15px;color:#eaf6fb}
+#view-portfolio .stage43-analysis-bottom-v48>div{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#view-portfolio .stage43-analysis-card-v48{margin:0!important;width:100%!important}
+}
+@media(min-width:901px) and (max-width:1180px){
+#view-portfolio .stage43-chart-order-v48{grid-template-columns:1fr!important}
+#view-portfolio .stage43-centered-oe-v48{width:100%!important;max-width:720px!important;grid-column:1!important;grid-row:auto!important}
+#view-portfolio .stage43-analysis-bottom-v48>div{grid-template-columns:1fr}
+}
