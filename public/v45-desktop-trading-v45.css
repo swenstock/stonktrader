@@ -1,0 +1,98 @@
+/* Stage 39 — desktop trading workspace. Mobile layers remain authoritative <=900px. */
+@media(min-width:901px){
+/* Header: contest identity + rank/prize/time in one row. */
+#view-portfolio .desktop-trade-head-v45{display:grid!important;grid-template-columns:auto minmax(340px,1fr) minmax(360px,.9fr) auto!important;gap:10px!important;align-items:center!important;padding:10px 12px!important}
+#view-portfolio .desktop-trade-head-v45>.trade-head-copy{min-width:0!important}
+#view-portfolio .header-metrics-v45{display:grid;grid-template-columns:repeat(3,minmax(105px,1fr));gap:6px;min-width:0}
+#view-portfolio .header-metrics-v45 .port-stat{min-height:54px!important;padding:7px 9px!important;border-radius:10px!important;background:#06131b!important}
+#view-portfolio .header-metrics-v45 .port-stat span{font-size:7px!important;letter-spacing:.045em!important}
+#view-portfolio .header-metrics-v45 .port-stat b{font-size:13px!important;white-space:nowrap}
+#view-portfolio .desktop-summary-empty-v45{display:none!important}
+
+/* Current Positions becomes the home of the account KPIs. */
+#view-portfolio .desktop-holdings-v45>.card-head{margin-bottom:7px!important}
+#view-portfolio .positions-kpis-v45{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0 0 8px}
+#view-portfolio .positions-kpis-v45 .port-stat{min-height:58px!important;padding:8px 10px!important;border-radius:10px!important;background:#07151e!important}
+#view-portfolio .positions-kpis-v45 .port-stat span{font-size:7px!important;letter-spacing:.05em!important}
+#view-portfolio .positions-kpis-v45 .port-stat b{font-size:15px!important}
+#view-portfolio .positions-context-v45{margin:0 0 8px}
+#view-portfolio .positions-sync-row-v45{display:grid!important;grid-template-columns:auto auto 1fr auto!important;align-items:center!important;gap:10px!important;min-height:42px!important;padding:7px 10px!important;border:1px solid #27424f!important;border-radius:9px!important;background:#06121a!important}
+#view-portfolio .positions-sync-row-v45:before{content:'PORTFOLIO LOADED';font-size:6px;font-weight:1000;letter-spacing:.08em;color:#6abde8;border:1px solid #24495e;border-radius:999px;padding:4px 7px;white-space:nowrap}
+#view-portfolio .positions-sync-row-v45 .activity-detail-v9{display:none!important}
+
+/* Familiar brokerage holdings vocabulary and secondary allocation/P&L detail. */
+#view-portfolio .holdings-table-v45 thead th{font-size:7px!important;letter-spacing:.055em!important;color:#7fa8bf!important;padding:7px 8px!important}
+#view-portfolio .holdings-table-v45 tbody td{vertical-align:middle!important;padding:9px 8px!important}
+#view-portfolio .holdings-table-v45 tbody td:nth-child(5) b,#view-portfolio .holdings-table-v45 tbody td:nth-child(6) b{display:block!important;font-size:10px!important}
+#view-portfolio .holdings-table-v45 tbody td:nth-child(5) small,#view-portfolio .holdings-table-v45 tbody td:nth-child(6) small{display:block!important;margin-top:2px!important;font-size:6px!important;color:#83a2b4!important;letter-spacing:.03em!important}
+
+/* Queued / Working / Recent are three equal concepts with standardized empty states. */
+#view-portfolio .desktop-native-tabs-hidden-v45{display:none!important}
+#view-portfolio .desktop-orders-tabs-v45{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:0 0 7px}
+#view-portfolio .desktop-orders-tabs-v45 button{min-height:37px;border:1px solid #335368;border-radius:9px;background:#07151e;color:#a9bfcb;font-size:8px;font-weight:1000;letter-spacing:.035em;cursor:pointer}
+#view-portfolio .desktop-orders-tabs-v45 button.active{border-color:#4ebcf7;background:#092338;color:#fff;box-shadow:inset 0 0 0 1px rgba(78,188,247,.18)}
+#view-portfolio .working-orders-v45,#view-portfolio #queuedOrders,#view-portfolio #tradeHistory{min-height:54px}
+#view-portfolio .desktop-orders-empty-v45{display:flex;flex-direction:column;justify-content:center;min-height:54px;padding:10px 12px;border:1px solid #263e4b;border-radius:9px;background:#061119;color:#7f96a4}
+#view-portfolio .desktop-orders-empty-v45 b{font-size:9px;color:#dce8ee;margin-bottom:2px}
+#view-portfolio .desktop-orders-empty-v45 span{font-size:7px;line-height:1.35}
+#view-portfolio .working-order-row-v45{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;padding:9px 10px;border:1px solid #284450;border-radius:9px;background:#06131a;margin-bottom:5px}
+#view-portfolio .working-order-row-v45 div{display:grid;grid-template-columns:auto auto 1fr;align-items:center;gap:8px;min-width:0}
+#view-portfolio .working-order-row-v45 small{font-size:6px;color:#71bfe8;border:1px solid #28516a;border-radius:999px;padding:3px 6px}
+#view-portfolio .working-order-row-v45 b{font-size:10px}.working-order-row-v45 span{font-size:7px;color:#9cafba;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#view-portfolio .working-order-row-v45 button{min-height:30px;padding:5px 9px;border:1px solid #74413b;border-radius:7px;background:#1c0d0c;color:#ff9f93;font-size:7px;font-weight:1000;cursor:pointer}
+
+/* Order entry: one clear 4-button type selector + sizing beside it. */
+#view-portfolio .desktop-order-entry-v45 .quick-trade-head{margin-bottom:7px!important}
+#view-portfolio .desktop-available-stocks-retired-v45{display:none!important}
+#view-portfolio .desktop-order-grid-v45{display:grid;grid-template-columns:minmax(300px,1.05fr) minmax(260px,.95fr);gap:9px;margin:7px 0}
+#view-portfolio .desktop-order-type-v45,#view-portfolio .desktop-order-size-v45{min-width:0;border:1px solid #294653;border-radius:10px;background:#06131a;padding:9px}
+#view-portfolio .desktop-order-size-v45>small{display:block;font-size:7px;font-weight:1000;color:#7f9bac;letter-spacing:.07em;margin-bottom:6px}
+#view-portfolio .advanced-order-types-v15{margin:0!important;padding:0!important;border:0!important;background:transparent!important}
+#view-portfolio .adv-type-row-v15{display:grid!important;grid-template-columns:auto repeat(4,minmax(72px,1fr))!important;gap:6px!important;align-items:center!important}
+#view-portfolio .adv-type-row-v15>span{font-size:7px!important;white-space:nowrap!important}
+#view-portfolio .adv-type-row-v15 button{min-height:36px!important;height:36px!important;padding:6px 9px!important;font-size:8px!important;border-radius:8px!important}
+#view-portfolio .desktop-stop-modes-retired-v45{display:none!important}
+#view-portfolio .adv-price-row-v15{display:flex!important;gap:8px!important;margin:8px 0 0!important;padding:9px!important;border:1px solid #315367!important;border-radius:9px!important;background:#081a25!important;box-shadow:0 8px 22px rgba(0,0,0,.22)}
+#view-portfolio .adv-price-row-v15:not(:has(label:not([hidden]))){display:none!important}
+#view-portfolio .adv-price-row-v15 label{flex:1!important;display:flex!important;align-items:center!important;gap:7px!important;font-size:8px!important;font-weight:1000!important}
+#view-portfolio .adv-price-row-v15 input{width:100%!important;min-width:0!important;min-height:38px!important;height:38px!important;font-size:12px!important}
+#view-portfolio .desktop-order-help-v45{margin:7px 1px 0;color:#8ea6b3;font-size:7px;line-height:1.35}
+#view-portfolio .desktop-order-size-v45 .quick-input-mode{display:grid!important;grid-template-columns:1fr 1fr!important;gap:6px!important;margin:0 0 6px!important}
+#view-portfolio .desktop-order-size-v45 .quick-input-mode button{min-height:38px!important;height:38px!important;font-size:8px!important}
+#view-portfolio .desktop-order-size-v45 .quick-percent-row{display:grid!important;grid-template-columns:repeat(4,1fr)!important;gap:6px!important;margin:0!important}
+#view-portfolio .desktop-order-size-v45 .quick-percent-row button{min-height:38px!important;height:38px!important;font-size:8px!important}
+#view-portfolio .desktop-order-size-v45 .percent-help{margin:6px 0 0!important;font-size:7px!important}
+#view-portfolio .desktop-order-entry-v45 .quick-action-row{margin-top:8px!important}.desktop-order-entry-v45 .quick-action{min-height:44px!important;height:44px!important;font-size:10px!important}
+
+/* Chart: primary controls stay visible; indicators/view controls live in a popover. */
+#view-portfolio .desktop-chart-card-v45{overflow:visible!important}
+#view-portfolio .desktop-redundant-live-v45{display:none!important}
+#view-portfolio .desktop-chart-head-actions-v45{display:flex;gap:5px;order:7;margin-left:auto}
+#view-portfolio .desktop-chart-head-actions-v45 button{min-height:32px;height:32px;padding:5px 9px;border:1px solid #31556b;border-radius:7px;background:#071722;color:#c1d7e3;font-size:7px;font-weight:1000;cursor:pointer}
+#view-portfolio .desktop-chart-head-actions-v45 button:hover{border-color:#4cbcf6;color:#fff}
+#view-portfolio .desktop-chart-tools-popover-v45{display:none;position:absolute;right:10px;top:62px;z-index:60;width:min(430px,72%);padding:9px;border:1px solid #36596b;border-radius:11px;background:#07131b;box-shadow:0 18px 48px rgba(0,0,0,.55)}
+#view-portfolio .chart-tools-open-v45 .desktop-chart-tools-popover-v45{display:block}
+#view-portfolio .desktop-chart-tools-popover-v45>header{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;padding-bottom:6px;border-bottom:1px solid #213b48}
+#view-portfolio .desktop-chart-tools-popover-v45>header b{font-size:8px;letter-spacing:.06em}.desktop-chart-tools-popover-v45>header button{width:28px;height:28px;border:1px solid #315064;border-radius:7px;background:#081722;color:#fff;cursor:pointer}
+#view-portfolio .desktop-chart-tools-popover-v45>div{display:flex;gap:7px;flex-wrap:wrap}
+#view-portfolio .desktop-chart-tools-popover-v45 .toolbar-group{display:flex!important;gap:4px!important;align-items:center!important;padding:6px!important;border:1px solid #203c4b!important;border-radius:8px!important;background:#061018!important;overflow:visible!important}
+#view-portfolio .desktop-chart-tools-popover-v45 .toolbar-group button{min-height:30px!important;height:30px!important;font-size:7px!important}
+#view-portfolio .chart-toolbar{overflow:visible!important}
+
+/* Focus Mode: chart + order entry get the whole desktop canvas without rebuilding the chart. */
+body.desktop-chart-focus-v45{overflow:hidden!important}
+body.desktop-chart-focus-v45:before{content:'';position:fixed;inset:0;z-index:2147481000;background:#02070b}
+#view-portfolio .desktop-chart-focus-card-v45{position:fixed!important;inset:10px!important;z-index:2147481100!important;margin:0!important;width:auto!important;height:auto!important;max-width:none!important;overflow:auto!important;padding:14px!important;border-color:#4a7488!important;box-shadow:0 0 0 1px rgba(92,201,255,.12),0 30px 100px #000!important;background:#051018!important}
+#view-portfolio .desktop-chart-focus-card-v45 .symbol-chart{height:clamp(340px,53vh,640px)!important;min-height:340px!important}
+#view-portfolio .desktop-chart-focus-card-v45 .trade-search-row.trade-search-in-chart-v20{width:min(520px,42vw)!important;max-width:520px!important}
+
+/* Basket commands live with ADD STOCKS. */
+.bb19-pane-head .basket-header-actions-v45{display:flex;align-items:center;gap:6px;margin-left:auto}
+.bb19-pane-head .basket-header-actions-v45 button{min-height:38px;padding:7px 11px;border:1px solid #31566b;border-radius:8px;background:#071722;color:#bfe5f7;font-size:8px;font-weight:1000;cursor:pointer;white-space:nowrap}
+.bb19-pane-head .basket-header-actions-v45 button:hover{border-color:#52c0f7;color:#fff;background:#092438}
+.bb19-pane-head{gap:10px!important}.bb19-pane-head>label{margin-left:0!important}
+}
+@media(min-width:901px) and (max-width:1120px){
+#view-portfolio .desktop-trade-head-v45{grid-template-columns:auto minmax(310px,1fr) minmax(320px,.9fr)!important}.header-metrics-v45 .port-stat{padding:6px!important}
+#view-portfolio .desktop-order-grid-v45{grid-template-columns:1fr!important}
+}
