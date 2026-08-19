@@ -1,0 +1,20 @@
+const fs=require('fs');
+const js=fs.readFileSync('public/v45-desktop-stage44-v49.js','utf8');
+const css=fs.readFileSync('public/v45-desktop-stage44-v49.css','utf8');
+const server=fs.readFileSync('server/index.js','utf8');
+function ok(x,msg){if(!x)throw new Error(msg)}
+ok(js.includes("matchMedia('(min-width:901px)')"),'desktop-only guard missing');
+ok(js.includes('PRICE −')&&js.includes('PRICE +')&&js.includes('FIT'),'price scale controls missing');
+ok(js.includes(".65,2.15")||js.includes('.65,2.15'),'price scale clamps missing');
+ok(js.includes("1,3.2")||js.includes('1,3.2'),'time zoom clamps missing');
+ok(js.includes("addEventListener('wheel'")||js.includes('addEventListener("wheel"'),'wheel zoom missing');
+ok(js.includes("addEventListener('pointerdown'")||js.includes('addEventListener("pointerdown"'),'drag pan missing');
+ok(js.includes("addEventListener('dblclick'")||js.includes('addEventListener("dblclick"'),'double-click FIT missing');
+ok(js.includes('function fit(){state.x=1;state.y=1;state.pan=0;apply()}'),'FIT reset contract missing');
+ok(js.includes("if(state.x<=1)return"),'pan should require horizontal zoom');
+ok(css.includes('.stage44-chart-viewport-v49')&&css.includes('overflow:hidden'),'chart viewport clipping missing');
+ok(server.includes('chartInteractions: "v49-scale-zoom-pan"'),'health marker missing');
+ok(server.includes('/v45-desktop-stage44-v49.css?v=49'),'Stage 44 CSS not loaded');
+ok(server.includes('/v45-desktop-stage44-v49.js?v=49'),'Stage 44 JS not loaded');
+ok(server.indexOf('/v45-desktop-stage43-v48.js?v=48')<server.indexOf('/v45-desktop-stage44-v49.js?v=49'),'Stage 44 must load after Stage 43');
+console.log('Stage 44 chart interaction validation passed');
