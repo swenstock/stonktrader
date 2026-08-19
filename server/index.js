@@ -119,7 +119,7 @@ const EXTRA_BODY = '<script src="/v45-mobile-v3.js?v=4"></script><script src="/v
 let servedShell = exactV45Shell.toString("utf8");
 servedShell = servedShell
   .replace('function maybeShowFirstVisitTutorial(){', 'function maybeShowFirstVisitTutorial(){ return; /* QA HARD PAUSE */')
-  .replace('function maybeShowContextTutorial(view){', 'function maybeShowContextTutorial(){ return; /* QA HARD PAUSE */')
+  .replace('function maybeShowContextTutorial(view){', 'function maybeShowContextTutorial(view){ return; /* QA HARD PAUSE */')
   .replace("</head>", `${EXTRA_HEAD}</head>`)
   .replace("</body>", `${EXTRA_BODY}</body>`);
 const exactV45WithEnhancements = Buffer.from(servedShell, "utf8");
