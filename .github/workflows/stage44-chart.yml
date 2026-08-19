@@ -1,0 +1,22 @@
+name: Stage 44 Chart Scale + Pan
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  desktop-stage44:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Syntax check Stage 44
+        run: |
+          node --check public/v45-desktop-stage44-v49.js
+          node --check scripts/validate-stage44-chart.js
+      - name: Validate Stage 44 chart interactions
+        run: node scripts/validate-stage44-chart.js
