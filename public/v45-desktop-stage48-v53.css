@@ -1,0 +1,17 @@
+/* Stage 48 — compact analytics proxies; never move full analytics containers into KPI grid. */
+@media(min-width:901px){
+#view-portfolio .stage47-header-metrics-v52{display:grid!important;grid-template-columns:minmax(142px,1fr) minmax(142px,1fr) minmax(142px,1fr) minmax(520px,3.4fr)!important;gap:7px!important;align-items:stretch!important;width:100%!important;max-width:none!important;margin:7px 0 10px!important;min-height:54px!important;height:auto!important}
+#view-portfolio .stage47-header-metrics-v52>.port-stat{min-width:0!important;min-height:54px!important;height:54px!important;margin:0!important;align-self:start!important}
+#view-portfolio .stage47-analysis-strip-v52{grid-column:4!important;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:7px!important;min-width:0!important;height:54px!important;min-height:54px!important;align-self:start!important;overflow:hidden!important}
+#view-portfolio .stage48-analytics-proxy-v53{display:grid!important;grid-template-columns:38px minmax(0,1fr)!important;align-items:center!important;gap:9px!important;height:54px!important;min-height:54px!important;max-height:54px!important;width:100%!important;min-width:0!important;margin:0!important;padding:6px 11px!important;border:1px solid #254858!important;border-radius:10px!important;background:#06131b!important;color:#e7f6fc!important;box-sizing:border-box!important;overflow:hidden!important;cursor:pointer!important;text-align:left!important}
+#view-portfolio .stage48-analytics-proxy-v53:hover{border-color:#3f7991!important;background:#081a24!important}
+#view-portfolio .stage48-analytics-proxy-v53 .stage48-icon-v53{width:32px!important;height:32px!important;border-radius:7px!important;display:grid!important;place-items:center!important;background:#102431!important;font-size:20px!important;line-height:1!important}
+#view-portfolio .stage48-analytics-proxy-v53 b{display:block!important;margin:0!important;color:#70b9df!important;font-size:10px!important;font-weight:1000!important;letter-spacing:.035em!important;line-height:1.05!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#view-portfolio .stage48-analytics-proxy-v53 span{display:block!important;margin-top:3px!important;color:#8ca8b6!important;font-size:7px!important;font-weight:700!important;line-height:1.15!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#view-portfolio .stage48-original-analysis-v53{display:none!important}
+#view-portfolio .stage43-analysis-bottom-v48{display:none!important}
+}
+@media(min-width:901px) and (max-width:1260px){
+#view-portfolio .stage47-header-metrics-v52{grid-template-columns:repeat(3,minmax(140px,1fr))!important}
+#view-portfolio .stage47-analysis-strip-v52{grid-column:1/-1!important;height:54px!important}
+}

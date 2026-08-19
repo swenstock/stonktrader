@@ -1,0 +1,1 @@
+Video review showed Stage 47 physically reparented full analytics containers into the KPI grid, stretching Rank / Prize / Time into tall columns. Stage 48 keeps original analytics internals out of the KPI strip and renders fixed-height compact proxy cards instead.

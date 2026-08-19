@@ -1,0 +1,1 @@
+Acceptance target: Rank / Est. Prize / Time remain compact KPI cards; Portfolio Analytics and Advanced Performance Charts are compact cards in same horizontal header band; no vertical stretching.
