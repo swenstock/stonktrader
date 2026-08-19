@@ -1,0 +1,22 @@
+name: Stage 38 Portfolio Header
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  header:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - name: Syntax check Stage 38 header guard
+        run: |
+          node --check public/v45-portfolio-header-v44.js
+          node --check scripts/validate-stage38-portfolio-header.js
+      - name: Validate Stage 38 portfolio header
+        run: node scripts/validate-stage38-portfolio-header.js
