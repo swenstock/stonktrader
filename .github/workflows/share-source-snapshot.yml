@@ -4,22 +4,29 @@ on:
   push:
     branches:
       - share-source-20260819
+    paths-ignore:
+      - 'SBC_FULL_SOURCE_*.zip'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   package:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout exact production source
+      - name: Checkout snapshot branch with production history
         uses: actions/checkout@v4
         with:
-          ref: 371c0368c0efc7d3228eafe3d5ae3f8ad7d49970
+          fetch-depth: 0
 
-      - name: Add snapshot manifest
+      - name: Export exact production source
         run: |
-          cat > SOURCE_SNAPSHOT_INFO.txt <<'EOF'
+          rm -rf /tmp/sbc-source
+          mkdir -p /tmp/sbc-source
+          git archive 371c0368c0efc7d3228eafe3d5ae3f8ad7d49970 | tar -x -C /tmp/sbc-source
+          rm -f /tmp/sbc-source/data/app.db /tmp/sbc-source/data/app.db-shm /tmp/sbc-source/data/app.db-wal
+          cat > /tmp/sbc-source/SOURCE_SNAPSHOT_INFO.txt <<'EOF'
           STONK BROKER CHALLENGE — FULL SOURCE SNAPSHOT
           Production source commit: 371c0368c0efc7d3228eafe3d5ae3f8ad7d49970
           Snapshot date: 2026-08-19
@@ -40,17 +47,20 @@ jobs:
           Runtime database files are deliberately excluded because they are data/state, not source code, and may contain local/test records. No application source code is omitted.
           EOF
 
-      - name: Build full source ZIP
+      - name: Build ZIP
         run: |
-          zip -r SBC_FULL_SOURCE_371c036.zip . \
-            -x '.git/*' \
-               'node_modules/*' \
-               'data/app.db' \
-               'data/app.db-shm' \
-               'data/app.db-wal' \
-               'SBC_FULL_SOURCE_371c036.zip'
+          cd /tmp/sbc-source
+          zip -r "$GITHUB_WORKSPACE/SBC_FULL_SOURCE_371c036.zip" .
 
-      - name: Upload shareable source
+      - name: Publish ZIP on snapshot branch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f SBC_FULL_SOURCE_371c036.zip
+          git commit -m 'Publish full shareable source snapshot' || exit 0
+          git push origin HEAD:share-source-20260819
+
+      - name: Upload shareable source artifact
         uses: actions/upload-artifact@v4
         with:
           name: SBC_FULL_SOURCE_371c036
