@@ -1,0 +1,20 @@
+name: Stage 49 Real Analytics Controls
+
+on:
+  pull_request:
+    paths:
+      - 'public/v45-desktop-stage49-v54.js'
+      - 'public/v45-desktop-stage49-v54.css'
+      - 'public/v45-desktop-stage46-v51-pre.js'
+      - 'scripts/validate-stage49-real-analytics.js'
+      - '.github/workflows/stage49-real-analytics.yml'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/validate-stage49-real-analytics.js
