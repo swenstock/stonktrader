@@ -1,0 +1,59 @@
+name: Shareable Source Snapshot
+
+on:
+  push:
+    branches:
+      - share-source-20260819
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact production source
+        uses: actions/checkout@v4
+        with:
+          ref: 371c0368c0efc7d3228eafe3d5ae3f8ad7d49970
+
+      - name: Add snapshot manifest
+        run: |
+          cat > SOURCE_SNAPSHOT_INFO.txt <<'EOF'
+          STONK BROKER CHALLENGE — FULL SOURCE SNAPSHOT
+          Production source commit: 371c0368c0efc7d3228eafe3d5ae3f8ad7d49970
+          Snapshot date: 2026-08-19
+
+          INCLUDED:
+          - Full frontend source and public assets
+          - Full backend/server source
+          - package.json and package-lock.json
+          - Validation scripts
+          - GitHub Actions workflows
+          - Project READMEs/status documentation
+
+          EXCLUDED FROM SHARE PACKAGE:
+          - .git metadata
+          - node_modules
+          - runtime SQLite database files in data/app.db*
+
+          Runtime database files are deliberately excluded because they are data/state, not source code, and may contain local/test records. No application source code is omitted.
+          EOF
+
+      - name: Build full source ZIP
+        run: |
+          zip -r SBC_FULL_SOURCE_371c036.zip . \
+            -x '.git/*' \
+               'node_modules/*' \
+               'data/app.db' \
+               'data/app.db-shm' \
+               'data/app.db-wal' \
+               'SBC_FULL_SOURCE_371c036.zip'
+
+      - name: Upload shareable source
+        uses: actions/upload-artifact@v4
+        with:
+          name: SBC_FULL_SOURCE_371c036
+          path: SBC_FULL_SOURCE_371c036.zip
+          if-no-files-found: error
+          retention-days: 30
