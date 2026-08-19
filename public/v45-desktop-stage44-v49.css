@@ -1,0 +1,18 @@
+/* Stage 44 — trader-style chart scale/zoom/pan. Desktop only. */
+@media(min-width:901px){
+#view-portfolio .stage44-resizable-chart-v49{position:relative!important}
+#view-portfolio .stage44-chart-scale-v49{display:flex;align-items:center;gap:6px;margin-right:auto}
+#view-portfolio .stage44-chart-scale-v49>span{min-width:132px;color:#7695a3;font-size:7px;font-weight:1000;letter-spacing:.045em;white-space:nowrap}
+#view-portfolio .stage44-chart-scale-v49 button{min-height:34px;padding:6px 10px;border:1px solid #31566a;border-radius:8px;background:#071721;color:#d8edf7;font-size:8px;font-weight:1000;cursor:pointer}
+#view-portfolio .stage44-chart-scale-v49 button:hover{border-color:#4dbbf2;background:#0b2b3b;color:#fff}
+#view-portfolio .stage44-chart-help-v49{margin:-4px 2px 8px;color:#6f8a97;font-size:7px;font-weight:800;letter-spacing:.025em;text-align:right}
+#view-portfolio .stage44-chart-viewport-v49{position:relative!important;overflow:hidden!important;cursor:zoom-in!important;touch-action:none!important}
+#view-portfolio .stage44-chart-viewport-v49.is-panning-v49{cursor:grabbing!important}
+#view-portfolio .stage44-chart-viewport-v49 canvas,#view-portfolio .stage44-chart-viewport-v49 svg{transition:transform .12s ease-out}
+#view-portfolio .stage44-chart-viewport-v49.is-panning-v49 canvas,#view-portfolio .stage44-chart-viewport-v49.is-panning-v49 svg{transition:none}
+}
+@media(min-width:901px) and (max-width:1180px){
+#view-portfolio .stage43-chart-controls-v48{flex-wrap:wrap}
+#view-portfolio .stage44-chart-scale-v49{width:100%;justify-content:flex-end;order:2}
+#view-portfolio .stage44-chart-help-v49{text-align:left}
+}
