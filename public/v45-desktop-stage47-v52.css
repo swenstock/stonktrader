@@ -1,0 +1,18 @@
+/* Stage 47 — portfolio analytics live in the same KPI band as Rank / Prize / Time. */
+@media(min-width:901px){
+#view-portfolio .stage47-header-metrics-v52{display:grid!important;grid-template-columns:minmax(142px,1fr) minmax(142px,1fr) minmax(142px,1fr) minmax(420px,3.25fr)!important;gap:7px!important;align-items:stretch!important;width:100%!important;max-width:none!important;margin:7px 0 10px!important}
+#view-portfolio .stage47-header-metrics-v52>.port-stat{min-width:0!important;min-height:54px!important;margin:0!important}
+#view-portfolio .stage47-analysis-strip-v52{grid-column:4!important;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:7px!important;min-width:0!important;align-self:stretch!important}
+#view-portfolio .stage47-analysis-card-v52{display:flex!important;align-items:center!important;justify-content:flex-start!important;gap:12px!important;min-width:0!important;min-height:54px!important;height:100%!important;width:100%!important;margin:0!important;padding:7px 13px!important;border-radius:10px!important;box-sizing:border-box!important;overflow:hidden!important}
+#view-portfolio .stage47-analysis-card-v52>*{min-width:0!important}
+#view-portfolio .stage47-analysis-card-v52 h1,#view-portfolio .stage47-analysis-card-v52 h2,#view-portfolio .stage47-analysis-card-v52 h3,#view-portfolio .stage47-analysis-card-v52 h4{margin:0!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#view-portfolio .stage47-analysis-card-v52 p,#view-portfolio .stage47-analysis-card-v52 small,#view-portfolio .stage47-analysis-card-v52 span{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+#view-portfolio .stage47-retired-analysis-bottom-v52{display:none!important}
+}
+@media(min-width:901px) and (max-width:1260px){
+#view-portfolio .stage47-header-metrics-v52{grid-template-columns:repeat(3,minmax(140px,1fr))!important}
+#view-portfolio .stage47-analysis-strip-v52{grid-column:1/-1!important}
+}
+@media(min-width:1261px) and (max-width:1500px){
+#view-portfolio .stage47-header-metrics-v52{grid-template-columns:repeat(3,minmax(140px,190px)) minmax(390px,1fr)!important}
+}
