@@ -25,6 +25,7 @@ const SYMBOLS = {
   NFLX: { name: "Netflix Inc.", exchange: "NASDAQ", currency: "USD", base: 780.4, marketCap: 340_000_000_000 },
   ORCL: { name: "Oracle Corp.", exchange: "NYSE", currency: "USD", base: 168.3, marketCap: 470_000_000_000 },
   ADBE: { name: "Adobe Inc.", exchange: "NASDAQ", currency: "USD", base: 520.6, marketCap: 235_000_000_000 },
+  AVGO: { name: "Broadcom Inc.", exchange: "NASDAQ", currency: "USD", base: 330.0, marketCap: 1_550_000_000_000 },
   CRM: { name: "Salesforce Inc.", exchange: "NYSE", currency: "USD", base: 330.1, marketCap: 315_000_000_000 },
   INTC: { name: "Intel Corp.", exchange: "NASDAQ", currency: "USD", base: 22.4, marketCap: 95_000_000_000 },
   AMD: { name: "Advanced Micro Devices", exchange: "NASDAQ", currency: "USD", base: 165.8, marketCap: 267_000_000_000 },
@@ -35,6 +36,7 @@ const SYMBOLS = {
   PYPL: { name: "PayPal Holdings", exchange: "NASDAQ", currency: "USD", base: 78.4, marketCap: 82_000_000_000 },
   SNOW: { name: "Snowflake Inc.", exchange: "NYSE", currency: "USD", base: 165.2, marketCap: 53_000_000_000 },
   PLTR: { name: "Palantir Technologies", exchange: "NASDAQ", currency: "USD", base: 42.6, marketCap: 95_000_000_000 },
+  MSTR: { name: "Strategy Inc.", exchange: "NASDAQ", currency: "USD", base: 185.0, marketCap: 52_000_000_000 },
   BAC: { name: "Bank of America", exchange: "NYSE", currency: "USD", base: 42.3, marketCap: 325_000_000_000 },
   WFC: { name: "Wells Fargo & Co.", exchange: "NYSE", currency: "USD", base: 68.5, marketCap: 240_000_000_000 },
   GS: { name: "Goldman Sachs Group", exchange: "NYSE", currency: "USD", base: 480.9, marketCap: 155_000_000_000 },
@@ -65,6 +67,7 @@ const SYMBOLS = {
   GE: { name: "General Electric", exchange: "NYSE", currency: "USD", base: 175.6, marketCap: 195_000_000_000 },
   F: { name: "Ford Motor Co.", exchange: "NYSE", currency: "USD", base: 11.2, marketCap: 44_000_000_000 },
   GM: { name: "General Motors", exchange: "NYSE", currency: "USD", base: 47.3, marketCap: 55_000_000_000 },
+  TSM: { name: "Taiwan Semiconductor Manufacturing", exchange: "NYSE", currency: "USD", base: 250.0, marketCap: 1_300_000_000_000 },
   T: { name: "AT&T Inc.", exchange: "NYSE", currency: "USD", base: 21.4, marketCap: 150_000_000_000 },
   VZ: { name: "Verizon Communications", exchange: "NYSE", currency: "USD", base: 40.2, marketCap: 170_000_000_000 },
 };
@@ -73,9 +76,9 @@ const LOGO_DOMAINS = {
   AAPL: "apple.com", MSFT: "microsoft.com", NVDA: "nvidia.com", TSLA: "tesla.com",
   AMZN: "amazon.com", GOOGL: "abc.xyz", HOOD: "robinhood.com", COIN: "coinbase.com",
   JPM: "jpmorganchase.com", WMT: "walmart.com", META: "meta.com", NFLX: "netflix.com",
-  ORCL: "oracle.com", ADBE: "adobe.com", CRM: "salesforce.com", INTC: "intel.com",
+  ORCL: "oracle.com", ADBE: "adobe.com", AVGO: "broadcom.com", CRM: "salesforce.com", INTC: "intel.com",
   AMD: "amd.com", QCOM: "qualcomm.com", CSCO: "cisco.com", IBM: "ibm.com",
-  UBER: "uber.com", PYPL: "paypal.com", SNOW: "snowflake.com", PLTR: "palantir.com",
+  UBER: "uber.com", PYPL: "paypal.com", SNOW: "snowflake.com", PLTR: "palantir.com", MSTR: "strategy.com",
   BAC: "bankofamerica.com", WFC: "wellsfargo.com", GS: "goldmansachs.com", MS: "morganstanley.com",
   V: "visa.com", MA: "mastercard.com", AXP: "americanexpress.com", JNJ: "jnj.com",
   PFE: "pfizer.com", UNH: "unitedhealthgroup.com", ABBV: "abbvie.com", MRK: "merck.com",
@@ -83,7 +86,7 @@ const LOGO_DOMAINS = {
   SBUX: "starbucks.com", NKE: "nike.com", DIS: "disney.com", COST: "costco.com",
   TGT: "target.com", HD: "homedepot.com", LOW: "lowes.com", XOM: "exxonmobil.com",
   CVX: "chevron.com", BA: "boeing.com", CAT: "caterpillar.com", GE: "ge.com",
-  F: "ford.com", GM: "gm.com", T: "att.com", VZ: "verizon.com",
+  F: "ford.com", GM: "gm.com", TSM: "tsmc.com", T: "att.com", VZ: "verizon.com",
 };
 
 function listSymbols() {
