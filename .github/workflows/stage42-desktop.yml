@@ -1,0 +1,20 @@
+name: Stage 42 Basket Library + Desktop Layout
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  desktop-stage42:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Syntax check Stage 42
+        run: |
+          node --check public/v45-desktop-stage42-v47.js
+          node --check scripts/validate-stage42-desktop.js
+      - name: Validate Stage 42 desktop
+        run: node scripts/validate-stage42-desktop.js
