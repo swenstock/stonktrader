@@ -4,13 +4,13 @@ const css=fs.readFileSync('public/v45-desktop-stage45-v50.css','utf8');
 const server=fs.readFileSync('server/index.js','utf8');
 function need(ok,msg){if(!ok)throw new Error(msg)}
 need(js.includes("matchMedia('(min-width:901px)')"),'desktop guard missing');
-need(js.includes('Math.abs(st.wheel)<70'),'wheel threshold missing');
+need(js.includes('Math.abs(st.wheel)<90'),'stabilized wheel threshold missing');
 need(!js.includes('anchor='),'pointer anchored zoom should be retired');
 need(js.includes('time(st.wheel<0?.12:-.12)'),'stepped wheel zoom missing');
 need(js.includes("stage45-retire-v50"),'old Stage 44 controls not retired');
 need(js.includes('analysisIntoMetrics'),'analysis KPI rehome missing');
 need(css.includes('max-width:none!important'),'chart max-width cap not removed');
-need(css.includes('1.62fr'),'chart should receive dominant lower-workspace width');
+need(css.includes('grid-template-columns:minmax(0,1fr) minmax(460px,520px)'),'chart should receive remaining width beside capped OE');
 need(css.includes('stage45-analysis-kpis-v50'),'analysis KPI slot styles missing');
 need(server.includes('chartStability: "v50-stable-wide-centered"'),'health marker missing');
 const s43=server.indexOf('/v45-desktop-stage43-v48.js?v=48');
