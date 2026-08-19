@@ -1,6 +1,9 @@
 const fs=require('fs');
 const js=fs.readFileSync('public/v45-desktop-stage45-v50.js','utf8');
 const css=fs.readFileSync('public/v45-desktop-stage45-v50.css','utf8');
+const pre=fs.readFileSync('public/v45-desktop-stage46-v51-pre.js','utf8');
+const css46=fs.readFileSync('public/v45-desktop-stage46-v51.css','utf8');
+const server=fs.readFileSync('server/index.js','utf8');
 function must(cond,msg){if(!cond){console.error('FAIL:',msg);process.exit(1)}}
 must(js.includes('isolateViewport'),'Stage45 must isolate/clone the live chart viewport to remove legacy listeners');
 must(js.includes("cloneNode(true)"),'viewport isolation must clone the node');
@@ -12,4 +15,13 @@ must(css.includes('overscroll-behavior:contain'),'chart viewport must contain ov
 must(css.includes('grid-template-columns:minmax(0,1fr) minmax(460px,520px)'),'chart/OE split must reserve a capped OE column and give chart the remaining width');
 must(css.includes('.symbol-chart canvas')&&css.includes('width:100%!important'),'actual chart surface must fill its chart column');
 must(css.includes('height:auto!important'),'chart surface must preserve aspect ratio');
+must(pre.includes('window.__sbcDesktopStage44V49=true'),'Stage46 pre-lock must disable Stage44 runtime before bind');
+must(css46.includes('overscroll-behavior:contain'),'Stage46 CSS must contain chart overscroll');
+must(server.includes('chartGestureLock: "v51-single-engine-served"'),'Stage46 served health marker missing');
+must(server.includes('/v45-desktop-stage46-v51.css?v=51'),'Stage46 CSS not injected into served shell');
+const preIdx=server.indexOf('/v45-desktop-stage46-v51-pre.js?v=51');
+const s44Idx=server.indexOf('/v45-desktop-stage44-v49.js?v=49');
+const s45Idx=server.indexOf('/v45-desktop-stage45-v50.js?v=50');
+must(preIdx>=0&&s44Idx>preIdx&&s45Idx>s44Idx,'Stage46 pre-lock must load before Stage44 and Stage45');
+must(server.includes(".replace('function maybeShowContextTutorial(view){', 'function maybeShowContextTutorial(view){ return;"),'native tutorial function signature must remain intact');
 console.log('Stage 46 chart gesture lock validation passed');
