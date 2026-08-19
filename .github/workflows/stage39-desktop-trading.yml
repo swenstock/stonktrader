@@ -1,0 +1,24 @@
+name: Stage 39 Desktop Trading Workspace
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  desktop-trading:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+      - run: npm ci
+      - name: Syntax check Stage 39 assets
+        run: |
+          node --check public/v45-native-orders-v45.js
+          node --check public/v45-desktop-trading-v45.js
+          node --check scripts/validate-stage39-desktop-trading.js
+      - name: Validate Stage 39 desktop trading workspace
+        run: node scripts/validate-stage39-desktop-trading.js
