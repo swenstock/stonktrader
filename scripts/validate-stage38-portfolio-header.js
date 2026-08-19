@@ -14,7 +14,7 @@ must(guard.includes("attributeFilter:['class']")&&guard.includes('MutationObserv
 const cleanup=server.indexOf('/v45-trade-cleanup-v8.js?v=10');
 const stocks=server.indexOf('/v45-header-stocks-v16.js?v=16');
 const header=server.indexOf('/v45-portfolio-header-v44.js?v=44');
-const basket=server.indexOf('/v45-basket-loader-v43.js?v=43');
+const basket=server.indexOf('/v45-basket-loader-v43.js?v=47');
 must(cleanup>=0&&stocks>cleanup&&header>stocks&&basket>header,'served shell loads header guard after legacy header layers and before basket enhancements');
 must(server.includes('portfolioHeader: "v44-idempotent-dedupe"'),'health reports Stage 38 portfolio header guard');
 console.log('Stage 38 portfolio header regression checks passed.');
