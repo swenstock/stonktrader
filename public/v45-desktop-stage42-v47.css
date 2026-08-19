@@ -1,0 +1,54 @@
+/* Stage 42 — basket library + desktop workspace reflow. */
+@media(min-width:901px){
+/* Basket modal: never let selected rows push the primary action out of view. */
+.bb19-modal{max-height:calc(100vh - 28px)!important;display:flex!important;flex-direction:column!important;overflow:hidden!important}
+#bb19Body{min-height:0!important;flex:1!important;overflow:hidden!important}
+.bb19-grid{height:100%!important;min-height:0!important}
+.bb19-pane{min-height:0!important;display:flex!important;flex-direction:column!important}
+.bb19-stock-list,.bb19-ticket-list{min-height:0!important;overflow:auto!important}
+.bb19-pane:nth-child(2) .bb19-ticket-list{flex:1 1 auto!important}
+.bb19-pane:nth-child(2) .bb19-bottom{position:sticky!important;bottom:0!important;z-index:20!important;margin-top:auto!important;padding:12px!important;border-top:1px solid #31515f!important;background:linear-gradient(180deg,rgba(4,13,19,.94),#06131b 30%)!important;box-shadow:0 -12px 28px rgba(0,0,0,.34)!important}
+#bb19Create{min-width:260px!important;min-height:58px!important;font-size:11px!important}
+#bb19Submit{min-width:250px!important;min-height:58px!important;font-size:11px!important}
+.bb19-final{height:100%!important;min-height:0!important;display:flex!important;flex-direction:column!important}
+.bb19-final .bb19-review-list{flex:1 1 auto!important;min-height:0!important;overflow:auto!important}
+.bb19-final .bb19-bottom{position:sticky!important;bottom:0!important;z-index:20!important;background:#06131b!important;padding-top:12px!important}
+
+/* Named baskets */
+.named-basket-bar-v47{display:grid;grid-template-columns:minmax(170px,1fr) auto;gap:7px;margin:0 0 8px}
+.named-basket-bar-v47 select,.bb19-final [data-final-library-v47]{min-height:38px;border:1px solid #315569;border-radius:8px;background:#06141d;color:#d9edf7;padding:7px 10px;font-size:8px;font-weight:900}
+.named-basket-bar-v47 button,.final-save-v47{min-height:38px;padding:7px 12px;border:1px solid #3a6073;border-radius:8px;background:#082033;color:#d9effa;font-size:8px;font-weight:1000;cursor:pointer}
+.final-save-v47{margin-left:8px}
+.bb19-final [data-final-library-v47]{margin-left:auto;min-width:190px}
+.named-basket-save-v47{position:fixed;inset:0;z-index:2147483300;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.68);backdrop-filter:blur(3px)}
+.named-basket-save-v47>section{width:min(440px,calc(100vw - 36px));padding:20px;border:1px solid #3c6173;border-radius:14px;background:#06131b;box-shadow:0 28px 80px rgba(0,0,0,.7)}
+.named-basket-save-v47 small{color:#f1bd31;font-size:8px;font-weight:1000;letter-spacing:.08em}.named-basket-save-v47 h3{margin:6px 0 6px;font-size:22px}.named-basket-save-v47 p{margin:0 0 12px;color:#9bb1bc;font-size:12px}.named-basket-save-v47 input{width:100%;min-height:44px;border:1px solid #35576a;border-radius:9px;background:#071821;color:#fff;padding:8px 11px;font-size:13px}.named-basket-save-v47 footer{display:grid;grid-template-columns:1fr 1.2fr;gap:8px;margin-top:12px}.named-basket-save-v47 footer button{min-height:44px;border-radius:9px;font-weight:1000;cursor:pointer}.named-basket-save-v47 footer button:first-child{border:1px solid #375263;background:#0a1820;color:#bfd0d8}.named-basket-save-v47 footer button:last-child{border:1px solid #2e8ab8;background:#0b5f8e;color:#fff}
+.basket-toast-v47{position:fixed;left:50%;bottom:28px;z-index:2147483400;transform:translate(-50%,20px);opacity:0;pointer-events:none;padding:10px 16px;border:1px solid #3c6f84;border-radius:999px;background:#071923;color:#dff6ff;font-size:9px;font-weight:1000;transition:.18s ease}.basket-toast-v47.show{opacity:1;transform:translate(-50%,0)}
+
+/* Game Film owns its analyzer action. */
+.game-film-v47{position:relative!important;padding-bottom:54px!important}
+.game-film-actions-v47{position:absolute;left:16px;bottom:12px;display:flex;gap:8px;align-items:center}
+.game-film-insights-v47{min-height:36px!important;padding:7px 14px!important;border-radius:9px!important;font-size:8px!important;font-weight:1000!important}
+
+/* Main desktop workspace: Positions | Orders, then Chart + Order Entry across the lower row. */
+#view-portfolio .trading-workspace-v47{display:grid!important;grid-template-columns:minmax(0,1.15fr) minmax(360px,.85fr)!important;grid-template-areas:'positions orders' 'trading trading'!important;gap:10px!important;align-items:start!important}
+#view-portfolio .trading-workspace-v47>.holdings-card{grid-area:positions!important;margin:0!important}
+#view-portfolio .trading-workspace-v47>.orders-activity-card{grid-area:orders!important;margin:0!important;align-self:stretch!important}
+#view-portfolio .trading-workspace-v47>.chart-trade-card{grid-area:trading!important;margin:0!important;width:100%!important}
+#view-portfolio .chart-order-split-v47{display:grid!important;grid-template-columns:minmax(0,1.2fr) minmax(420px,.8fr)!important;column-gap:10px!important;align-items:start!important}
+#view-portfolio .chart-order-split-v47>.card-head{grid-column:1/-1!important}
+#view-portfolio .chart-order-split-v47>.quick-trade-clean{grid-column:2!important;grid-row:2 / span 20!important;align-self:start!important;margin:0!important;min-width:0!important}
+#view-portfolio .chart-order-split-v47>*:not(.card-head):not(.quick-trade-clean):not(.desktop-chart-tools-popover-v45){grid-column:1!important;min-width:0!important}
+#view-portfolio .chart-order-split-v47 .desktop-chart-tools-popover-v45{grid-column:1!important}
+#view-portfolio .quick-ticket-launch-v47{min-width:210px!important;min-height:52px!important;padding:10px 20px!important;font-size:10px!important;border-radius:10px!important}
+#view-portfolio .quick-trade-clean .quick-trade-head{display:flex!important;align-items:center!important;gap:12px!important}
+#view-portfolio .quick-trade-clean .quick-trade-head>:first-child{margin-right:auto!important}
+#view-portfolio .desktop-order-grid-v45{grid-template-columns:1fr!important}
+#view-portfolio .desktop-order-type-v45,#view-portfolio .desktop-order-size-v45{width:100%!important}
+}
+@media(min-width:901px) and (max-width:1180px){
+#view-portfolio .trading-workspace-v47{grid-template-columns:1fr!important;grid-template-areas:'positions' 'orders' 'trading'!important}
+#view-portfolio .chart-order-split-v47{grid-template-columns:1fr!important}
+#view-portfolio .chart-order-split-v47>.quick-trade-clean{grid-column:1!important;grid-row:auto!important}
+#view-portfolio .chart-order-split-v47>*:not(.card-head):not(.quick-trade-clean):not(.desktop-chart-tools-popover-v45){grid-column:1!important}
+}
