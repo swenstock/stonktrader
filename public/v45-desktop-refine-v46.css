@@ -1,0 +1,42 @@
+/* Stage 41 — desktop trading refinement. Mobile remains authoritative <=900px. */
+@media(min-width:901px){
+#view-portfolio .desktop-trade-head-v45{display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;gap:12px!important;align-items:center!important}
+#view-portfolio .contest-metrics-strip-v46{display:grid!important;grid-template-columns:repeat(3,minmax(150px,1fr));gap:7px;width:min(610px,100%);margin:7px 0 10px!important}
+#view-portfolio .contest-metrics-strip-v46 .port-stat{min-height:54px!important;padding:7px 12px!important;border-radius:10px!important;background:#06131b!important}
+#view-portfolio .contest-metrics-strip-v46 .port-stat span{font-size:7px!important;letter-spacing:.05em!important}
+#view-portfolio .contest-metrics-strip-v46 .port-stat b{font-size:14px!important;white-space:nowrap}
+
+#view-portfolio .desktop-holdings-v45>.card-head{display:flex!important;align-items:center!important;gap:10px!important;margin-bottom:7px!important}
+#view-portfolio .desktop-holdings-v45>.card-head>:first-child{margin-right:auto!important}
+#view-portfolio .positions-helper-retired-v46{display:none!important}
+#view-portfolio .sell-all-v46{min-height:36px;padding:7px 14px;border:1px solid #82443e;border-radius:9px;background:#230d0c;color:#ff9f95;font-size:8px;font-weight:1000;letter-spacing:.055em;cursor:pointer}
+#view-portfolio .sell-all-v46:hover{border-color:#ef6558;background:#32110f;color:#fff}
+
+#view-portfolio .desktop-order-grid-v45{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:8px!important;margin:6px 0!important}
+#view-portfolio .desktop-order-type-v45,#view-portfolio .desktop-order-size-v45{padding:8px!important}
+#view-portfolio .adv-type-row-v15{grid-template-columns:repeat(4,minmax(80px,1fr))!important;gap:6px!important}
+#view-portfolio .adv-type-row-v15>span{display:none!important}
+#view-portfolio .adv-type-row-v15 button{min-height:39px!important;height:39px!important}
+#view-portfolio .desktop-order-help-v45{display:none!important}
+#view-portfolio .desktop-order-entry-v45 .quick-action-row{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;margin-top:7px!important}
+#view-portfolio .desktop-order-entry-v45 .quick-action{min-height:48px!important;height:48px!important;font-size:11px!important}
+#view-portfolio .quick-ticket-launch{min-height:42px!important;padding:8px 16px!important;font-size:9px!important;border-radius:9px!important}
+
+.sell-all-confirm-v46{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.72);backdrop-filter:blur(3px)}
+.sell-all-confirm-v46>section{position:relative;width:min(520px,calc(100vw - 40px));padding:22px;border:1px solid #3c6275;border-radius:15px;background:#06131b;color:#eaf6fb;box-shadow:0 30px 90px rgba(0,0,0,.75)}
+.sell-all-confirm-v46 small{display:block;color:#f4b942;font-size:8px;font-weight:1000;letter-spacing:.09em;margin-bottom:6px}.sell-all-confirm-v46 h2{margin:0 0 10px;font-size:24px}.sell-all-confirm-v46 p{margin:0 0 10px;color:#c8d8df;line-height:1.5}.sell-all-confirm-v46>section>div{padding:10px 12px;border:1px solid #294755;border-radius:9px;background:#081a23;color:#9fb6c2;font-size:12px}.sell-all-confirm-v46 footer{display:grid;grid-template-columns:1fr 1.25fr;gap:9px;margin-top:16px}.sell-all-confirm-v46 footer button{min-height:46px;border-radius:9px;font-weight:1000;cursor:pointer}.sell-all-confirm-v46 [data-sell-all-cancel-v46]{border:1px solid #355463;background:#091821;color:#c8d7de}.sell-all-confirm-v46 [data-sell-all-confirm-v46]{border:1px solid #d55449;background:#7d1d17;color:#fff}.sell-all-confirm-v46 [data-sell-all-confirm-v46]:disabled{opacity:.55;cursor:wait}.sell-all-x-v46{position:absolute;right:12px;top:12px;width:34px;height:34px;border:1px solid #365463;border-radius:8px;background:#071720;color:#fff;cursor:pointer}
+
+.bb19-allocation-tools{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:0 0 8px;padding:8px;border:1px solid #274654;border-radius:9px;background:#06131a}
+.bb19-allocation-tools button{min-height:34px;padding:6px 10px;border:1px solid #34596d;border-radius:7px;background:#081923;color:#bfe2f3;font-size:7px;font-weight:1000;cursor:pointer}
+.bb19-allocation-tools button:hover{border-color:#55bff4;color:#fff}
+.bb19-allocation-state{margin-right:auto;padding:5px 8px;border-radius:999px;font-size:7px;font-weight:1000;letter-spacing:.05em}.bb19-allocation-state.full{border:1px solid #2d7f59;color:#66eea4;background:#082016}.bb19-allocation-state.under{border:1px solid #7c6b2b;color:#ffd463;background:#211b08}.bb19-allocation-state.over{border:1px solid #7d3d35;color:#ff998e;background:#260c0a}
+.bb19-cash-size{display:grid;grid-template-columns:minmax(160px,1fr) auto auto;align-items:center;gap:10px;margin:0 0 8px;padding:9px 10px;border:1px solid #2e4f60;border-radius:10px;background:#071721}.bb19-cash-size>div:first-child b{display:block;font-size:8px;letter-spacing:.055em}.bb19-cash-size>div:first-child span{display:block;margin-top:2px;color:#819dab;font-size:7px}.bb19-cash-presets{display:flex;gap:5px}.bb19-cash-presets button{min-width:44px;min-height:36px;border:1px solid #315467;border-radius:7px;background:#06141d;color:#a9c2cf;font-size:8px;font-weight:1000;cursor:pointer}.bb19-cash-presets button.active{border-color:#f0bf00;background:#2a2103;color:#ffd52e}.bb19-cash-size label{display:flex;align-items:center;gap:5px;color:#829eac;font-size:7px;font-weight:1000}.bb19-cash-size input{width:66px;min-height:36px;border:1px solid #35586a;border-radius:7px;background:#06131a;color:#fff;text-align:center;font-weight:1000}
+#bb19Create{min-height:52px!important;padding:10px 20px!important;font-size:10px!important;font-weight:1000!important;letter-spacing:.035em!important}
+#bb19Submit{min-height:54px!important;padding:11px 24px!important;font-size:11px!important;font-weight:1000!important;letter-spacing:.035em!important;box-shadow:0 0 0 1px rgba(71,187,246,.18)!important}
+.bb19-final .bb19-pane-head aside small{display:block;margin-top:2px;font-size:7px;color:#83a2b3}
+}
+@media(min-width:901px) and (max-width:1120px){
+#view-portfolio .contest-metrics-strip-v46{width:100%}
+#view-portfolio .desktop-order-grid-v45{grid-template-columns:1fr!important}
+.bb19-cash-size{grid-template-columns:1fr}.bb19-cash-presets{justify-content:flex-start}
+}
