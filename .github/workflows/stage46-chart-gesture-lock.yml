@@ -1,0 +1,13 @@
+name: Stage 46 Chart Gesture Lock
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: node scripts/validate-stage46-chart-gesture-lock.js
