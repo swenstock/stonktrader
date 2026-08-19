@@ -1,0 +1,17 @@
+name: Stage 47 Header Analytics Strip
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [stage47-header-analytics-strip]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/validate-stage47-header-analytics.js
