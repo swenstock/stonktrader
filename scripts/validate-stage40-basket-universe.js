@@ -1,0 +1,22 @@
+const fs=require('fs'),path=require('path');
+const root=path.join(__dirname,'..');
+const data=require(path.join(root,'server','dataProvider'));
+const guard=fs.readFileSync(path.join(root,'public','v45-basket-loader-v43.js'),'utf8');
+const server=fs.readFileSync(path.join(root,'server','index.js'),'utf8');
+const quick=fs.readFileSync(path.join(root,'server','routes','quickTickets.js'),'utf8');
+function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
+const symbols=data.listSymbols();
+const set=new Set(symbols.map(x=>x.symbol));
+must(symbols.length===59,'server exposes the full 59-symbol SBC universe');
+['AVGO','MSTR','TSM'].forEach(s=>must(set.has(s),`${s} is in the authoritative SBC universe`));
+const quotes=data.getQuotes(['AVGO','MSTR','TSM']);
+must(quotes.length===3&&quotes.every(q=>Number(q.price)>0),'AVGO/MSTR/TSM have simulated SBC quotes');
+must(quick.includes('const known = new Set(listSymbols()'),'basket validation derives from the authoritative provider universe');
+must(guard.includes('async function serverFirst')&&guard.includes('nativeFetch(input,init).then'),'browser universe loader is server-first');
+must(!guard.includes("if(rows.length)return Promise.resolve(response(rows,'native-v45'))"),'browser no longer freezes the universe at the small native shell list');
+must(guard.includes('rows.length<20'),'unexpectedly tiny server universes are rejected instead of silently accepted');
+must(guard.includes('AVGO|Broadcom Inc.')&&guard.includes('MSTR|Strategy Inc.')&&guard.includes('TSM|Taiwan Semiconductor Manufacturing'),'fallback universe includes the three previously rejected native symbols');
+must(guard.includes('sanitizeSavedBasket')&&guard.includes('sbcLastBasketV45'),'saved baskets are sanitized before restore');
+must(server.includes('/v45-basket-loader-v43.js?v=47'),'served shell cache-busts the repaired basket loader');
+must(server.includes('basketUniverse: "v47-server-first-59-symbols"'),'health reports the repaired basket universe');
+console.log('Stage 40 basket universe regression checks passed.');
