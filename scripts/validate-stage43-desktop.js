@@ -1,0 +1,22 @@
+const fs=require('fs'),path=require('path');
+const root=path.join(__dirname,'..');
+const ui=fs.readFileSync(path.join(root,'public','v45-desktop-stage43-v48.js'),'utf8');
+const css=fs.readFileSync(path.join(root,'public','v45-desktop-stage43-v48.css'),'utf8');
+const server=fs.readFileSync(path.join(root,'server','index.js'),'utf8');
+function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
+must(ui.includes("matchMedia('(min-width:901px)')")&&css.includes('@media(min-width:901px)'),'Stage 43 is desktop-only');
+must(ui.includes("document.body.classList.remove('desktop-chart-focus-v45')")&&ui.includes("$$('.desktop-chart-head-actions-v45',card).forEach(x=>x.remove())"),'Focus Mode and old global chart actions are retired');
+must(ui.includes('TIMEFRAME')&&ui.includes('CHART TOOLS')&&ui.includes('data-stage43-chart-action="CANDLES"')&&ui.includes('data-stage43-chart-action="LINE"'),'timeframe and chart display live inside compact chart controls');
+must(ui.includes('VOL')&&ui.includes('MA')&&ui.includes('EMA')&&ui.includes('GRID')&&ui.includes('CROSSHAIR'),'Chart Tools keeps robust indicator and view controls');
+must(ui.includes('clickNative(toolbar,sel.value)')&&ui.includes('clickNative(card,label)'),'new dropdown/tools reuse native chart controls');
+must(ui.includes('stage43-duplicate-chart-label-v48'),'duplicate chart symbol/live labels are reduced');
+must(ui.includes('stage43-price-window-v48')&&ui.includes("type==='limit'?'LIMIT PRICE':type==='stop'?'STOP LOSS':'STOP LOSS + LIMIT'"),'advanced order prices use a contextual window');
+must(ui.includes("if(type==='market'){win.hidden=true;return;}")&&ui.includes("limit.hidden=!(type==='limit'||type==='stop_limit')")&&ui.includes("stop.hidden=!(type==='stop'||type==='stop_limit')"),'Market hides price UI; Limit/Stop/Stop Limit show only relevant fields');
+must(css.includes('.stage43-price-window-v48[hidden]{display:none!important}')&&css.includes('.stage43-price-fields-v48 .adv-price-row-v15'),'legacy price fields are rehomed into the popup-style condition window');
+must(css.includes('.stage43-centered-oe-v48{width:min(100%,620px)')&&css.includes('.stage43-chart-order-v48{grid-template-columns'),'order entry is centered and chart/OE share the lower workspace');
+must(css.includes('.stage43-basket-launch-v48{min-width:250px')&&css.includes('min-height:56px'),'Create A Basket is materially larger');
+must(ui.includes('stage43-analysis-bottom-v48')&&css.includes('.stage43-analysis-bottom-v48>div{display:grid'),'analysis panels move to a clean bottom section');
+must(server.includes('/v45-desktop-stage43-v48.js?v=48')&&server.includes('/v45-desktop-stage43-v48.css?v=48'),'Stage 43 assets are served cache-busted');
+must(server.includes('chartOrderUi: "v48-dropdown-tools-context-prices"'),'health reports Stage 43 chart/order UI');
+must(server.indexOf('/v45-desktop-stage42-v47.js?v=47')<server.indexOf('/v45-desktop-stage43-v48.js?v=48'),'Stage 43 loads after Stage 42');
+console.log('Stage 43 desktop chart/order UI checks passed.');
