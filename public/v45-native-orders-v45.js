@@ -15,7 +15,9 @@ function money(n){return `$${Number(n||0).toLocaleString(undefined,{minimumFract
 function showAdvanced(body){const fire=()=>{try{if(window.SBCTradeConfirmV42?.showAdvanced){window.SBCTradeConfirmV42.showAdvanced(body);return true}}catch(_){}return false};if(!fire())setTimeout(fire,120)}
 function showMessage(eyebrow,title,detail,subdetail,icon='📝'){const fire=()=>{try{if(window.SBCTradeConfirmV42?.show){window.SBCTradeConfirmV42.show({eyebrow,title,detail,subdetail,icon});return true}}catch(_){}return false};if(!fire())setTimeout(fire,120)}
 function selectedSizing(ticket){
-  const mode=ticket.dataset.advMode||($$('.quick-input-mode button',ticket).find(b=>b.classList.contains('active')||b.getAttribute('aria-pressed')==='true')?.textContent||'PERCENTAGE').toLowerCase().includes('share')?'shares':'percent';
+  const activeMode=$$('.quick-input-mode button',ticket).find(b=>b.classList.contains('active')||b.getAttribute('aria-pressed')==='true');
+  const hinted=String(ticket.dataset.advMode||activeMode?.textContent||'percentage').toLowerCase();
+  const mode=hinted.includes('share')?'shares':'percent';
   let percent=Number(ticket.dataset.advPercent||0);
   const activePct=$$('.quick-percent-row button',ticket).find(b=>b.classList.contains('active')||b.getAttribute('aria-pressed')==='true');
   if(activePct){const n=Number((activePct.textContent.match(/\d+/)||[])[0]);if(n)percent=n;}
