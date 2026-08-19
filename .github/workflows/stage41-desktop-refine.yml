@@ -1,0 +1,21 @@
+name: Stage 41 Desktop Refinement
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  refine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+      - run: npm ci
+      - name: Syntax check Stage 41 files
+        run: |
+          node --check public/v45-basket-builder-v19.js
+          node --check public/v45-desktop-trading-v45.js
+          node --check scripts/validate-stage41-desktop-refine.js
+      - name: Validate Stage 41 desktop refinement
+        run: node scripts/validate-stage41-desktop-refine.js
