@@ -12,6 +12,7 @@ must(guard.includes('AAPL|Apple Inc.')&&guard.includes('VZ|Verizon Communication
 const loaderPos=server.indexOf('/v45-basket-loader-v43.js?v=43');
 const builderPos=server.indexOf('/v45-basket-builder-v19.js?v=31');
 must(loaderPos>=0&&builderPos>=0&&loaderPos<builderPos,'served shell loads universe guard before basket builder');
-must(server.includes('v43-resilient-universe-loader-v31-any-count'),'health marker exposes Stage 37 basket loader');
+must(server.includes('createABasket: "v31-any-count-auto-rebalance"'),'Stage 25 basket health marker remains unchanged');
+must(server.includes('basketLoader: "v43-resilient-universe"'),'health exposes Stage 37 basket loader separately');
 must(builder.includes("await loadUniverse();renderBuilder();"),'existing basket builder behavior remains intact after universe load');
 console.log('Stage 37 basket loader checks passed.');
