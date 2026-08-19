@@ -1,0 +1,23 @@
+name: Stage 43 Desktop Chart + Order UI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  desktop-stage43:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Syntax check Stage 43
+        run: |
+          node --check public/v45-desktop-stage43-v48.js
+          node --check scripts/validate-stage43-desktop.js
+      - name: Validate Stage 43 desktop
+        run: node scripts/validate-stage43-desktop.js
