@@ -1,1 +1,1 @@
-placeholder
+Stage 50 removes the runtime race between Stages 47, 48, and 49. Stage 47/48 JavaScript no longer runs on desktop; their sizing CSS may remain. Stage 49 is the sole owner responsible for physically rehoming the real Portfolio Analytics and Advanced Performance Charts controls into the KPI header. This prevents older interval/mutation observers from moving controls back to the lower analysis area or recreating proxies.
