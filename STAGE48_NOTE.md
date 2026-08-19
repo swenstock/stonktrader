@@ -1,0 +1,1 @@
+Stage 48 fixes the video-confirmed Stage 47 regression where full analytics containers stretched the KPI header vertically. Compact proxy cards now occupy the header while original analytics containers remain out of the KPI grid.
