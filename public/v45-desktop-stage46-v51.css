@@ -1,0 +1,16 @@
+/* Stage 46 — chart gesture lock + true wide viewport. Desktop only. */
+@media(min-width:901px){
+#view-portfolio .stage45-chart-viewport-v50{overscroll-behavior:contain!important;touch-action:none!important}
+#view-portfolio .stage45-wide-chart-card-v50.stage43-chart-order-v48{grid-template-columns:minmax(0,1fr) minmax(460px,520px)!important;gap:18px!important}
+#view-portfolio .stage45-wide-chart-card-v50 .symbol-chart,
+#view-portfolio .stage45-wide-chart-card-v50 .chart-canvas{width:100%!important;max-width:none!important;justify-self:stretch!important}
+#view-portfolio .stage45-wide-chart-card-v50 .symbol-chart canvas,
+#view-portfolio .stage45-wide-chart-card-v50 .symbol-chart svg,
+#view-portfolio .stage45-wide-chart-card-v50 .chart-canvas canvas,
+#view-portfolio .stage45-wide-chart-card-v50 .chart-canvas svg{display:block!important;width:100%!important;max-width:none!important;height:auto!important}
+#view-portfolio .stage45-oe-v50{width:min(100%,520px)!important;max-width:520px!important}
+}
+@media(min-width:901px) and (max-width:1250px){
+#view-portfolio .stage45-wide-chart-card-v50.stage43-chart-order-v48{grid-template-columns:1fr!important}
+#view-portfolio .stage45-oe-v50{grid-column:1!important;max-width:720px!important;width:min(100%,720px)!important}
+}
