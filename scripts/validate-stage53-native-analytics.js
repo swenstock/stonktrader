@@ -1,0 +1,12 @@
+const fs=require('fs');
+const js=fs.readFileSync('public/v45-desktop-stage51-v55.js','utf8');
+const pre=fs.readFileSync('public/v45-desktop-stage46-v51-pre.js','utf8');
+const must=(ok,msg)=>{if(!ok){console.error('FAIL:',msg);process.exit(1)}else console.log('PASS:',msg)};
+must(js.includes(".stage43-analysis-bottom-v48>div"),'stage51 prefers the real Stage43 analytics host');
+must(js.includes("$(':scope>.stage43-analysis-card-v48',host)"),'stage51 selects direct native analytics panels');
+must(js.includes("card.classList.remove('stage52-retired-analytics-stray-v56')"),'captured native panels are un-retired before modal use');
+must(js.includes("card.removeAttribute('aria-hidden')"),'captured native panels are accessible in modal');
+must(js.includes("b.querySelectorAll('*').length-a.querySelectorAll('*').length"),'fallback favors the largest complete analytics container');
+must(!/wheel|pointermove|touchmove/.test(js),'stage53 does not add chart gesture handlers');
+must(pre.includes('/v45-desktop-stage51-v55.js?v=57'),'corrected analytics owner is cache-busted');
+console.log('Stage 53 native analytics validation complete.');
