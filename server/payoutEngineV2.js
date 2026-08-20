@@ -92,9 +92,10 @@ function splitResidualTopDown(totalResidual, paidPlaces) {
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   let remaining = totalResidual;
   const bonuses = weights.map((w, i) => {
-    if (i === paidPlaces - 1) return money(remaining);
-    const share = money((totalResidual * w) / totalWeight);
-    remaining = money(remaining - share);
+    if (i === paidPlaces - 1) return money(Math.max(0, remaining));
+    const roundedShare = money((totalResidual * w) / totalWeight);
+    const share = money(Math.min(Math.max(0, remaining), Math.max(0, roundedShare)));
+    remaining = money(Math.max(0, remaining - share));
     return share;
   });
   return bonuses;
