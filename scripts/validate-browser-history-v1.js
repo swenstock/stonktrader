@@ -1,0 +1,11 @@
+const fs=require('fs');
+const js=fs.readFileSync('public/v45-browser-history-v1.js','utf8');
+const pre=fs.readFileSync('public/v45-desktop-stage46-v51-pre.js','utf8');
+const must=(ok,msg)=>{if(!ok){console.error('FAIL:',msg);process.exit(1)}console.log('PASS:',msg)};
+must(js.includes('history.pushState')&&js.includes("window.addEventListener('popstate'"),'browser history helper records SBC views and handles Back');
+must(js.includes("[id^=\"view-\"]")||js.includes("[id^=\'view-\']")||js.includes("[id^=\"view-\"]"),'history helper is scoped to SBC in-app views');
+must(!/style\.|classList\.add\([^)]*(layout|color|size)|innerHTML\s*=/.test(js),'history helper does not restyle or rebuild SBC UI');
+must(!/fetch\(|WebSocket|\/api\//.test(js),'history helper does not touch backend or trading data');
+must(pre.includes('/v45-browser-history-v1.js?v=1'),'history helper is bootstrapped by desktop preloader');
+must(pre.includes('Stage 51 owns analytics placement'),'preloader documents consolidated analytics ownership');
+console.log('Browser history guard validation complete.');
