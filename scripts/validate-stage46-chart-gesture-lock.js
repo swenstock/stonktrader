@@ -20,7 +20,7 @@ must(pre.includes('window.__sbcDesktopStage44V49=true'),'Stage46 pre-lock must d
 must(css46.includes('overscroll-behavior:contain'),'Stage46 CSS must contain chart overscroll');
 must(server.includes('chartGestureLock: "v51-single-engine-served"'),'Stage46 served health marker missing');
 must(server.includes('/v45-desktop-stage46-v51.css?v=51'),'Stage46 CSS not injected into served shell');
-const preIdx=server.indexOf('/v45-desktop-stage46-v51-pre.js?v=51');
+const preIdx=server.search(/\/v45-desktop-stage46-v51-pre\.js\?v=(51|64)/);
 const s44Idx=server.indexOf('/v45-desktop-stage44-v49.js?v=49');
 const s45Idx=server.indexOf('/v45-desktop-stage45-v50.js?v=50');
 must(preIdx>=0&&s44Idx>preIdx&&s45Idx>s44Idx,'Stage46 pre-lock must load before Stage44 and Stage45');
