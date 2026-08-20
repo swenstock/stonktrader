@@ -17,7 +17,7 @@ function realStage43Panel(v,kind){
   return panels.find(x=>norm(x.textContent).startsWith(META[kind].label))||null;
 }
 function findSource(v,kind){
-  const marked=$$('[data-stage51-source]',v).find(x=>x.dataset.stage51Source===kind);if(marked)return marked;
+  const marked=$$('[data-stage51-source]').find(x=>x.dataset.stage51Source===kind);if(marked)return marked;
   const native=realStage43Panel(v,kind);if(native)return native;
   const candidates=$$('.stage43-analysis-card-v48,section,article,details,div',v).filter(x=>!x.closest('.stage51-header-strip-v55')&&!x.closest('.stage51-modal-v55')&&!x.classList.contains('stage51-native-stash-v55'));
   const hits=candidates.filter(x=>norm(x.textContent).startsWith(META[kind].label));
@@ -40,9 +40,9 @@ function standardizeToggle(card){
   sync();
 }
 function captureOne(v,kind){
-  const stash=ensureStash(v);let card=$(`[data-stage51-source="${kind}"]`,v);if(!card)card=findSource(v,kind);if(!card)return null;
+  const stash=ensureStash(v);let card=$(`[data-stage51-source="${kind}"]`);if(!card)card=findSource(v,kind);if(!card)return null;
   card.dataset.stage51Source=kind;card.classList.add('stage51-native-source-v55');card.classList.remove('stage52-retired-analytics-stray-v56');card.removeAttribute('aria-hidden');addGuard(card);standardizeToggle(card);
-  $$('[data-stage51-source="'+kind+'"]',v).filter(x=>x!==card).forEach(x=>{x.removeAttribute('data-stage51-source');x.classList.remove('stage51-native-source-v55','stage51-modal-source-v55');});
+  $$('[data-stage51-source="'+kind+'"]').filter(x=>x!==card).forEach(x=>{x.removeAttribute('data-stage51-source');x.classList.remove('stage51-native-source-v55','stage51-modal-source-v55');});
   if(!card.closest('.stage51-modal-v55')&&card.parentElement!==stash)stash.appendChild(card);return card;
 }
 function captureSources(v){captureOne(v,'portfolio');captureOne(v,'advanced');const old=$('.stage43-analysis-bottom-v48',v);if(old)old.classList.add('stage51-retired-bottom-v55');}
@@ -57,7 +57,7 @@ function expandNative(card){
   if(action)setTimeout(()=>{try{action.click();standardizeToggle(card);}catch{}},0);
 }
 function openModal(kind){
-  const v=$('#view-portfolio');if(!v)return;captureSources(v);const card=$(`[data-stage51-source="${kind}"]`,v);const m=ensureModal(),content=$('.stage51-modal-content-v55',m),title=$('#stage51ModalTitle',m);title.textContent=META[kind].label;content.innerHTML='';
+  const v=$('#view-portfolio');if(!v)return;captureSources(v);const card=$(`[data-stage51-source="${kind}"]`);const m=ensureModal(),content=$('.stage51-modal-content-v55',m),title=$('#stage51ModalTitle',m);title.textContent=META[kind].label;content.innerHTML='';
   if(!card){content.innerHTML='<div class="stage51-loading-v55">Analytics are still loading. Close and try again in a moment.</div>';current=null;}else{current=card;card.classList.remove('stage52-retired-analytics-stray-v56');card.removeAttribute('aria-hidden');card.classList.add('stage51-modal-source-v55');content.appendChild(card);expandNative(card);}
   m.hidden=false;document.body.classList.add('stage51-modal-open-v55');$('.stage51-modal-close-v55',m).focus();
 }
