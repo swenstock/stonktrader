@@ -3,7 +3,7 @@
 if(!window.matchMedia('(max-width:620px)').matches||window.__sbcMobileV6)return;
 window.__sbcMobileV6=true;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
-let positionsSheet=null,refreshTimer=null;
+let positionsSheet=null;
 const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
 
 function cleanupLobby(){
@@ -140,6 +140,7 @@ function cleanupDeadMobile(){
   $$('.mobile-floor-brokers').forEach(x=>x.remove());
 }
 function enhance(){cleanupLobby();cleanupDeadMobile();setupContestHeader();setupTradeFirst();ensurePositionsLauncher();bindFindMe();}
-function start(){enhance();let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(enhance,90)}).observe(document.body,{childList:true,subtree:true});setInterval(()=>{ensurePositionsLauncher();},1200);}
+window.__sbcMobileV6Enhance=enhance;
+function start(){enhance();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
