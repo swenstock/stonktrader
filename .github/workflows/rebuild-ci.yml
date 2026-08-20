@@ -41,6 +41,8 @@ jobs:
           node --check public/v45-ticket-native-hooks-v41.js
           node --check public/v45-native-orders-v45.js
           node --check public/v45-desktop-trading-v45.js
+          node --check public/v45-price-sync-v1.js
+          node --check public/v45-queue-confirm-rescue-v1.js
           node --check scripts/validate-native-mycontest-flow.js
           node --check scripts/validate-stage17-ui.js
           node --check scripts/validate-stage18-ui.js
@@ -105,7 +107,7 @@ jobs:
             exit 1
           fi
           curl -fsS http://127.0.0.1:3456/api/health >/tmp/health.json
-          node -e "const h=require('/tmp/health.json'); if(h.satellitePayoutEngine!=='v45'||h.entryTradeHandoff!=='native-shell'||h.tradeUiPolish!=='v28-dom-safe-quote-hide'||h.createABasket!=='v31-any-count-auto-rebalance'||h.viewLandings!=='v29-stale-scroll-cancel'||h.leaderboardUi!=='v30-modal-unified-ranks'||h.leaderboardOrder!=='v31-contest-first'||h.leaderboardPortraits!=='native-card-sizing'||h.leaderboardPlacement!=='v34-popup-only'||h.ticketExchangeControls!=='v36-prototype-orders-ticket-actions-scroll'||h.myTicketsCleanup!=='v37-raw-text-removed'||h.basketControls!=='v46-cash-sizing-rebalance'||h.desktopTrading!=='v46-workspace-sell-all-basket-sizing') process.exit(1)"
+          node -e "const h=require('/tmp/health.json'); if(h.satellitePayoutEngine!=='v45'||h.entryTradeHandoff!=='native-shell'||h.tradeUiPolish!=='v29-event-driven'||h.priceSync!=='v2-authoritative-served'||h.basketStability!=='v2-reachable-controls'||h.queuedConfirm!=='v1-navigation-escape'||h.createABasket!=='v31-any-count-auto-rebalance'||h.viewLandings!=='v29-stale-scroll-cancel'||h.leaderboardUi!=='v30-modal-unified-ranks'||h.leaderboardOrder!=='v31-contest-first'||h.leaderboardPortraits!=='native-card-sizing'||h.leaderboardPlacement!=='v34-popup-only'||h.ticketExchangeControls!=='v36-prototype-orders-ticket-actions-scroll'||h.myTicketsCleanup!=='v37-raw-text-removed'||h.basketControls!=='v46-cash-sizing-rebalance'||h.desktopTrading!=='v46-workspace-sell-all-basket-sizing') process.exit(1)"
           curl -fsS http://127.0.0.1:3456/api/config >/tmp/config.json
           curl -fsS http://127.0.0.1:3456/api/economics >/tmp/economics.json
           curl -fsS 'http://127.0.0.1:3456/api/sim-market/quotes?symbols=NVDA,MSFT' >/tmp/quotes.json
@@ -120,7 +122,10 @@ jobs:
           grep -q 'JUMP TO ME' /tmp/leaders.html
           grep -q 'JUMP TO MONEY LINE' /tmp/leaders.html
           grep -q 'v45-mycontest-native-position-v27.js' /tmp/enhanced.html
-          grep -q 'v45-trade-ui-polish-v16.js?v=28' /tmp/enhanced.html
+          grep -Eq 'v45-trade-ui-polish-v16.js\?v=[0-9]+' /tmp/enhanced.html
+          grep -q 'v45-price-sync-v1.js?v=2' /tmp/enhanced.html
+          grep -q 'v45-queue-confirm-rescue-v1.js?v=1' /tmp/enhanced.html
+          grep -q 'v45-basket-stability-v1.css?v=2' /tmp/enhanced.html
           grep -q 'v45-basket-builder-v19.js?v=46' /tmp/enhanced.html
           grep -q 'v45-desktop-trading-v45.js?v=46' /tmp/enhanced.html
           grep -q 'v45-desktop-refine-v46.css?v=46' /tmp/enhanced.html
