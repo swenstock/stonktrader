@@ -8,11 +8,11 @@
 #view-portfolio .stage45-chart-viewport-v50{position:relative!important;overflow:hidden!important;cursor:grab!important;touch-action:none!important;overscroll-behavior:contain!important;width:100%!important;max-width:none!important}
 #view-portfolio .stage45-chart-viewport-v50.is-panning-v50{cursor:grabbing!important}
 #view-portfolio .stage45-wide-chart-card-v50{width:100%!important;max-width:none!important;justify-self:stretch!important;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box!important}
-#view-portfolio .stage45-wide-chart-card-v50.stage43-chart-order-v48{grid-template-columns:minmax(0,1fr) minmax(460px,520px)!important;gap:18px!important}
+#view-portfolio .stage45-wide-chart-card-v50.stage43-chart-order-v48{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr)!important;gap:18px!important}
 #view-portfolio .stage45-wide-chart-card-v50>*:not(.quick-trade-clean):not(.card-head):not(.desktop-chart-tools-popover-v45){min-width:0!important}
 #view-portfolio .stage45-wide-chart-card-v50 .symbol-chart,#view-portfolio .stage45-wide-chart-card-v50 .chart-canvas{width:100%!important;max-width:none!important;justify-self:stretch!important}
 #view-portfolio .stage45-wide-chart-card-v50 .symbol-chart canvas,#view-portfolio .stage45-wide-chart-card-v50 .symbol-chart svg,#view-portfolio .stage45-wide-chart-card-v50 .chart-canvas canvas,#view-portfolio .stage45-wide-chart-card-v50 .chart-canvas svg{display:block!important;width:100%!important;max-width:none!important;height:auto!important}
-#view-portfolio .stage45-oe-v50{width:min(100%,520px)!important;max-width:520px!important;justify-self:center!important;align-self:start!important}
+#view-portfolio .stage45-oe-v50{width:100%!important;max-width:none!important;justify-self:stretch!important;align-self:start!important}
 #view-portfolio .stage45-workspace-v50{width:100%!important;max-width:none!important}
 #view-portfolio .contest-metrics-strip-v46,#view-portfolio .header-metrics-v45{display:grid!important;grid-template-columns:repeat(3,minmax(150px,205px)) minmax(260px,1fr)!important;gap:8px!important;align-items:stretch!important;width:100%!important}
 #view-portfolio .stage45-analysis-kpis-v50{grid-column:4!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;min-width:0!important}
