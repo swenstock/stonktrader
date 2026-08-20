@@ -3,7 +3,7 @@ const js=fs.readFileSync('public/v45-desktop-stage47-v52.js','utf8');
 const css=fs.readFileSync('public/v45-desktop-stage47-v52.css','utf8');
 const pre=fs.readFileSync('public/v45-desktop-stage46-v51-pre.js','utf8');
 function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
-const stage51=/\/v45-desktop-stage51-v55\.js\?v=(55|57)/.test(pre);
+const stage51=/\/v45-desktop-stage51-v55\.js\?v=(55|57|60)/.test(pre);
 if(stage51){
   must(pre.includes('window.__sbcDesktopStage47V52=true'),'Stage 47 runtime is explicitly retired by Stage 51');
   must(!pre.includes('/v45-desktop-stage47-v52.js?v=52'),'retired Stage 47 JS is not bootstrapped');
