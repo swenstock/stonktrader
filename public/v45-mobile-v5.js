@@ -32,7 +32,7 @@ function hookWebSocket(){try{const Native=window.WebSocket;if(!Native||Native.__
 function debounceTicks(){const obs=new MutationObserver(()=>{if(tickTimer)return;tickTimer=setTimeout(()=>{tickTimer=null;refreshContext()},250)});const v=$('#view-portfolio');if(v)obs.observe(v,{childList:true,subtree:true,characterData:true})}
 
 function restoreState(){const view=sessionStorage.getItem('sbcMobileLastViewV5');if(view)setTimeout(()=>{safeView(view);syncBottomNav()},30);setTimeout(()=>window.scrollTo(0,lastScroll),120)}
-function enhance(){makeBottomNav();contextBar();tradeTabs();cardifyRows();findMeButton();sheets();numericInputs();accessibleIcons();syncBottomNav();refreshContext()}
+function enhance(){makeBottomNav();contextBar();tradeTabs();cardifyRows();findMeButton();sheets();numericInputs();accessibleIcons();syncBottomNav();refreshContext();try{window.__sbcMobileV3Enhance?.();window.__sbcMobileV6Enhance?.();window.__sbcMobileV7Enhance?.();}catch(_){}}
 function start(){hookWebSocket();observeConnectivity();enhance();restoreState();debounceTicks();let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(enhance,80)}).observe(document.body,{childList:true,subtree:true});window.addEventListener('scroll',()=>sessionStorage.setItem('sbcMobileScrollV5',String(scrollY)),{passive:true})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
