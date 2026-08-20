@@ -1,0 +1,7 @@
+/* Desktop basket editor: keep both panes and footer controls stationary while selections change. */
+@media(min-width:851px){
+.bb19-grid{height:min(760px,calc(92vh - 106px));align-items:stretch}
+.bb19-pane{height:100%;overflow:hidden}
+.bb19-stock-list,.bb19-ticket-list{flex:1 1 auto;max-height:none!important;min-height:0}
+.bb19-bottom{flex:0 0 auto}
+}

@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const { CATEGORIES, TIERS, PRICE_LEVEL_NAMES } = require('../tierConfig');
 const { TIER_RULES, MAIN_EVENT_TICKET_BACKING, RAKE_RATE } = require('../payoutEngineV2');
+const { currentStonkUsdPriceMicros } = require('../contestScheduler');
 const dataProvider = require('../dataProvider');
 
 router.get('/', (req, res) => {
+  const stonkUsdPrice = currentStonkUsdPriceMicros() / 1e6;
   const byLevel = {};
   for (const tier of TIERS) {
     if (!byLevel[tier.priceLevel]) {
@@ -12,6 +14,7 @@ router.get('/', (req, res) => {
         key: tier.priceLevel,
         name: tier.priceLevelName,
         playerPrice: tier.entryFee,
+        playerPriceUsd: Number((tier.entryFee * stonkUsdPrice).toFixed(2)),
         contestPortion: tier.poolFee,
         freerollContribution: tier.surcharge,
       };
@@ -25,10 +28,11 @@ router.get('/', (req, res) => {
     maxStandardPositionPct: 10,
     maxEntriesPerContest: 10,
     rakeRate: RAKE_RATE,
+    stonkUsdPrice,
     mainEventTicketBacking: MAIN_EVENT_TICKET_BACKING,
     mainEventReserveTarget: 733332,
     tiers: {
-      freeroll: { name: PRICE_LEVEL_NAMES.free, playerPrice: 0 },
+      freeroll: { name: PRICE_LEVEL_NAMES.free, playerPrice: 0, playerPriceUsd: 0 },
       runner: byLevel.runner,
       clerk: byLevel.low,
       trader: byLevel.mid,
