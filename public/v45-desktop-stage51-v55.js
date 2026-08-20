@@ -26,7 +26,7 @@ function ownsCorePortfolio(el,v){
   const core=['.trading-workspace-v47','.stage43-workspace-v48','.chart-trade-card','.holdings-card','.orders-activity-card','.orders-activity-v45','.quick-trade-clean'];
   return core.some(s=>{const n=$(s,v);return !!n&&el.contains(n);});
 }
-function isSafeNativeModule(el,v,kind){return !!el&&hasNativeSignature(el,kind)&&hasNativeToggle(el)&&!ownsCorePortfolio(el,v);}
+function isSafeNativeModule(el,v,kind){return !!el&&hasNativeSignature(el,kind)&&!ownsCorePortfolio(el,v);}
 function promoteNativeModule(node,v,kind){
   for(let p=node;p&&p!==v;p=p.parentElement){
     if(!hasNativeSignature(p,kind))continue;
