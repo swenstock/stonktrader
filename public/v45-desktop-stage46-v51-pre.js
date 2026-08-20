@@ -14,6 +14,9 @@ if(!document.querySelector('script[data-sbc-stage51-v55]')){const s=document.cre
 // Stage 52 preserves the compact desktop focus/perspective while Stage 51 owns analytics placement.
 if(!document.querySelector('link[data-sbc-stage52-v56]')){const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-desktop-stage52-v56.css?v=56';l.dataset.sbcStage52V56='1';document.head.appendChild(l);}
 if(!document.querySelector('script[data-sbc-stage52-v56]')){const s=document.createElement('script');s.src='/v45-desktop-stage52-v56.js?v=56';s.dataset.sbcStage52V56='1';s.defer=true;document.head.appendChild(s);}
+// Stage 65 adds the current prize funding / payout rules to How It Works without changing contest mechanics.
+if(!document.querySelector('link[data-sbc-prize-info-v65]')){const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-prize-info-v65.css?v=65';l.dataset.sbcPrizeInfoV65='1';document.head.appendChild(l);}
+if(!document.querySelector('script[data-sbc-prize-info-v65]')){const s=document.createElement('script');s.src='/v45-prize-info-v65.js?v=65';s.dataset.sbcPrizeInfoV65='1';s.defer=true;document.head.appendChild(s);}
 // Browser Back follows SBC view history instead of leaving the site after in-app navigation.
 if(!document.querySelector('script[data-sbc-browser-history-v1]')){const s=document.createElement('script');s.src='/v45-browser-history-v1.js?v=1';s.dataset.sbcBrowserHistoryV1='1';s.defer=true;document.head.appendChild(s);}
 })();
