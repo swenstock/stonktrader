@@ -1,0 +1,21 @@
+name: Chart Workstation V1
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: Syntax check chart workstation
+        run: |
+          node --check public/v45-chart-workstation-v1.js
+          node --check scripts/validate-chart-workstation-v1.js
+      - name: Validate chart workstation ownership and controls
+        run: node scripts/validate-chart-workstation-v1.js
