@@ -1,10 +1,28 @@
-/* Desktop basket editor: stable geometry without trapping review controls below the viewport. */
+/* Desktop basket editor: bounded editor, compact content-sized final review, readable controls. */
 @media(min-width:851px){
-.bb19-modal{height:min(900px,94vh);max-height:94vh}
-#bb19Body{min-height:0;flex:1 1 auto;overflow:hidden}
+.bb19-modal{height:auto!important;max-height:90vh!important}
+#bb19Body{min-height:0;flex:0 1 auto;overflow:auto!important}
+#bb19Body:has(.bb19-grid){height:min(650px,calc(90vh - 104px));overflow:hidden!important}
+#bb19Body:has(.bb19-final){height:auto;max-height:calc(90vh - 104px);overflow:auto!important}
 .bb19-grid{height:100%;min-height:0;align-items:stretch;overflow:hidden}
 .bb19-pane{height:100%;min-height:0;overflow:hidden}
 .bb19-stock-list,.bb19-ticket-list{flex:1 1 0;max-height:none!important;min-height:120px;overflow:auto;scrollbar-gutter:stable both-edges}
 .bb19-allocation-tools,.bb19-cash-size,.bb19-bottom{flex:0 0 auto}
 .bb19-bottom{position:sticky;bottom:0;z-index:3;background:#061119;padding-bottom:2px}
+
+/* Final review should size to its rows instead of inheriting a nearly full-screen canvas. */
+.bb19-final{margin:14px!important;overflow:visible!important;min-height:0!important;height:auto!important;max-height:none!important}
+.bb19-final .bb19-review-list{height:auto!important;min-height:0!important;max-height:46vh!important;overflow:auto!important}
+.bb19-final .bb19-review-list>div{min-height:42px}
+.bb19-final .bb19-bottom{position:static!important;margin-top:12px!important}
+
+/* Bring basket data/control typography up to normal desktop readability. */
+.bb19-pane-head>div>b{font-size:17px!important}
+.bb19-pane-head>div>span,.bb19-pane-head label,.bb19-bottom>span{font-size:10px!important;line-height:1.35!important}
+.bb19-stock-head,.bb19-ticket-head{font-size:9px!important}
+.bb19-stock b,.bb19-ticket-row b,.bb19-review-list b{font-size:13px!important}
+.bb19-stock span,.bb19-stock em,.bb19-ticket-row span,.bb19-review-list span{font-size:11px!important;line-height:1.3!important}
+.bb19-ticket-row strong,.bb19-review-list em,.bb19-review-list strong{font-size:12px!important;font-variant-numeric:tabular-nums}
+.bb19-allocation-tools button,.bb19-cash-presets button,.bb19-bottom button{font-size:11px!important}
+.bb19-pane-head aside{font-size:9px!important}.bb19-pane-head aside strong{font-size:24px!important}
 }
