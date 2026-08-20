@@ -1,0 +1,18 @@
+const fs=require('fs');
+const css=fs.readFileSync('public/v45-desktop-stability-v1.css','utf8');
+const js=fs.readFileSync('public/v45-queued-activity-v1.js','utf8');
+const pre=fs.readFileSync('public/v45-desktop-stage46-v51-pre.js','utf8');
+const server=fs.readFileSync('server/index.js','utf8');
+const must=(ok,msg)=>{if(!ok){console.error('FAIL:',msg);process.exit(1)}console.log('PASS:',msg)};
+must(css.includes('grid-template-rows:300px auto')&&css.includes('height:300px!important'),'portfolio top row has a fixed desktop height');
+must(css.includes('orders-activity-card>#queuedOrders')&&css.includes('overflow:auto!important'),'order tabs scroll internally instead of growing the page');
+must(css.includes('holdings-card table')&&css.includes('max-height:165px'),'large holdings lists scroll inside Current Positions');
+must(css.includes('grid-template-columns:minmax(0,1.6fr) minmax(330px,.4fr)'),'normal chart gets materially more width than order entry');
+must(css.includes('min-height:480px!important;height:480px!important'),'normal chart gets a larger stable default height');
+must(js.includes("add('QUEUED'")&&js.includes("add('CANCELLED'"),'queued activity records placement and cancellation');
+must(js.includes("#view-portfolio #queuedOrders button")&&js.includes("data-orders-tab-v45=\"recent\""),'queued activity is scoped to the portfolio order UI');
+must(!js.includes('MutationObserver')&&!js.includes('setInterval('),'queued activity adds no polling or document-wide mutation observer');
+must(pre.includes('/v45-desktop-stability-v1.css?v=1')&&pre.includes('/v45-queued-activity-v1.js?v=1'),'desktop preloader serves stability assets');
+must(server.includes('/v45-desktop-stage46-v51-pre.js?v=70'),'served shell cache-busts the updated desktop preloader');
+must(server.includes('portfolioStability: "v1-fixed-top-row-large-chart"')&&server.includes('queuedActivity: "v1-placement-cancel-history"'),'health exposes the stabilization contract');
+console.log('Portfolio stability validation passed.');
