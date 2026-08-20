@@ -1,0 +1,17 @@
+name: Stage 53 Native Analytics Panels
+on:
+  pull_request:
+    paths:
+      - 'public/v45-desktop-stage51-v55.js'
+      - 'public/v45-desktop-stage46-v51-pre.js'
+      - 'scripts/validate-stage53-native-analytics.js'
+      - '.github/workflows/stage53-native-analytics.yml'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/validate-stage53-native-analytics.js
