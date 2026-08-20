@@ -13,7 +13,7 @@ must(ui.includes('stage43-duplicate-chart-label-v48'),'duplicate chart symbol/li
 must(ui.includes('stage43-price-window-v48')&&ui.includes("type==='limit'?'LIMIT PRICE':type==='stop'?'STOP LOSS':'STOP LOSS + LIMIT'"),'advanced order prices use a contextual window');
 must(ui.includes("if(type==='market'){win.hidden=true;return;}")&&ui.includes("limit.hidden=!(type==='limit'||type==='stop_limit')")&&ui.includes("stop.hidden=!(type==='stop'||type==='stop_limit')"),'Market hides price UI; Limit/Stop/Stop Limit show only relevant fields');
 must(css.includes('.stage43-price-window-v48[hidden]{display:none!important}')&&css.includes('.stage43-price-fields-v48 .adv-price-row-v15'),'legacy price fields are rehomed into the popup-style condition window');
-must(css.includes('.stage43-centered-oe-v48{width:min(100%,620px)')&&css.includes('.stage43-chart-order-v48{grid-template-columns'),'order entry is centered and chart/OE share the lower workspace');
+must(css.includes('.stage43-chart-order-v48{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr)')&&css.includes('.stage43-centered-oe-v48{width:100%!important;max-width:none!important;justify-self:stretch!important'),'chart and order entry use the full lower workspace');
 must(css.includes('.stage43-basket-launch-v48{min-width:250px')&&css.includes('min-height:56px'),'Create A Basket is materially larger');
 must(ui.includes('stage43-analysis-bottom-v48')&&css.includes('.stage43-analysis-bottom-v48>div{display:grid'),'analysis panels move to a clean bottom section');
 must(server.includes('/v45-desktop-stage43-v48.js?v=48')&&server.includes('/v45-desktop-stage43-v48.css?v=48'),'Stage 43 assets are served cache-busted');
