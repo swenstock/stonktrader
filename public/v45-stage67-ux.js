@@ -4,6 +4,10 @@ if(window.__sbcStage67Ux)return;window.__sbcStage67Ux=true;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
 const upper=s=>clean(s).toUpperCase();
+(function loadFinalCleanup(){
+  if(!document.querySelector('link[data-sbc-basket-stability]')){const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-basket-stability-v1.css?v=1';l.dataset.sbcBasketStability='1';document.head.appendChild(l);}
+  if(!document.querySelector('script[data-sbc-price-sync]')){const s=document.createElement('script');s.src='/v45-price-sync-v1.js?v=1';s.dataset.sbcPriceSync='1';document.head.appendChild(s);}
+})();
 
 function removeOpenSlots(){
   $$('#view-my .entry-slot-empty.entry-slot-big').forEach(x=>x.remove());
