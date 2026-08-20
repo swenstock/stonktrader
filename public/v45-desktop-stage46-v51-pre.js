@@ -12,4 +12,6 @@ if(!document.querySelector('script[data-sbc-stage51-v55]')){const s=document.cre
 // Stage 52 removes escaped analytics remnants and preserves the compact desktop focus/perspective.
 if(!document.querySelector('link[data-sbc-stage52-v56]')){const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-desktop-stage52-v56.css?v=56';l.dataset.sbcStage52V56='1';document.head.appendChild(l);}
 if(!document.querySelector('script[data-sbc-stage52-v56]')){const s=document.createElement('script');s.src='/v45-desktop-stage52-v56.js?v=56';s.dataset.sbcStage52V56='1';s.defer=true;document.head.appendChild(s);}
+// Browser Back follows SBC view history instead of leaving the site after in-app navigation.
+if(!document.querySelector('script[data-sbc-browser-history-v1]')){const s=document.createElement('script');s.src='/v45-browser-history-v1.js?v=1';s.dataset.sbcBrowserHistoryV1='1';s.defer=true;document.head.appendChild(s);}
 })();
