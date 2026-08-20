@@ -40,6 +40,18 @@ function findSource(v,kind){
   if(marked){marked.removeAttribute('data-stage51-source');marked.classList.remove('stage51-native-source-v55','stage51-modal-source-v55');}
   return findNativeModule(v,kind);
 }
+function retireLegacyDescriptions(v){
+  const stash=ensureStash(v);
+  Object.keys(META).forEach(kind=>{
+    const hits=$$('section,article,details,header,div',v).filter(x=>{
+      if(x.closest('.stage51-header-strip-v55,.stage51-modal-v55,.stage51-native-stash-v55,[data-stage51-source]'))return false;
+      const t=norm(x.textContent),count=x.querySelectorAll('*').length;
+      return t.startsWith(META[kind].label)&&!hasNativeSignature(x,kind)&&t.length<=260&&count<=12;
+    });
+    hits.sort((a,b)=>(a.querySelectorAll('*').length-b.querySelectorAll('*').length)||(a.textContent.length-b.textContent.length));
+    hits.forEach(x=>{x.classList.add('stage51-retired-description-v56');x.setAttribute('aria-hidden','true');if(x.parentElement!==stash)stash.appendChild(x);});
+  });
+}
 function standardizeToggle(card){
   if(!card)return;
   const detail=card.matches('details')?card:$('details',card);
@@ -62,7 +74,7 @@ function captureOne(v,kind){
   $$('[data-stage51-source="'+kind+'"]').filter(x=>x!==card).forEach(x=>{x.removeAttribute('data-stage51-source');x.classList.remove('stage51-native-source-v55','stage51-modal-source-v55');});
   if(!card.closest('.stage51-modal-v55')&&card.parentElement!==stash)stash.appendChild(card);return card;
 }
-function captureSources(v){captureOne(v,'portfolio');captureOne(v,'advanced');const old=$('.stage43-analysis-bottom-v48',v);if(old)old.classList.add('stage51-retired-bottom-v55');}
+function captureSources(v){captureOne(v,'portfolio');captureOne(v,'advanced');retireLegacyDescriptions(v);const old=$('.stage43-analysis-bottom-v48',v);if(old)old.classList.add('stage51-retired-bottom-v55');}
 function ensureModal(){
   let m=$('.stage51-modal-v55');if(m)return m;
   m=document.createElement('div');m.className='stage51-modal-v55';m.hidden=true;m.innerHTML='<section class="stage51-modal-panel-v55" role="dialog" aria-modal="true" aria-labelledby="stage51ModalTitle"><header><div><small>PORTFOLIO ANALYSIS</small><h2 id="stage51ModalTitle">ANALYTICS</h2></div><button type="button" class="stage51-modal-close-v55" aria-label="Close analytics">×</button></header><div class="stage51-modal-content-v55"></div></section>';
