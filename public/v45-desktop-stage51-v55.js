@@ -16,6 +16,7 @@ let current=null;
 function ensureStash(v){let s=$('.stage51-native-stash-v55',v);if(!s){s=document.createElement('div');s.className='stage51-native-stash-v55';s.setAttribute('aria-hidden','true');v.appendChild(s);}return s;}
 function addGuard(el){if(!el||$('.stage51-scan-guard-v55',el))return;const g=document.createElement('span');g.className='stage51-scan-guard-v55';g.textContent='\u200B';el.prepend(g);}
 function hasNativeSignature(el,kind){if(!el)return false;const t=norm(el.textContent);return NATIVE_SIGNATURES[kind].every(x=>t.includes(x));}
+function hasOtherNativeSignature(el,kind){return Object.keys(NATIVE_SIGNATURES).some(k=>k!==kind&&hasNativeSignature(el,k));}
 function hasNativeToggle(el){
   if(!el)return false;
   if(el.matches('details'))return true;
@@ -26,13 +27,14 @@ function ownsCorePortfolio(el,v){
   const core=['.trading-workspace-v47','.stage43-workspace-v48','.chart-trade-card','.holdings-card','.orders-activity-card','.orders-activity-v45','.quick-trade-clean'];
   return core.some(s=>{const n=$(s,v);return !!n&&el.contains(n);});
 }
-function isSafeNativeModule(el,v,kind){return !!el&&hasNativeSignature(el,kind)&&!ownsCorePortfolio(el,v);}
+function isSafeNativeModule(el,v,kind){return !!el&&hasNativeSignature(el,kind)&&!hasOtherNativeSignature(el,kind)&&!ownsCorePortfolio(el,v);}
 function promoteNativeModule(node,v,kind){
+  let outer=null,outerToggle=null;
   for(let p=node;p&&p!==v;p=p.parentElement){
-    if(!hasNativeSignature(p,kind))continue;
-    if(isSafeNativeModule(p,v,kind))return p;
+    if(!isSafeNativeModule(p,v,kind))continue;
+    outer=p;if(hasNativeToggle(p))outerToggle=p;
   }
-  return null;
+  return outerToggle||outer;
 }
 function findNativeModule(v,kind){
   const candidates=$$('details,section,article,div',v).filter(x=>!x.closest('.stage51-header-strip-v55,.stage51-modal-v55,.stage51-native-stash-v55')&&hasNativeSignature(x,kind));
@@ -48,16 +50,18 @@ function findSource(v,kind){
   return findNativeModule(v,kind);
 }
 function retireLegacyDescriptions(v){
-  const stash=ensureStash(v);
-  Object.keys(META).forEach(kind=>{
-    const hits=$$('section,article,details,header,div',v).filter(x=>{
-      if(x.closest('.stage51-header-strip-v55,.stage51-modal-v55,.stage51-native-stash-v55,[data-stage51-source]'))return false;
-      const t=norm(x.textContent),count=x.querySelectorAll('*').length;
-      return t.startsWith(META[kind].label)&&!hasNativeSignature(x,kind)&&t.length<=260&&count<=12;
-    });
-    hits.sort((a,b)=>(a.querySelectorAll('*').length-b.querySelectorAll('*').length)||(a.textContent.length-b.textContent.length));
-    hits.forEach(x=>{x.classList.add('stage51-retired-description-v56');x.setAttribute('aria-hidden','true');if(x.parentElement!==stash)stash.appendChild(x);});
+  const stash=ensureStash(v),header=$('.stage51-header-strip-v55',v);
+  const hits=$$('section,article,details,header,div',v).filter(x=>{
+    if(x.closest('.stage51-header-strip-v55,.stage51-modal-v55,.stage51-native-stash-v55,[data-stage51-source]'))return false;
+    if(header&&x.contains(header))return false;
+    if(ownsCorePortfolio(x,v))return false;
+    const t=norm(x.textContent),count=x.querySelectorAll('*').length;
+    const labels=Object.values(META).filter(d=>t.includes(d.label)).length;
+    const legacyCopy=/EQUITY CURVE|ALLOCATION|P&L DRIVERS|PRIZE-LINE PRESSURE|CASH DEPLOYMENT|MOVED YOUR RANK|RANK DRIVERS/.test(t);
+    return labels>0&&legacyCopy&&!Object.keys(NATIVE_SIGNATURES).some(k=>hasNativeSignature(x,k))&&t.length<=520&&count<=28;
   });
+  hits.sort((a,b)=>(a.querySelectorAll('*').length-b.querySelectorAll('*').length)||(a.textContent.length-b.textContent.length));
+  hits.forEach(x=>{x.classList.add('stage51-retired-description-v56');x.setAttribute('aria-hidden','true');if(x.parentElement!==stash)stash.appendChild(x);});
 }
 function standardizeToggle(card){
   if(!card)return;
