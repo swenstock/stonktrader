@@ -35,6 +35,7 @@ function installTradeModeGuard(){
 }
 
 function chartPopout(){
+  if(!window.matchMedia('(min-width:901px)').matches)return;
   const card=$('#view-portfolio .chart-trade-card');if(!card)return;
   card.classList.add('stage67-chart-ready');
   let btn=$('[data-stage67-chart-expand]',card);
@@ -66,10 +67,11 @@ function projectionText(level){
 }
 function renderProjection(card,category){
   let box=$('.stage67-payout-projection',card);if(!box){box=document.createElement('details');box.className='stage67-payout-projection';box.open=false;card.appendChild(box);}
+  const wasOpen=box.open;
   const levels=(category?.levels||[]).filter(l=>['free','runner','low','mid','high'].includes(l.priceLevel));
   const entrants=levels.reduce((n,l)=>n+Number(l.entrantCount||0),0);
   box.innerHTML=`<summary><span>PROJECTED PAYOUTS</span><b>IF FIELD CLOSED NOW • ${entrants.toLocaleString()} ENTRIES</b></summary><div class="stage67-payout-grid">${levels.map(l=>`<div class="stage67-payout-row"><strong>${tierLabel(l)}</strong><span>${projectionText(l)}</span></div>`).join('')}</div><small>Projection uses the same V45 settlement engine as final payouts and updates with the live field.</small>`;
-  box.onclick=e=>e.stopPropagation();
+  box.open=wasOpen;box.onclick=e=>e.stopPropagation();
 }
 async function projectedPayouts(){
   const cards=$$('#enterableList .enterable-card');if(!cards.length)return;
@@ -79,8 +81,18 @@ async function projectedPayouts(){
   }catch(_){ }
 }
 
-let timer;
-function enhance(){removeOpenSlots();installTradeModeGuard();chartPopout();installEscape();clearTimeout(timer);timer=setTimeout(projectedPayouts,120);}
-function start(){enhance();new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(enhance,80)}).observe(document.body,{childList:true,subtree:true});setInterval(projectedPayouts,15000);}
+function enhance(){removeOpenSlots();installTradeModeGuard();chartPopout();installEscape();}
+function hookRender(name){
+  const fn=window[name];if(typeof fn!=='function'||fn.__stage67Hook)return;
+  const wrapped=function(){const out=fn.apply(this,arguments);setTimeout(()=>{enhance();if(name==='renderTradingFloor')projectedPayouts();},0);return out;};
+  wrapped.__stage67Hook=true;wrapped.__stage67Original=fn;window[name]=wrapped;
+}
+function installRenderHooks(){['renderTradingFloor','renderMyContests','renderPortfolio','showView'].forEach(hookRender);}
+function start(){
+  enhance();installRenderHooks();projectedPayouts();
+  setTimeout(()=>{installRenderHooks();enhance();projectedPayouts();},300);
+  setTimeout(()=>{installRenderHooks();enhance();projectedPayouts();},1200);
+  setInterval(projectedPayouts,15000);
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
