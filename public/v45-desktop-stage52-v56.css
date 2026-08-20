@@ -1,0 +1,10 @@
+/* Stage 52 — desktop focus cleanup. No trading/chart behavior changes. */
+@media(min-width:901px){
+#view-portfolio.stage52-desktop-focus-v56{scroll-padding-top:12px!important}
+#view-portfolio .stage52-retired-analytics-stray-v56{display:none!important}
+#view-portfolio .stage52-primary-workspace-v56{margin-top:0!important;padding-top:0!important;align-items:start!important}
+#view-portfolio .stage52-focus-anchor-v56{margin-bottom:8px!important}
+#view-portfolio .desktop-holdings-v45,#view-portfolio .orders-activity-card,#view-portfolio .orders-activity-v45{margin-top:0!important}
+#view-portfolio .stage43-chart-order-v48{margin-top:10px!important}
+#view-portfolio .stage43-analysis-bottom-v48,#view-portfolio .stage51-native-stash-v55{display:none!important;margin:0!important;padding:0!important;height:0!important;min-height:0!important;overflow:hidden!important}
+}
