@@ -1,7 +1,7 @@
 // Converts ranked satellite finishers into concrete V45 award instructions.
 // PURE PLANNING ONLY: no DB writes, custody, tickets, or reserve mutation.
 
-const { computePaidContest, computeFreerollRequirement } = require('./payoutEngineV2');
+const { computePaidContest, computeCascadingContest, computeFreerollRequirement } = require('./payoutEngineV2');
 
 const PRICE_LEVEL_TO_TIER = Object.freeze({
   runner: 'runner',
@@ -26,7 +26,7 @@ function planPaidSatellite({ priceLevel, ranked }) {
   const tierKey = PRICE_LEVEL_TO_TIER[priceLevel];
   if (!tierKey) throw new Error(`Unsupported paid price level: ${priceLevel}`);
   const rows = rankedIds(ranked);
-  const math = computePaidContest({ tierKey, fieldSize: rows.length });
+  const math = computeCascadingContest({ tierKey, fieldSize: rows.length });
 
   if (math.status !== 'OK') {
     return {
@@ -49,10 +49,11 @@ function planPaidSatellite({ priceLevel, ranked }) {
       rank: p.rank,
       ticketType: p.ticketTier,
       ticketQuantity: p.quantity,
-      backingPerTicket: p.liabilityBacking / p.quantity,
+      backingPerTicket: p.quantity > 0 ? p.liabilityBacking / p.quantity : 0,
       totalTicketBacking: p.liabilityBacking,
       stonkBonus: p.stonkBonus,
       mainEventUpgrade: p.award === 'main_event_ticket',
+      isCashPrize: p.isCashPrize === true,
     };
   });
 
