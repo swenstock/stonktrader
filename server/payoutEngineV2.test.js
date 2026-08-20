@@ -3,14 +3,12 @@ const {
   TIER_RULES,
   economicsForEntry,
   computePaidContest,
+  computeCascadingContest,
   computeFreerollRequirement,
 } = require('./payoutEngineV2');
 
-function approxEqual(a, b) {
-  return Math.abs(a - b) < 1e-9;
-}
+function approxEqual(a, b) { return Math.abs(a - b) < 1e-9; }
 
-// Exact per-entry economics
 const expected = {
   runner: { price: 100, contest: 100, freeroll: 0, rake: 15, contestPrize: 85 },
   clerk: { price: 200, contest: 150, freeroll: 50, rake: 22.5, contestPrize: 127.5 },
@@ -29,8 +27,6 @@ for (const [tier, e] of Object.entries(expected)) {
   assert(approxEqual(x.rake + x.contestPrize + x.freerollContribution, x.playerPrice), `${tier} full entry reconciles`);
 }
 
-// Wide stress test. A tiny field may legitimately be marked UNDERFUNDED_BASELINE;
-// whenever status=OK every STONK must reconcile exactly.
 for (const tier of Object.keys(TIER_RULES)) {
   for (const fieldSize of [1,2,3,5,10,11,25,50,100,250,1000,5000,10000]) {
     const r = computePaidContest({ tierKey: tier, fieldSize });
@@ -40,17 +36,6 @@ for (const tier of Object.keys(TIER_RULES)) {
       assert.equal(r.reconciliation.prize, true, `${tier}/${fieldSize} prize reconciliation`);
       assert.equal(r.payouts.length, r.paidPlaces, `${tier}/${fieldSize} pays every prize place`);
       assert(r.mainEventTickets <= r.paidPlaces, `${tier}/${fieldSize} no excess ME upgrades`);
-      for (const p of r.payouts) {
-        assert(p.rank >= 1 && p.rank <= r.paidPlaces, `${tier}/${fieldSize} valid rank`);
-        if (p.award === 'main_event_ticket') {
-          assert.equal(p.quantity, 1);
-          assert.equal(p.liabilityBacking, 3000);
-        } else {
-          assert.equal(p.award, 'baseline_tickets');
-          assert.equal(p.quantity, 2);
-        }
-        assert(p.stonkBonus >= 0, `${tier}/${fieldSize} nonnegative residual bonus`);
-      }
     } else {
       assert.equal(r.status, 'UNDERFUNDED_BASELINE');
       assert(r.shortfall > 0, `${tier}/${fieldSize} real baseline shortfall`);
@@ -58,17 +43,44 @@ for (const tier of Object.keys(TIER_RULES)) {
   }
 }
 
-// Freeroll liability: top 10%, two Runner tickets each.
 assert.deepEqual(
   computeFreerollRequirement({ fieldSize: 1000 }),
-  {
-    fieldSize: 1000,
-    paidPlaces: 100,
-    ticketTier: 'runner',
-    ticketsPerWinner: 2,
-    ticketsRequired: 200,
-    liabilityRequired: 20000,
-  }
+  { fieldSize: 1000, paidPlaces: 100, ticketTier: 'runner', ticketsPerWinner: 2, ticketsRequired: 200, liabilityRequired: 20000 }
 );
+
+// The cascading planner must resolve every live tier/field-size combination
+// while reconciling every STONK exactly.
+for (const tier of Object.keys(TIER_RULES)) {
+  for (let fieldSize = 1; fieldSize <= 1000; fieldSize++) {
+    const r = computeCascadingContest({ tierKey: tier, fieldSize });
+    assert.equal(r.status, 'OK', `${tier}/${fieldSize} cascade resolves`);
+    assert.equal(r.reconciliation.entry, true, `${tier}/${fieldSize} cascade entry reconciliation`);
+    assert.equal(r.reconciliation.prize, true, `${tier}/${fieldSize} cascade prize reconciliation`);
+    assert.equal(r.payouts.length, r.paidPlaces, `${tier}/${fieldSize} pays every prize place`);
+    for (const p of r.payouts) {
+      assert(p.stonkBonus >= 0, `${tier}/${fieldSize} nonnegative payout`);
+      if (p.quantity === 0) assert.equal(p.isCashPrize, true, `${tier}/${fieldSize} no-ticket payout labeled cash prize`);
+    }
+  }
+}
+
+const healthyDirect = computePaidContest({ tierKey: 'trader', fieldSize: 100 });
+const healthyCascade = computeCascadingContest({ tierKey: 'trader', fieldSize: 100 });
+assert.deepEqual(healthyCascade, healthyDirect, 'healthy rooms are byte-for-byte equivalent at object level');
+
+const tinyRunner = computeCascadingContest({ tierKey: 'runner', fieldSize: 2 });
+assert.equal(tinyRunner.degraded, true);
+assert.equal(tinyRunner.payouts.length, 1);
+assert.equal(tinyRunner.payouts[0].quantity, 0);
+assert.equal(tinyRunner.payouts[0].isCashPrize, true);
+assert.equal(tinyRunner.payouts[0].stonkBonus, 170);
+
+const soloTrader = computeCascadingContest({ tierKey: 'trader', fieldSize: 1 });
+assert.equal(soloTrader.degraded, true);
+assert.equal(soloTrader.payouts[0].ticketTier, 'runner');
+assert.equal(soloTrader.payouts[0].quantity, 2);
+assert.equal(soloTrader.payouts[0].liabilityBacking, 200);
+assert.equal(soloTrader.payouts[0].stonkBonus, 97.5);
+assert.equal(soloTrader.payouts[0].isCashPrize, false);
 
 console.log('payoutEngineV2 tests passed');

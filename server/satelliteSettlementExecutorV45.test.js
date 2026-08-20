@@ -29,7 +29,6 @@ function buildEntries(sat, n, fee) {
   return {entries,ranked};
 }
 
-// ---- 100-player Trader field ----
 const paidSat=satellite('mid','morning',350);
 const paid=buildEntries(paidSat,100,350);
 const paidOut=executePaid({satellite:paidSat,entries:paid.entries,ranked:paid.ranked,stonkUsdPriceMicros:24000});
@@ -47,16 +46,24 @@ if(reserveLedger.balance('platform_revenue')!==5250) throw new Error('Platform r
 const creditedBonus=db.prepare("SELECT COALESCE(SUM(amount),0) n FROM ledger_entries WHERE reason='satellite_prize_stonk_v45'").get().n;
 if(Number(creditedBonus)!==2350) throw new Error(`Residual bonuses mismatch ${creditedBonus}`);
 
-// ---- Underfunded Runner field: NO writes ----
+// Two Runner entrants cannot fund the 200-STONK baseline pair. The room must
+// still resolve: 15% rake remains intact and rank 1 receives the 170-STONK
+// net prize pool as an explicitly labeled cash prize.
 const tiny=satellite('runner','full_day',100);
 const tinyData=buildEntries(tiny,2,100);
-let blocked=false;
-try{executePaid({satellite:tiny,entries:tinyData.entries,ranked:tinyData.ranked});}catch(e){blocked=e.code==='UNDERFUNDED_BASELINE';}
-if(!blocked) throw new Error('Tiny underfunded Runner field was not blocked');
-if(db.prepare('SELECT status FROM satellites WHERE id=?').get(tiny.id).status!=='open') throw new Error('Blocked field mutated status');
-if(db.prepare('SELECT COUNT(*) n FROM satellite_results WHERE satellite_id=?').get(tiny.id).n!==0) throw new Error('Blocked field wrote results');
+const balanceBefore=Number(db.prepare('SELECT stonk_balance FROM accounts WHERE id=?').get(accountId).stonk_balance);
+const tinyOut=executePaid({satellite:tiny,entries:tinyData.entries,ranked:tinyData.ranked,stonkUsdPriceMicros:24000});
+if(tinyOut.math.degraded!==true) throw new Error('Expected degraded thin-room path');
+if(db.prepare('SELECT status FROM satellites WHERE id=?').get(tiny.id).status!=='resolved') throw new Error('Thin room did not resolve');
+if(db.prepare('SELECT COUNT(*) n FROM satellite_results WHERE satellite_id=?').get(tiny.id).n!==2) throw new Error('Expected one result row per entrant');
+if(db.prepare("SELECT COUNT(*) n FROM tickets WHERE source_satellite_id=?").get(tiny.id).n!==0) throw new Error('Cash-prize room should not issue tickets');
+const result1=db.prepare('SELECT * FROM satellite_results WHERE satellite_id=? AND rank=1').get(tiny.id);
+if(result1.prize_type!=='stonk_cash_prize'||Number(result1.stonk_bonus)!==170) throw new Error(`Unexpected thin-room result ${JSON.stringify(result1)}`);
+const balanceAfter=Number(db.prepare('SELECT stonk_balance FROM accounts WHERE id=?').get(accountId).stonk_balance);
+if(balanceAfter-balanceBefore!==170) throw new Error(`Expected 170 STONK cash prize, actual delta ${balanceAfter-balanceBefore}`);
+const totalPrizeCredits=Number(db.prepare("SELECT COALESCE(SUM(amount),0) n FROM ledger_entries WHERE reason='satellite_prize_stonk_v45'").get().n);
+if(totalPrizeCredits!==2520) throw new Error(`Expected cumulative prize credits 2520 after thin room, got ${totalPrizeCredits}`);
 
-// ---- 100-player freeroll: top 10% each get two Runner tickets ----
 const freeSat=satellite('free','afternoon',0);
 const freeData=buildEntries(freeSat,100,0);
 freerollReserve.deposit('afternoon',2000,{referenceType:'test',referenceId:freeSat.id});

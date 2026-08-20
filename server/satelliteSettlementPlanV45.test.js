@@ -11,9 +11,22 @@ assert.equal(minimumFieldForTier('trader'), 2);
 assert.equal(minimumFieldForTier('junior'), 1);
 
 const tinyRunner = planPaidSatellite({priceLevel:'runner',ranked:ranked(2)});
-assert.equal(tinyRunner.status,'UNDERFUNDED_BASELINE');
-assert.equal(tinyRunner.action,'DO_NOT_SETTLE_UNFUNDED');
-assert.equal(tinyRunner.awards.length,0);
+assert.equal(tinyRunner.status,'OK');
+assert.equal(tinyRunner.math.degraded,true);
+assert.equal(tinyRunner.awards.length,1);
+assert.equal(tinyRunner.awards[0].ticketQuantity,0);
+assert.equal(tinyRunner.awards[0].isCashPrize,true);
+assert.equal(tinyRunner.awards[0].stonkBonus,170);
+
+const soloTrader = planPaidSatellite({priceLevel:'mid',ranked:ranked(1)});
+assert.equal(soloTrader.status,'OK');
+assert.equal(soloTrader.math.degraded,true);
+assert.equal(soloTrader.awards.length,1);
+assert.equal(soloTrader.awards[0].ticketType,'runner');
+assert.equal(soloTrader.awards[0].ticketQuantity,2);
+assert.equal(soloTrader.awards[0].isCashPrize,false);
+assert.equal(soloTrader.awards[0].stonkBonus,97.5);
+assert.equal(soloTrader.math.reconciliation.prize,true);
 
 const trader100 = planPaidSatellite({priceLevel:'mid',ranked:ranked(100)});
 assert.equal(trader100.status,'OK');

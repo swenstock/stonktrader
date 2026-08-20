@@ -25,14 +25,22 @@ function entrants(s,n,fee){
   }
 }
 
-// Runner requires three players to fund top-10% baseline (two Runner tickets).
-const blocked=sat('runner','full_day',100);
-entrants(blocked,2,100);
-const b=scheduler.resolveSatellite(blocked);
-if(b.status!=='blocked'||b.code!=='UNDERFUNDED_BASELINE') throw new Error(`Expected blocked Runner field, got ${JSON.stringify(b)}`);
-const blockedRow=db.prepare('SELECT * FROM satellites WHERE id=?').get(blocked.id);
-if(blockedRow.status!=='blocked'||!String(blockedRow.settlement_error).includes('minimum funded field 3')) throw new Error('Blocked room did not persist explicit reason');
-if(db.prepare('SELECT COUNT(*) n FROM satellite_results WHERE satellite_id=?').get(blocked.id).n!==0) throw new Error('Blocked room wrote prizes/results');
+// A 2-player Runner room cannot fund two Runner tickets. It should no longer
+// become permanently blocked: rank 1 receives the 170-STONK net prize pool.
+const thin=sat('runner','full_day',100);
+entrants(thin,2,100);
+const balanceBefore=Number(db.prepare('SELECT stonk_balance FROM accounts WHERE id=?').get(accountId).stonk_balance);
+const r=scheduler.resolveSatellite(thin);
+if(r.status!=='OK') throw new Error(`Expected thin Runner field to resolve OK, got ${JSON.stringify(r)}`);
+const thinRow=db.prepare('SELECT * FROM satellites WHERE id=?').get(thin.id);
+if(thinRow.status!=='resolved'||thinRow.settlement_version!=='v45') throw new Error('Thin room did not resolve through V45');
+const results=db.prepare('SELECT * FROM satellite_results WHERE satellite_id=? ORDER BY rank').all(thin.id);
+if(results.length!==2) throw new Error(`Expected 2 result rows, got ${results.length}`);
+if(results[0].prize_type!=='stonk_cash_prize'||Number(results[0].stonk_bonus)!==170) throw new Error(`Expected rank 1 170-STONK cash prize, got ${JSON.stringify(results[0])}`);
+if(results[1].prize_type!=='none') throw new Error(`Expected rank 2 to get nothing, got ${JSON.stringify(results[1])}`);
+const balanceAfter=Number(db.prepare('SELECT stonk_balance FROM accounts WHERE id=?').get(accountId).stonk_balance);
+if(balanceAfter-balanceBefore!==170) throw new Error(`Expected 170 STONK credited, actual delta ${balanceAfter-balanceBefore}`);
+if(db.prepare("SELECT COUNT(*) n FROM tickets WHERE source_satellite_id=?").get(thin.id).n!==0) throw new Error('Thin cash-prize room should not issue tickets');
 
 const funded=sat('runner','morning',100);
 entrants(funded,3,100);
@@ -47,7 +55,6 @@ entrants(free,10,0);
 let freeBlocked=scheduler.resolveSatellite(free);
 if(freeBlocked.status!=='blocked'||freeBlocked.code!=='FREEROLL_RESERVE_UNDERFUNDED') throw new Error('Unfunded freeroll was not blocked');
 
-// Separate funded freeroll after adding exact reserve liability.
 const free2=sat('free','afternoon',0);
 entrants(free2,10,0);
 freerollReserve.deposit('afternoon',200,{referenceType:'test',referenceId:free2.id});

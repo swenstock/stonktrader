@@ -7,6 +7,7 @@ const { settleEntryRake, money } = require('./rakeV45');
 
 function resultPrizeType(award) {
   if (!award) return 'none';
+  if (award.isCashPrize) return 'stonk_cash_prize';
   if (award.ticketType === 'main_event') return 'main_event_ticket';
   return `${award.ticketType}_tickets`;
 }
