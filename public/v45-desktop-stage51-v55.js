@@ -15,28 +15,35 @@ const NATIVE_SIGNATURES={
 let current=null;
 function ensureStash(v){let s=$('.stage51-native-stash-v55',v);if(!s){s=document.createElement('div');s.className='stage51-native-stash-v55';s.setAttribute('aria-hidden','true');v.appendChild(s);}return s;}
 function addGuard(el){if(!el||$('.stage51-scan-guard-v55',el))return;const g=document.createElement('span');g.className='stage51-scan-guard-v55';g.textContent='\u200B';el.prepend(g);}
-function hasNativeSignature(el,kind){
-  if(!el)return false;const t=norm(el.textContent);return NATIVE_SIGNATURES[kind].every(x=>t.includes(x));
+function hasNativeSignature(el,kind){if(!el)return false;const t=norm(el.textContent);return NATIVE_SIGNATURES[kind].every(x=>t.includes(x));}
+function hasNativeToggle(el){
+  if(!el)return false;
+  if(el.matches('details'))return true;
+  return $$('button,summary,[role="button"]',el).some(x=>/EXPAND|COLLAPSE/.test(norm(x.textContent)));
 }
+function ownsCorePortfolio(el,v){
+  if(!el||!v||el===v)return true;
+  const core=['.trading-workspace-v47','.stage43-workspace-v48','.chart-trade-card','.holdings-card','.orders-activity-card','.orders-activity-v45','.quick-trade-clean'];
+  return core.some(s=>{const n=$(s,v);return !!n&&el.contains(n);});
+}
+function isSafeNativeModule(el,v,kind){return !!el&&hasNativeSignature(el,kind)&&hasNativeToggle(el)&&!ownsCorePortfolio(el,v);}
 function promoteNativeModule(node,v,kind){
-  let fallback=node;
   for(let p=node;p&&p!==v;p=p.parentElement){
     if(!hasNativeSignature(p,kind))continue;
-    fallback=p;
-    const controls=$$('button,summary,[role="button"]',p);
-    if(p.matches('details')||controls.some(x=>/EXPAND|COLLAPSE/.test(norm(x.textContent))))return p;
+    if(isSafeNativeModule(p,v,kind))return p;
   }
-  return fallback;
+  return null;
 }
 function findNativeModule(v,kind){
   const candidates=$$('details,section,article,div',v).filter(x=>!x.closest('.stage51-header-strip-v55,.stage51-modal-v55,.stage51-native-stash-v55')&&hasNativeSignature(x,kind));
   if(!candidates.length)return null;
   candidates.sort((a,b)=>(a.querySelectorAll('*').length-b.querySelectorAll('*').length)||(a.textContent.length-b.textContent.length));
-  return promoteNativeModule(candidates[0],v,kind);
+  for(const candidate of candidates){const promoted=promoteNativeModule(candidate,v,kind);if(promoted)return promoted;}
+  return null;
 }
 function findSource(v,kind){
   const marked=$$('[data-stage51-source]').find(x=>x.dataset.stage51Source===kind);
-  if(marked&&hasNativeSignature(marked,kind))return marked;
+  if(marked&&isSafeNativeModule(marked,v,kind))return marked;
   if(marked){marked.removeAttribute('data-stage51-source');marked.classList.remove('stage51-native-source-v55','stage51-modal-source-v55');}
   return findNativeModule(v,kind);
 }
@@ -69,7 +76,9 @@ function standardizeToggle(card){
   sync();
 }
 function captureOne(v,kind){
-  const stash=ensureStash(v);let card=$(`[data-stage51-source="${kind}"]`);if(card&&!hasNativeSignature(card,kind)){card.removeAttribute('data-stage51-source');card.classList.remove('stage51-native-source-v55','stage51-modal-source-v55');card=null;}if(!card)card=findSource(v,kind);if(!card)return null;
+  const stash=ensureStash(v);let card=$(`[data-stage51-source="${kind}"]`);
+  if(card&&!isSafeNativeModule(card,v,kind)){card.removeAttribute('data-stage51-source');card.classList.remove('stage51-native-source-v55','stage51-modal-source-v55');card=null;}
+  if(!card)card=findSource(v,kind);if(!card)return null;
   card.dataset.stage51Source=kind;card.classList.add('stage51-native-source-v55');card.classList.remove('stage52-retired-analytics-stray-v56');card.removeAttribute('aria-hidden');addGuard(card);standardizeToggle(card);
   $$('[data-stage51-source="'+kind+'"]').filter(x=>x!==card).forEach(x=>{x.removeAttribute('data-stage51-source');x.classList.remove('stage51-native-source-v55','stage51-modal-source-v55');});
   if(!card.closest('.stage51-modal-v55')&&card.parentElement!==stash)stash.appendChild(card);return card;
@@ -87,7 +96,7 @@ function expandNative(card){
 }
 function openModal(kind){
   const v=$('#view-portfolio');if(!v)return;captureSources(v);const card=$(`[data-stage51-source="${kind}"]`);const m=ensureModal(),content=$('.stage51-modal-content-v55',m),title=$('#stage51ModalTitle',m);title.textContent=META[kind].label;content.innerHTML='';
-  if(!card||!hasNativeSignature(card,kind)){content.innerHTML='<div class="stage51-loading-v55">Analytics are still loading. Close and try again in a moment.</div>';current=null;}else{current=card;card.classList.remove('stage52-retired-analytics-stray-v56');card.removeAttribute('aria-hidden');card.classList.add('stage51-modal-source-v55');content.appendChild(card);expandNative(card);}
+  if(!card||!isSafeNativeModule(card,v,kind)){content.innerHTML='<div class="stage51-loading-v55">Analytics are still loading. Close and try again in a moment.</div>';current=null;}else{current=card;card.classList.remove('stage52-retired-analytics-stray-v56');card.removeAttribute('aria-hidden');card.classList.add('stage51-modal-source-v55');content.appendChild(card);expandNative(card);}
   m.hidden=false;document.body.classList.add('stage51-modal-open-v55');$('.stage51-modal-close-v55',m).focus();
 }
 function closeModal(){const m=$('.stage51-modal-v55');if(!m||m.hidden)return;const v=$('#view-portfolio'),stash=v&&ensureStash(v);if(current&&stash){current.classList.remove('stage51-modal-source-v55');stash.appendChild(current);}current=null;m.hidden=true;document.body.classList.remove('stage51-modal-open-v55');}

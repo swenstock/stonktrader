@@ -1,0 +1,13 @@
+const fs=require('fs');
+const js=fs.readFileSync('public/v45-desktop-stage51-v55.js','utf8');
+const css=fs.readFileSync('public/v45-desktop-stage52-v56.css','utf8');
+const must=(ok,msg)=>{if(!ok){console.error('FAIL:',msg);process.exit(1)}console.log('PASS:',msg)};
+must(js.includes('function isSafeNativeModule'),'safe native-module gate exists');
+must(js.includes('function ownsCorePortfolio'),'core portfolio wrapper guard exists');
+must(js.includes("return null;\n}"),'unsafe promotion has a null failure path');
+must(!js.includes('let fallback=node'),'dangerous ancestor fallback is removed');
+must(js.includes("if(marked&&isSafeNativeModule(marked,v,kind))return marked"),'marked owners must pass safety gate');
+must(js.includes("if(!card||!isSafeNativeModule(card,v,kind))"),'modal refuses unsafe analytics sources');
+must(css.includes('margin-top:-6px!important'),'desktop portfolio restores tighter vertical position');
+must(!/wheel|pointermove|touchmove/.test(js),'analytics source guard adds no chart gesture handlers');
+console.log('Stage 58 analytics source guard validation complete.');
