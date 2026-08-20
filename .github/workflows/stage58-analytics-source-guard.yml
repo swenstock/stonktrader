@@ -1,0 +1,17 @@
+name: Stage 58 Analytics Source Guard
+on:
+  pull_request:
+    paths:
+      - 'public/v45-desktop-stage51-v55.js'
+      - 'public/v45-desktop-stage52-v56.css'
+      - 'scripts/validate-stage58-analytics-source-guard.js'
+      - '.github/workflows/stage58-analytics-source-guard.yml'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/validate-stage58-analytics-source-guard.js
