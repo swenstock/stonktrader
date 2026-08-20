@@ -13,8 +13,9 @@ jobs:
           const fs=require('fs');
           const p='public/v45-desktop-stage51-v55.js';
           const s=fs.readFileSync(p,'utf8');
-          const must=['EQUITY CURVE','ALLOCATION BREAKDOWN','P&L DRIVERS','VS. PRIZE LINE','CASH DEPLOYMENT','RANK MOVEMENT','function hasNativeSignature','function findNativeModule'];
-          for(const x of must){if(!s.includes(x))throw new Error('Missing Stage56 signature guard: '+x)}
-          if(!s.includes("if(marked&&hasNativeSignature(marked,kind))return marked"))throw new Error('Marked source must be signature-valid');
-          console.log('Stage 56 native analytics signature validation passed');
+          const must=['EQUITY CURVE','ALLOCATION BREAKDOWN','P&L DRIVERS','VS. PRIZE LINE','CASH DEPLOYMENT','RANK MOVEMENT','function hasNativeSignature','function findNativeModule','function isSafeNativeModule','function ownsCorePortfolio'];
+          for(const x of must){if(!s.includes(x))throw new Error('Missing Stage56/58 analytics guard: '+x)}
+          if(!s.includes("if(marked&&isSafeNativeModule(marked,v,kind))return marked"))throw new Error('Marked source must be safe and signature-valid');
+          if(s.includes('let fallback=node'))throw new Error('Unsafe ancestor fallback must remain removed');
+          console.log('Stage 56/58 native analytics validation passed');
           NODE
