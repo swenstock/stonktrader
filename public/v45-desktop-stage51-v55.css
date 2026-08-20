@@ -22,9 +22,8 @@ body.stage51-modal-open-v55{overflow:hidden!important}
 .stage51-modal-close-v55{width:40px!important;height:40px!important;border:1px solid #365d70!important;border-radius:9px!important;background:#08141c!important;color:#fff!important;font-size:24px!important;cursor:pointer!important}
 .stage51-modal-content-v55{min-height:220px!important;overflow:auto!important;padding:14px!important}
 .stage51-modal-content-v55 .stage51-native-source-v55{display:block!important;visibility:visible!important;width:100%!important;max-width:none!important;height:auto!important;max-height:none!important;margin:0!important;overflow:visible!important}
-.stage51-modal-content-v55 .stage53-standard-expand-toggle-v57{appearance:none!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;min-width:84px!important;height:38px!important;padding:0 14px!important;margin:6px 8px!important;border:1px solid #dcecf4!important;border-radius:10px!important;background:#07151e!important;color:#fff!important;font-size:11px!important;font-weight:1000!important;letter-spacing:.03em!important;line-height:1!important;cursor:pointer!important;list-style:none!important;box-sizing:border-box!important}
+.stage51-modal-content-v55 .stage53-standard-expand-toggle-v57{display:none!important}
 .stage51-modal-content-v55 .stage53-standard-expand-toggle-v57::-webkit-details-marker{display:none!important}
-.stage51-modal-content-v55 .stage53-standard-expand-toggle-v57:hover,.stage51-modal-content-v55 .stage53-standard-expand-toggle-v57:focus-visible{border-color:#58bde8!important;background:#0a1d28!important;outline:none!important;box-shadow:0 0 0 2px #58bde822!important}
 .stage51-loading-v55{padding:42px 16px!important;text-align:center!important;color:#8faebb!important;font-size:13px!important;font-weight:800!important}
 }
 @media(min-width:901px) and (max-width:1100px){
