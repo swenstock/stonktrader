@@ -99,6 +99,6 @@ function buildHeader(v){
   let strip=$('.stage51-header-strip-v55',metrics);if(!strip){strip=document.createElement('div');strip.className='stage51-header-strip-v55';strip.append(button('portfolio'),button('advanced'));metrics.appendChild(strip);}
 }
 function enhance(){const v=$('#view-portfolio');if(!v)return;buildHeader(v);captureSources(v);}
-function start(){enhance();let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(enhance,60)}).observe(document.body,{childList:true,subtree:true});setInterval(enhance,1500);}
+function start(){enhance();let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(enhance,60)}).observe(document.body,{childList:true,subtree:true});}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
