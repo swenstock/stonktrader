@@ -1,27 +1,50 @@
 /* Desktop portfolio stabilization: fixed top row + larger chart. */
 @media(min-width:901px){
-#view-portfolio .trading-workspace-v47{grid-template-rows:300px auto!important;align-items:stretch!important}
-#view-portfolio .trading-workspace-v47>.holdings-card,#view-portfolio .trading-workspace-v47>.orders-activity-card{height:300px!important;max-height:300px!important;min-height:300px!important;overflow:hidden!important;box-sizing:border-box!important}
+#view-portfolio .trading-workspace-v47{grid-template-rows:320px auto!important;align-items:stretch!important}
+#view-portfolio .trading-workspace-v47>.holdings-card,#view-portfolio .trading-workspace-v47>.orders-activity-card{height:320px!important;max-height:320px!important;min-height:320px!important;overflow:hidden!important;box-sizing:border-box!important}
 #view-portfolio .trading-workspace-v47>.holdings-card{display:flex!important;flex-direction:column!important}
 #view-portfolio .trading-workspace-v47>.holdings-card>.card-head,#view-portfolio .trading-workspace-v47>.holdings-card>.positions-kpis-v45,#view-portfolio .trading-workspace-v47>.holdings-card>.positions-context-v45{flex:0 0 auto!important}
-#view-portfolio .trading-workspace-v47>.holdings-card table{display:block!important;overflow:auto!important;min-height:0!important;max-height:165px!important;width:100%!important}
+#view-portfolio .trading-workspace-v47>.holdings-card table{display:block!important;overflow:auto!important;min-height:0!important;max-height:180px!important;width:100%!important}
 #view-portfolio .trading-workspace-v47>.holdings-card thead{position:sticky!important;top:0!important;z-index:2!important;background:#06131b!important}
 #view-portfolio .trading-workspace-v47>.orders-activity-card{display:flex!important;flex-direction:column!important}
 #view-portfolio .trading-workspace-v47>.orders-activity-card>.card-head,#view-portfolio .trading-workspace-v47>.orders-activity-card>.desktop-orders-tabs-v45{flex:0 0 auto!important}
 #view-portfolio .trading-workspace-v47>.orders-activity-card>#queuedOrders,#view-portfolio .trading-workspace-v47>.orders-activity-card>#workingOrdersV45,#view-portfolio .trading-workspace-v47>.orders-activity-card>#tradeHistory{flex:1 1 auto!important;min-height:0!important;overflow:auto!important;overscroll-behavior:contain!important;padding-right:3px!important}
+
+/* Brokerage-standard desktop readability: primary values first, secondary context beneath. */
+#view-portfolio .holdings-card .card-head h2,#view-portfolio .orders-activity-card .card-head h2{font-size:20px!important;line-height:1.1!important}
+#view-portfolio .positions-kpis-v45 .port-stat span{font-size:9px!important;line-height:1.2!important;letter-spacing:.045em!important}
+#view-portfolio .positions-kpis-v45 .port-stat b{font-size:18px!important;line-height:1.15!important}
+#view-portfolio .holdings-table-v45 thead th{font-size:9px!important;line-height:1.2!important;letter-spacing:.04em!important;padding:8px 8px!important;white-space:nowrap!important}
+#view-portfolio .holdings-table-v45 tbody td{font-size:11px!important;line-height:1.25!important;padding:10px 8px!important;font-variant-numeric:tabular-nums!important;white-space:nowrap!important}
+#view-portfolio .holdings-table-v45 tbody td:first-child{font-size:12px!important;font-weight:1000!important}
+#view-portfolio .holdings-table-v45 tbody td:nth-child(5) b,#view-portfolio .holdings-table-v45 tbody td:nth-child(6) b{font-size:11px!important;line-height:1.2!important}
+#view-portfolio .holdings-table-v45 tbody td:nth-child(5) small,#view-portfolio .holdings-table-v45 tbody td:nth-child(6) small{font-size:8px!important;line-height:1.2!important;margin-top:3px!important}
+#view-portfolio .desktop-orders-tabs-v45 button{font-size:10px!important;line-height:1.15!important;min-height:42px!important}
+#view-portfolio .desktop-orders-empty-v45 b{font-size:11px!important}
+#view-portfolio .desktop-orders-empty-v45 span{font-size:9px!important;line-height:1.4!important}
+#view-portfolio .working-order-row-v45{padding:11px 10px!important}
+#view-portfolio .working-order-row-v45 small{font-size:8px!important}
+#view-portfolio .working-order-row-v45 b{font-size:11px!important}
+#view-portfolio .working-order-row-v45 span{font-size:9px!important;line-height:1.3!important}
+#view-portfolio .working-order-row-v45 button{font-size:8px!important;min-height:32px!important}
+#view-portfolio #queuedOrders>*,#view-portfolio #tradeHistory>*{font-size:10px!important;line-height:1.3!important}
+#view-portfolio #queuedOrders b,#view-portfolio #tradeHistory b{font-size:11px!important}
+#view-portfolio #queuedOrders small,#view-portfolio #queuedOrders span,#view-portfolio #queuedOrders time,#view-portfolio #tradeHistory small,#view-portfolio #tradeHistory span,#view-portfolio #tradeHistory time{font-size:9px!important;line-height:1.3!important}
+
 #view-portfolio .stage45-wide-chart-card-v50.stage43-chart-order-v48{grid-template-columns:minmax(0,1.6fr) minmax(330px,.4fr)!important;gap:16px!important}
 #view-portfolio .stage45-wide-chart-card-v50 .stage45-chart-viewport-v50,#view-portfolio .stage45-wide-chart-card-v50 .symbol-chart,#view-portfolio .stage45-wide-chart-card-v50 .chart-canvas{min-height:480px!important;height:480px!important;max-height:none!important}
 #view-portfolio .stage45-wide-chart-card-v50 .symbol-chart canvas,#view-portfolio .stage45-wide-chart-card-v50 .symbol-chart svg,#view-portfolio .stage45-wide-chart-card-v50 .chart-canvas canvas,#view-portfolio .stage45-wide-chart-card-v50 .chart-canvas svg{height:480px!important;min-height:480px!important;width:100%!important}
-#view-portfolio .queued-activity-v1{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:8px 9px;border-bottom:1px solid #18313d;background:#06131a}
-#view-portfolio .queued-activity-v1>div{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:7px;align-items:center;min-width:0}
-#view-portfolio .queued-activity-v1 small{font-size:6px;font-weight:1000;color:#73c8f4;border:1px solid #28516a;border-radius:999px;padding:3px 6px}
-#view-portfolio .queued-activity-v1 b{font-size:9px;color:#e9f6fb}
-#view-portfolio .queued-activity-v1 span{font-size:7px;color:#91a9b6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#view-portfolio .queued-activity-v1 time{font-size:6px;color:#627f8d;white-space:nowrap}
+#view-portfolio .queued-activity-v1{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;padding:10px 9px;border-bottom:1px solid #18313d;background:#06131a}
+#view-portfolio .queued-activity-v1>div{display:grid;grid-template-columns:auto auto minmax(0,1fr);gap:8px;align-items:center;min-width:0}
+#view-portfolio .queued-activity-v1 small{font-size:8px;font-weight:1000;color:#73c8f4;border:1px solid #28516a;border-radius:999px;padding:3px 6px}
+#view-portfolio .queued-activity-v1 b{font-size:11px;color:#e9f6fb}
+#view-portfolio .queued-activity-v1 span{font-size:9px;color:#91a9b6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#view-portfolio .queued-activity-v1 time{font-size:8px;color:#627f8d;white-space:nowrap}
 }
 @media(min-width:901px) and (max-width:1180px){
-#view-portfolio .trading-workspace-v47{grid-template-rows:auto!important}
-#view-portfolio .trading-workspace-v47>.holdings-card,#view-portfolio .trading-workspace-v47>.orders-activity-card{height:280px!important;max-height:280px!important;min-height:280px!important}
+/* Keep the portfolio row fixed at desktop widths; internal card scrollers absorb content growth. */
+#view-portfolio .trading-workspace-v47{grid-template-rows:320px auto!important}
+#view-portfolio .trading-workspace-v47>.holdings-card,#view-portfolio .trading-workspace-v47>.orders-activity-card{height:320px!important;max-height:320px!important;min-height:320px!important}
 #view-portfolio .stage45-wide-chart-card-v50.stage43-chart-order-v48{grid-template-columns:1fr!important}
 #view-portfolio .stage45-wide-chart-card-v50 .stage45-chart-viewport-v50,#view-portfolio .stage45-wide-chart-card-v50 .symbol-chart,#view-portfolio .stage45-wide-chart-card-v50 .chart-canvas{min-height:420px!important;height:420px!important}
 }
