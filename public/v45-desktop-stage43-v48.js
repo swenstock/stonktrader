@@ -66,6 +66,7 @@ function syncPriceWindow(ticket){
 function layoutCleanup(){
   const v=$('#view-portfolio'),grid=$('.trading-workspace-v47',v),chart=$('.chart-trade-card',v),ticket=$('.quick-trade-clean',chart);if(!v||!grid||!chart||!ticket)return;
   grid.classList.add('stage43-workspace-v48');chart.classList.add('stage43-chart-order-v48');ticket.classList.add('stage43-centered-oe-v48');
+  if(window.__sbcDesktopStage51V55){const old=$('.stage43-analysis-bottom-v48',v);if(old)old.classList.add('stage51-retired-bottom-v55');return;}
   const stage51Owned=x=>!!x.closest('.stage51-header-strip-v55,.stage51-modal-v55,.stage51-native-stash-v55,[data-stage51-source]');
   const analytics=$$('body *').filter(x=>{if(stage51Owned(x))return false;const t=norm(x.textContent);return x.children.length>0&&(t.startsWith('PORTFOLIO ANALYTICS')||t.startsWith('ADVANCED PERFORMANCE CHARTS'));});
   const unique=analytics.filter(x=>!analytics.some(y=>y!==x&&y.contains(x)));
