@@ -20,14 +20,15 @@
 #view-portfolio .stage45-workspace-v50{width:100%!important;max-width:none!important}
 #view-portfolio .contest-metrics-strip-v46,#view-portfolio .header-metrics-v45{display:grid!important;grid-template-columns:repeat(3,minmax(150px,205px)) minmax(260px,1fr)!important;gap:8px!important;align-items:stretch!important;width:100%!important}
 #view-portfolio .stage45-analysis-kpis-v50{grid-column:4!important;display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important;min-width:0!important}
+#view-portfolio .stage51-header-metrics-v55>.stage45-analysis-kpis-v50{display:none!important}
 #view-portfolio .stage45-analysis-kpis-v50 .stage43-analysis-card-v48{min-height:100%!important;margin:0!important;width:100%!important;display:flex!important;align-items:center!important;justify-content:space-between!important}
 #view-portfolio .stage43-analysis-bottom-v48{display:none!important}
 }
-@media(min-width:901px) and (max-width:1250px){
+@media(min-width:901px) and (max-width:1100px){
 #view-portfolio .stage45-wide-chart-card-v50.stage43-chart-order-v48{grid-template-columns:1fr!important}
 #view-portfolio .stage45-wide-chart-card-v50.stage43-chart-order-v48>.quick-trade-clean{grid-column:1!important;grid-row:auto!important}
 #view-portfolio .stage45-wide-chart-card-v50.stage43-chart-order-v48>*:not(.card-head):not(.quick-trade-clean):not(.desktop-chart-tools-popover-v45){grid-column:1!important}
-#view-portfolio .stage45-oe-v50{grid-column:1!important;max-width:720px!important;width:min(100%,720px)!important}
+#view-portfolio .stage45-oe-v50{grid-column:1!important;max-width:none!important;width:100%!important}
 #view-portfolio .contest-metrics-strip-v46,#view-portfolio .header-metrics-v45{grid-template-columns:repeat(3,minmax(140px,1fr))!important}
 #view-portfolio .stage45-analysis-kpis-v50{grid-column:1/-1!important}
 }

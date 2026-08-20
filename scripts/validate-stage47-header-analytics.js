@@ -7,7 +7,7 @@ const stage51=/\/v45-desktop-stage51-v55\.js\?v=(55|57|60|62)/.test(pre);
 if(stage51){
   must(pre.includes('window.__sbcDesktopStage47V52=true'),'Stage 47 runtime is explicitly retired by Stage 51');
   must(!pre.includes('/v45-desktop-stage47-v52.js?v=52'),'retired Stage 47 JS is not bootstrapped');
-  must(pre.includes('/v45-desktop-stage51-v55.css?v=55'),'Stage 51 owns the replacement header presentation');
+  must(pre.includes('/v45-desktop-stage51-v55.css?v=63'),'Stage 51 owns the replacement header presentation');
   must(pre.includes('window.__sbcDesktopStage44V49=true'),'Stage46 chart gesture lock remains intact');
   console.log('Stage 47 validator passed via Stage 51 supersession');
 }else{
