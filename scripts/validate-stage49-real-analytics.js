@@ -7,7 +7,7 @@ const stage51=/\/v45-desktop-stage51-v55\.js\?v=(55|57|60|62)/.test(pre);
 if(stage51){
   must(pre.includes('window.__sbcDesktopStage49V54=true'),'Stage 49 runtime is explicitly retired by Stage 51');
   must(!pre.includes('/v45-desktop-stage49-v54.js?v=54'),'retired Stage 49 JS is not bootstrapped');
-  must(pre.includes('/v45-desktop-stage51-v55.css?v=63')&&/\/v45-desktop-stage51-v55\.js\?v=(55|57|60|62)/.test(pre),'Stage 51 replaces Stage 49 header behavior');
+  must(/\/v45-desktop-stage51-v55\.css\?v=(63|64)/.test(pre)&&/\/v45-desktop-stage51-v55\.js\?v=(55|57|60|62)/.test(pre),'Stage 51 replaces Stage 49 header behavior');
   console.log('Stage 49 validator passed via Stage 51 supersession');
 }else{
   must(js.includes('action.classList.add(\'stage49-live-control-v54\')')&&js.includes('cell.appendChild(action)'),'real existing action node is physically rehomed');
