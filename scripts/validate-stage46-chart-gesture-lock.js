@@ -12,7 +12,8 @@ must(js.includes("e.preventDefault();e.stopPropagation();st.wheel+=e.deltaY"),'w
 must(js.includes("Math.abs(st.wheel)<90"),'wheel zoom must remain thresholded/stable');
 must(!js.includes('anchor='),'pointer-anchored chart recentering must stay retired');
 must(css.includes('overscroll-behavior:contain'),'chart viewport must contain overscroll');
-must(css.includes('grid-template-columns:minmax(0,1fr) minmax(460px,520px)'),'chart/OE split must reserve a capped OE column and give chart the remaining width');
+must(css.includes('grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr)'),'chart/OE split must use the full desktop workspace');
+must(css.includes('.stage45-oe-v50{width:100%!important;max-width:none!important;justify-self:stretch!important'),'OE must stretch to fill its workspace column');
 must(css.includes('.symbol-chart canvas')&&css.includes('width:100%!important'),'actual chart surface must fill its chart column');
 must(css.includes('height:auto!important'),'chart surface must preserve aspect ratio');
 must(pre.includes('window.__sbcDesktopStage44V49=true'),'Stage46 pre-lock must disable Stage44 runtime before bind');

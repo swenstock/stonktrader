@@ -6,12 +6,13 @@ const must=(ok,msg)=>{if(!ok){console.error('FAIL:',msg);process.exit(1)}else co
 must(js.includes("portfolio:['EQUITY CURVE','ALLOCATION BREAKDOWN','P&L DRIVERS']"),'portfolio analytics source requires the three real native chart signatures');
 must(js.includes("advanced:['VS. PRIZE LINE','CASH DEPLOYMENT','RANK MOVEMENT']"),'advanced analytics source requires the three real native chart signatures');
 must(js.includes('findNativeModule(v,kind)')&&js.includes('hasNativeSignature'),'stage51 selects native analytics modules by structural chart content');
-must(js.includes('function isSafeNativeModule')&&js.includes('function hasNativeToggle'),'native analytics reuse now also requires a real expandable module');
+must(js.includes('function isSafeNativeModule')&&js.includes('function ownsCorePortfolio'),'native analytics reuse requires signature match and core-workspace exclusion');
+must(js.includes("function isSafeNativeModule(el,v,kind){return !!el&&hasNativeSignature(el,kind)&&!ownsCorePortfolio(el,v);}"),'analytics without a native toggle can still be captured only when isolated from core portfolio');
 must(js.includes("card.classList.remove('stage52-retired-analytics-stray-v56')"),'captured native panels are un-retired before modal use');
 must(js.includes("card.removeAttribute('aria-hidden')"),'captured native panels are accessible in modal');
 must(js.includes("if(marked&&isSafeNativeModule(marked,v,kind))return marked"),'previously marked sources are reused only when they remain safe real analytics modules');
-must(js.includes('stage53-standard-expand-toggle-v57')&&js.includes("action.textContent=expanded?'COLLAPSE':'EXPAND'"),'analytics panels share one labeled expand collapse control');
+must(js.includes('stage53-standard-expand-toggle-v57')&&js.includes("action.textContent=expanded?'COLLAPSE':'EXPAND'"),'analytics panels with native toggles share one labeled expand collapse control');
 must(css.includes('.stage53-standard-expand-toggle-v57'),'shared analytics expand collapse styling is present');
 must(!/wheel|pointermove|touchmove/.test(js),'stage53 does not add chart gesture handlers');
-must(pre.includes('/v45-desktop-stage51-v55.js?v=57'),'corrected analytics owner is cache-busted');
+must(pre.includes('/v45-desktop-stage51-v55.js?v=60'),'corrected analytics owner is cache-busted');
 console.log('Stage 53 native analytics validation complete.');
