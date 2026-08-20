@@ -1,0 +1,42 @@
+/* Desktop chart workstation — reference-driven controls around the existing SBC chart engine. */
+@media(min-width:901px){
+#view-portfolio .stage43-chart-controls-v48{position:relative!important;justify-content:flex-start!important;gap:8px!important;margin:4px 0 8px!important}
+#view-portfolio .stage43-chart-controls-v48>.stage45-scale-v50,#view-portfolio .stage43-chart-controls-v48>label,#view-portfolio .stage43-chart-controls-v48>.stage43-chart-tools-v48{display:none!important}
+#view-portfolio .chart-workstation-v1{display:flex;align-items:center;gap:7px;width:100%;min-width:0;padding:5px 6px;border:1px solid #274654;border-radius:10px;background:#06131b;box-sizing:border-box}
+#view-portfolio .cw-timeframes-v1{display:flex;align-items:center;gap:4px;min-width:0}
+#view-portfolio .cw-timeframes-v1 small{margin:0 3px;color:#718e9d;font-size:6px;font-weight:1000;letter-spacing:.08em}
+#view-portfolio .chart-workstation-v1 button,#view-portfolio .chart-workstation-v1 summary{min-height:32px;height:32px;padding:5px 9px;border:1px solid transparent;border-radius:7px;background:transparent;color:#9eb9c7;font-size:8px;font-weight:1000;line-height:1;cursor:pointer;box-sizing:border-box;white-space:nowrap}
+#view-portfolio .chart-workstation-v1 button:hover,#view-portfolio .chart-workstation-v1 summary:hover{border-color:#31596b;background:#0a1e29;color:#e8f7ff}
+#view-portfolio .chart-workstation-v1 button.active{border-color:#38a7dd;background:#0a2a3b;color:#fff;box-shadow:inset 0 0 0 1px rgba(56,167,221,.15)}
+#view-portfolio .cw-menu-v1{position:relative}
+#view-portfolio .cw-menu-v1>summary{display:flex;align-items:center;gap:7px;list-style:none;border-color:#294957;background:#071923;color:#c2d8e3}
+#view-portfolio .cw-menu-v1>summary::-webkit-details-marker{display:none}
+#view-portfolio .cw-pop-v1{position:absolute;top:38px;left:0;z-index:500;min-width:170px;padding:7px;border:1px solid #34596b;border-radius:10px;background:#06141d;box-shadow:0 20px 54px rgba(0,0,0,.6)}
+#view-portfolio .cw-pop-v1 button{display:flex!important;width:100%;align-items:center;justify-content:flex-start;text-align:left;border-color:transparent!important}
+#view-portfolio .cw-indicator-pop-v1{width:310px}
+#view-portfolio .cw-indicator-pop-v1 input{width:100%;height:36px;margin-bottom:6px;padding:7px 10px;border:1px solid #315467;border-radius:8px;background:#081923;color:#e9f7fd;outline:none;font-size:10px}
+#view-portfolio .cw-indicator-pop-v1 button{height:auto!important;min-height:46px!important;display:grid!important;grid-template-columns:1fr!important;align-content:center!important;gap:2px!important;padding:8px 10px!important}
+#view-portfolio .cw-indicator-pop-v1 button b{font-size:9px;color:#e5f2f8}.cw-indicator-pop-v1 button small{font-size:7px;color:#738f9d}
+#view-portfolio .cw-indicator-pop-v1 button.active{border-color:#38a7dd!important;background:#0a2a3b!important}
+#view-portfolio .cw-fit-v1{margin-left:auto!important;border-color:#315467!important;background:#071923!important}
+#view-portfolio .cw-full-v1{border-color:#3a6376!important;background:#092033!important;color:#dff5ff!important}
+
+#view-portfolio .stage45-chart-viewport-v50{position:relative!important;min-height:480px!important}
+#view-portfolio .chart-drawing-overlay-v1{position:absolute;inset:0;z-index:38;width:100%;height:100%;pointer-events:none;overflow:visible}
+#view-portfolio .chart-drawing-overlay-v1.drawing-active-v1{pointer-events:auto;cursor:crosshair}
+#view-portfolio .cw-line-v1{stroke:#f0c54d;stroke-width:1.5;vector-effect:non-scaling-stroke;filter:drop-shadow(0 0 2px rgba(240,197,77,.25))}
+#view-portfolio .cw-measure-label-v1{fill:#f4da7f;font-size:10px;font-weight:900;paint-order:stroke;stroke:#07131b;stroke-width:3px;stroke-linejoin:round}
+#view-portfolio .chart-drawing-rail-v1{position:absolute;left:7px;top:50%;z-index:42;transform:translateY(-50%);display:flex;flex-direction:column;gap:4px;padding:5px;border:1px solid #294a5a;border-radius:9px;background:rgba(5,18,26,.94);box-shadow:0 14px 34px rgba(0,0,0,.38);pointer-events:auto}
+#view-portfolio .chart-drawing-rail-v1 button{width:31px;height:31px;min-width:31px;padding:0;border:1px solid transparent;border-radius:7px;background:transparent;color:#9db7c4;font-size:14px;font-weight:900;cursor:pointer}
+#view-portfolio .chart-drawing-rail-v1 button:hover{border-color:#315a6c;background:#0a2230;color:#fff}
+#view-portfolio .chart-drawing-rail-v1 button.active{border-color:#38a7dd;background:#0a2c3d;color:#fff}
+#view-portfolio .chart-drawing-rail-v1 [data-cw-clear]{margin-top:3px;border-top-color:#573f3d;color:#e7a49c}
+
+#view-portfolio .chart-trade-card.stage67-chart-popout .chart-workstation-v1{position:sticky;top:0;z-index:6}
+#view-portfolio .chart-trade-card.stage67-chart-popout .stage45-chart-viewport-v50{min-height:560px!important;height:560px!important}
+}
+@media(min-width:901px) and (max-width:1180px){
+#view-portfolio .chart-workstation-v1{flex-wrap:wrap}
+#view-portfolio .cw-fit-v1{margin-left:0!important}
+#view-portfolio .cw-full-v1{margin-left:auto!important}
+}
