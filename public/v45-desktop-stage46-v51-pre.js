@@ -13,4 +13,6 @@ if(!document.querySelector('script[data-sbc-stage52-v56]')){const s=document.cre
 if(!document.querySelector('link[data-sbc-prize-info-v65]')){const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-prize-info-v65.css?v=69';l.dataset.sbcPrizeInfoV65='1';document.head.appendChild(l);}
 if(!document.querySelector('script[data-sbc-prize-info-v65]')){const s=document.createElement('script');s.src='/v45-prize-info-v65.js?v=69';s.dataset.sbcPrizeInfoV65='1';s.defer=true;document.head.appendChild(s);}
 if(!document.querySelector('script[data-sbc-browser-history-v1]')){const s=document.createElement('script');s.src='/v45-browser-history-v1.js?v=1';s.dataset.sbcBrowserHistoryV1='1';s.defer=true;document.head.appendChild(s);}
+if(!document.querySelector('link[data-sbc-desktop-stability-v1]')){const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-desktop-stability-v1.css?v=1';l.dataset.sbcDesktopStabilityV1='1';document.head.appendChild(l);}
+if(!document.querySelector('script[data-sbc-queued-activity-v1]')){const s=document.createElement('script');s.src='/v45-queued-activity-v1.js?v=1';s.dataset.sbcQueuedActivityV1='1';s.defer=true;document.head.appendChild(s);}
 })();
