@@ -6,7 +6,7 @@ const { getNow } = require("../testClock");
 const requireAuth = require("../middleware/requireAuth");
 const { createPortfolio } = require("../portfolioValue");
 const { TIERS, CATEGORIES, FREEROLL_PRIZE_CONFIG } = require("../tierConfig");
-const { computePaidContest, computeFreerollRequirement } = require("../payoutEngineV2");
+const { computeCascadingContest, computeFreerollRequirement } = require("../payoutEngineV2");
 const freerollReserve = require("../freerollReserveV45");
 const { currentStonkUsdPriceMicros } = require("../contestScheduler");
 const { isWeekday, etCalendarDate, etDateTime, easternParts, currentWeekWindow } = require("../timeHelpers");
@@ -76,20 +76,27 @@ function v45Projection(priceLevel, entrantCount, categoryId) {
       reserveRequired: req.liabilityRequired,
       reserveAvailable: reserveBalance,
       reserveShortfall: Math.max(0, req.liabilityRequired - reserveBalance),
+      mainEventTickets: 0,
+      cashPrizePlaces: 0,
     };
   }
   const tierKey = PRICE_LEVEL_TO_TIER[priceLevel];
   if (!tierKey) return null;
-  const math = computePaidContest({ tierKey, fieldSize: entrantCount });
+  const math = computeCascadingContest({ tierKey, fieldSize: entrantCount });
+  const baselinePlaces = math.payouts.filter(p => p.quantity > 0 && p.ticketTier !== "main_event").length;
   return {
     engine: "v45",
     status: math.status,
+    degraded: !!math.degraded,
     paidPlaces: math.paidPlaces,
     mainEventTickets: math.mainEventTickets || 0,
-    baselineLiability: math.baselineLiability,
+    lowerTierPaidPlaces: baselinePlaces,
+    lowerTierTickets: math.payouts.filter(p => p.quantity > 0 && p.ticketTier !== "main_event").reduce((n,p)=>n+p.quantity,0),
+    cashPrizePlaces: math.cashPrizePlaces || math.payouts.filter(p => p.quantity === 0 && p.stonkBonus > 0).length,
+    lowerTierTicketLiability: math.lowerTierTicketLiability || 0,
     contestPrizePool: math.contestPrizePool,
     residualBonuses: math.residualBonuses || 0,
-    shortfall: math.shortfall || 0,
+    shortfall: 0,
   };
 }
 
@@ -252,10 +259,6 @@ router.post("/:id/enter", requireAuth, (req, res) => {
       .run(satellite.id, account.id, portfolioId, tier.poolFee);
 
     if (tier.surcharge > 0) {
-      // Mature legacy accumulator remains the single capture point during the
-      // transition. schemaV45's trigger mirrors each positive +50 into the
-      // actual V45 reserve. When V45 is enabled we deliberately do NOT turn
-      // that balance into old prizes_available counters.
       db.prepare("UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk + ? WHERE category_id = ?")
         .run(tier.surcharge, tier.categoryId);
       if (!V45_ENABLED) {
