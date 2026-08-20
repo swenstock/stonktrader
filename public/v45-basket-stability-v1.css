@@ -1,7 +1,10 @@
-/* Desktop basket editor: keep both panes and footer controls stationary while selections change. */
+/* Desktop basket editor: stable geometry without trapping review controls below the viewport. */
 @media(min-width:851px){
-.bb19-grid{height:min(760px,calc(92vh - 106px));align-items:stretch}
-.bb19-pane{height:100%;overflow:hidden}
-.bb19-stock-list,.bb19-ticket-list{flex:1 1 auto;max-height:none!important;min-height:0}
-.bb19-bottom{flex:0 0 auto}
+.bb19-modal{height:min(900px,94vh);max-height:94vh}
+#bb19Body{min-height:0;flex:1 1 auto;overflow:hidden}
+.bb19-grid{height:100%;min-height:0;align-items:stretch;overflow:hidden}
+.bb19-pane{height:100%;min-height:0;overflow:hidden}
+.bb19-stock-list,.bb19-ticket-list{flex:1 1 0;max-height:none!important;min-height:120px;overflow:auto;scrollbar-gutter:stable both-edges}
+.bb19-allocation-tools,.bb19-cash-size,.bb19-bottom{flex:0 0 auto}
+.bb19-bottom{position:sticky;bottom:0;z-index:3;background:#061119;padding-bottom:2px}
 }
