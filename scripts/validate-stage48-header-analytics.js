@@ -3,11 +3,11 @@ const js=fs.readFileSync('public/v45-desktop-stage48-v53.js','utf8');
 const css=fs.readFileSync('public/v45-desktop-stage48-v53.css','utf8');
 const pre=fs.readFileSync('public/v45-desktop-stage46-v51-pre.js','utf8');
 function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
-const stage51=/\/v45-desktop-stage51-v55\.js\?v=(55|57|60)/.test(pre);
+const stage51=/\/v45-desktop-stage51-v55\.js\?v=(55|57|60|62)/.test(pre);
 if(stage51){
   must(pre.includes('window.__sbcDesktopStage48V53=true'),'Stage 48 runtime is explicitly retired by Stage 51');
   must(!pre.includes('/v45-desktop-stage48-v53.js?v=53'),'retired Stage 48 JS is not bootstrapped');
-  must(pre.includes('/v45-desktop-stage51-v55.css?v=55')&&/\/v45-desktop-stage51-v55\.js\?v=(55|57|60)/.test(pre),'Stage 51 replaces Stage 48 header behavior');
+  must(pre.includes('/v45-desktop-stage51-v55.css?v=55')&&/\/v45-desktop-stage51-v55\.js\?v=(55|57|60|62)/.test(pre),'Stage 51 replaces Stage 48 header behavior');
   console.log('Stage 48 validator passed via Stage 51 supersession');
 }else{
   must(js.includes('stage48-analytics-proxy-v53'),'compact proxy cards exist');
