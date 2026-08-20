@@ -66,7 +66,8 @@ function syncPriceWindow(ticket){
 function layoutCleanup(){
   const v=$('#view-portfolio'),grid=$('.trading-workspace-v47',v),chart=$('.chart-trade-card',v),ticket=$('.quick-trade-clean',chart);if(!v||!grid||!chart||!ticket)return;
   grid.classList.add('stage43-workspace-v48');chart.classList.add('stage43-chart-order-v48');ticket.classList.add('stage43-centered-oe-v48');
-  const analytics=$$('body *').filter(x=>{const t=norm(x.textContent);return x.children.length>0&&(t.startsWith('PORTFOLIO ANALYTICS')||t.startsWith('ADVANCED PERFORMANCE CHARTS'));});
+  const stage51Owned=x=>!!x.closest('.stage51-header-strip-v55,.stage51-modal-v55,.stage51-native-stash-v55,[data-stage51-source]');
+  const analytics=$$('body *').filter(x=>{if(stage51Owned(x))return false;const t=norm(x.textContent);return x.children.length>0&&(t.startsWith('PORTFOLIO ANALYTICS')||t.startsWith('ADVANCED PERFORMANCE CHARTS'));});
   const unique=analytics.filter(x=>!analytics.some(y=>y!==x&&y.contains(x)));
   if(unique.length){let bottom=$('.stage43-analysis-bottom-v48',v);if(!bottom){bottom=document.createElement('section');bottom.className='stage43-analysis-bottom-v48';bottom.innerHTML='<header><small>ANALYSIS</small><h3>PORTFOLIO ANALYSIS</h3></header><div></div>';grid.after(bottom);}const host=$(':scope>div',bottom);unique.forEach(x=>{x.classList.add('stage43-analysis-card-v48');if(x.parentElement!==host)host.appendChild(x);});}
 }
