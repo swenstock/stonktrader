@@ -92,7 +92,8 @@
   }
 
   function enhance(){compactPath();decorateFloorCTA();setupStepViewer();sessionAnchors();contestAnchors();headerBroker();tightenLabels();}
-  const observer=new MutationObserver(()=>{sessionAnchors();contestAnchors();decorateFloorCTA();});
-  const start=()=>{enhance();syncVisiblePrices();observer.observe(document.body,{childList:true,subtree:true});};
+  function runtimeEnhance(){sessionAnchors();contestAnchors();decorateFloorCTA();}
+  window.__sbcMobileV3Enhance=runtimeEnhance;
+  const start=()=>{enhance();syncVisiblePrices();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();

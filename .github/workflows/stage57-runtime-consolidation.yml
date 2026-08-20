@@ -1,0 +1,23 @@
+name: Stage 57 Runtime Consolidation
+on:
+  pull_request:
+    paths:
+      - 'public/v45-desktop-stage43-v48.js'
+      - 'public/v45-desktop-stage51-v55.js'
+      - 'public/v45-desktop-stage52-v56.js'
+      - 'public/v45-mobile-v3.js'
+      - 'public/v45-mobile-v5.js'
+      - 'public/v45-mobile-v6.js'
+      - 'public/v45-mobile-v7.js'
+      - 'scripts/validate-runtime-consolidation.js'
+      - '.github/workflows/stage57-runtime-consolidation.yml'
+  workflow_dispatch:
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/validate-runtime-consolidation.js

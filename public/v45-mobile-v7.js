@@ -34,6 +34,7 @@ function hydrateMyContests(){
   [60,180,420,900].forEach(ms=>setTimeout(()=>{if(!myHasContent()){tryMyRenderFunctions();const c=nativeMyControl();if(c){try{c.click();}catch(_){}}}},ms));
 }
 function wireMyNavigation(){
+  if(document.documentElement.dataset.mobileMyNavV7)return;document.documentElement.dataset.mobileMyNavV7='1';
   document.addEventListener('click',e=>{
     const b=e.target.closest?.('[data-mobile-view-v5="my"]');
     if(!b)return;
@@ -79,6 +80,7 @@ function enrichHow(){
 }
 
 function ensure(){hydrateMyContests();enrichHow();}
-function start(){wireMyNavigation();ensure();let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(ensure,100)}).observe(document.body,{childList:true,subtree:true});setTimeout(ensure,300);setTimeout(ensure,1000);}
+window.__sbcMobileV7Enhance=ensure;
+function start(){wireMyNavigation();ensure();setTimeout(ensure,300);setTimeout(ensure,1000);}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();

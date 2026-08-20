@@ -1,12 +1,14 @@
 const fs=require('fs');
 const js=fs.readFileSync('public/v45-desktop-stage52-v56.js','utf8');
+const owner=fs.readFileSync('public/v45-desktop-stage51-v55.js','utf8');
 const css=fs.readFileSync('public/v45-desktop-stage52-v56.css','utf8');
 const pre=fs.readFileSync('public/v45-desktop-stage46-v51-pre.js','utf8');
 const must=(ok,msg)=>{if(!ok){console.error('FAIL:',msg);process.exit(1)}else console.log('PASS:',msg)};
-must(js.includes('stage52-retired-analytics-stray-v56'),'stray analytics remnants are retired');
+must(!js.includes('retireStrays')&&!js.includes('MutationObserver')&&!js.includes('setInterval'),'stage52 is layout-only and no longer competes for analytics ownership');
+must(owner.includes('retireLegacyDescriptions')&&owner.includes('stage51-retired-description-v56'),'Stage51 sole owner retires legacy analytics descriptions');
 must(js.includes('stage52-primary-workspace-v56'),'primary workspace focus class is applied');
 must(!/wheel|pointermove|touchmove/.test(js),'stage52 does not add chart gesture handlers');
-must(css.includes('stage52-retired-analytics-stray-v56{display:none'),'stray analytics content is hidden');
+must(css.includes('stage52-retired-analytics-stray-v56{display:none'),'legacy stray-hide CSS remains available for previously marked nodes');
 must(css.includes('stage43-chart-order-v48{margin-top:10px'),'chart/order workspace remains compact');
 must(css.includes('stage51-native-stash-v55{display:none'),'native analytics stash stays out of page flow');
 must(pre.includes('/v45-desktop-stage52-v56.css?v=56'),'stage52 css bootstrapped');
