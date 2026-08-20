@@ -16,10 +16,11 @@ must(confirm.includes("showView('portfolio')")||confirm.includes('showView("port
 must(shell.includes("getElementById('quoteSymbolLabel').textContent")&&shell.includes("getElementById('quotePrice').textContent")&&shell.includes("getElementById('quotePosition').textContent"),'native refreshTradeTicket requires quote nodes');
 must(!tradeUi.includes('el.remove()'),'trade UI polish does not delete native quote nodes');
 must(tradeUi.includes('trade-native-hidden-v28'),'trade UI polish hides duplicate quote block non-destructively');
+must(!tradeUi.includes('MutationObserver'),'trade UI polish remains event-driven instead of document-wide mutation scanning');
 must(tradeCss.includes('.quick-quote-box{display:none!important}'),'duplicate quote box remains visually hidden');
 must(!actions.includes("removeAttribute('onclick')")&&!actions.includes('removeAttribute("onclick")'),'entry action dock does not remove native onclick');
 must(!actions.includes('firstTradeLink'),'entry action dock does not proxy through a stock trade link');
 must(!server.includes('v45-entry-flow-v25.js'),'legacy trade interception script is not injected');
 must(server.includes('v45-mycontest-native-position-v27.js'),'native positioning helper is injected');
-must(server.includes('v45-trade-ui-polish-v16.js?v=28'),'DOM-safe trade polish v28 is injected');
+must(/v45-trade-ui-polish-v16\.js\?v=\d+/.test(server),'DOM-safe trade polish is injected');
 console.log('Native My Contests flow regression checks passed.');
