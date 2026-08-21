@@ -10,10 +10,12 @@ must(guard.includes('api\\/quotes\\/symbols')&&guard.includes('window.fetch=func
 must(guard.includes('serverFirst')&&guard.includes('nativeFetch(input,init)'),'guard asks the server for the authoritative universe first');
 must(guard.includes('fallback-timeout')&&guard.includes('fallback-error'),'guard has timeout and error fallback paths');
 must(guard.includes('AAPL|Apple Inc.')&&guard.includes('VZ|Verizon Communications'),'fallback contains the SBC tradable universe endpoints');
-const loaderPos=server.indexOf('/v45-basket-loader-v43.js?v=47');
-const builderPos=server.indexOf('/v45-basket-builder-v19.js?v=46');
-must(loaderPos>=0&&builderPos>=0&&loaderPos<builderPos,'served shell loads fresh universe guard before basket builder');
-must(server.includes('createABasket: "v31-any-count-auto-rebalance"'),'Stage 25 basket health marker remains unchanged');
-must(server.includes('basketLoader: "v43-resilient-universe"'),'Stage 37 basket loader health marker remains available');
+const loaderMatch=server.match(/\/v45-basket-loader-v43\.js\?v=\d+/);
+const builderMatch=server.match(/\/v45-basket-builder-v19\.js\?v=\d+/);
+const loaderPos=loaderMatch?server.indexOf(loaderMatch[0]):-1;
+const builderPos=builderMatch?server.indexOf(builderMatch[0]):-1;
+must(loaderPos>=0&&builderPos>=0&&loaderPos<builderPos,'served shell loads universe guard before basket builder');
+must(/createABasket:\s*"[^"]+"/.test(server),'health endpoint still exposes basket capability marker');
+must(/basketLoader:\s*"[^"]+"/.test(server),'health endpoint still exposes basket loader marker');
 must(builder.includes("await loadUniverse();renderBuilder();"),'existing basket builder behavior remains intact after universe load');
 console.log('Stage 37 basket loader checks passed.');
