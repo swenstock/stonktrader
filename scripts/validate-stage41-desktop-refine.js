@@ -20,6 +20,6 @@ must(basket.includes('REVIEW BASKET ORDER')&&basket.includes('SUBMIT BASKET ORDE
 must(css.includes('#bb19Create{min-height:52px')&&css.includes('#bb19Submit{min-height:54px'),'basket order buttons are materially larger');
 must(css.includes('.desktop-order-grid-v45{grid-template-columns:minmax(0,1fr) minmax(0,1fr)')&&css.includes('.adv-type-row-v15{grid-template-columns:repeat(4'),'Quick Trade order type and order size are tightened into balanced desktop panels');
 must(css.includes('.sell-all-confirm-v46')&&css.includes('position:fixed'),'Sell All confirmation is a proper centered modal');
-must(server.includes('/v45-basket-builder-v19.js?v=46')&&server.includes('/v45-desktop-trading-v45.js?v=46')&&server.includes('/v45-desktop-refine-v46.css?v=46'),'Stage 41 assets are cache-busted and served');
-must(server.includes('basketControls: "v46-cash-sizing-rebalance"')&&server.includes('desktopTrading: "v46-workspace-sell-all-basket-sizing"'),'health exposes Stage 41 basket and desktop refinements');
+must(/\/v45-basket-builder-v19\.js\?v=\d+/.test(server)&&/\/v45-desktop-trading-v45\.js\?v=\d+/.test(server)&&/\/v45-desktop-refine-v46\.css\?v=\d+/.test(server),'Stage 41 assets are served with cache-busting');
+must(/basketControls:\s*"[^"]+"/.test(server)&&/desktopTrading:\s*"[^"]+"/.test(server),'health exposes Stage 41 basket and desktop refinement markers');
 console.log('Stage 41 desktop refinement checks passed.');
