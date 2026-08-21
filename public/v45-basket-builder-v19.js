@@ -3,7 +3,7 @@
 if(window.__sbcBasketBuilderV19)return;window.__sbcBasketBuilderV19=true;
 const MIN=1,STEP=.5,MINW=.5,BASKET_STORE='sbcLastBasketV45',$=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 let modal=null,state={universe:[],selected:new Map(),filter:'',defaultPct:10,cashPct:100,isDegen:false,portfolio:null,queueMode:false,review:null,stockScroll:0};
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const sym=x=>String(x?.symbol||x||'').trim().toUpperCase();
 const name=x=>String(x?.name||x?.company||x?.companyName||'').trim();
 const rows=()=>[...state.selected.values()];
