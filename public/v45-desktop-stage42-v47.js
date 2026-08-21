@@ -34,6 +34,12 @@ function moveInsights(){const cards=$$('body *').filter(x=>/STONKBROKER GAME FIL
 function tradingLayout(){const v=$('#view-portfolio'),hold=$('.holdings-card',v),orders=$('.orders-activity-card',v),chart=$('.chart-trade-card',v);if(!v||!hold||!orders||!chart)return;let grid=$('.trading-workspace-v47',v);if(!grid){grid=document.createElement('div');grid.className='trading-workspace-v47';const anchor=$('.contest-metrics-strip-v46',v)||$('.trade-head',v);anchor?.after(grid)}[hold,orders,chart].forEach(x=>{if(x.parentElement!==grid)grid.appendChild(x)});chart.classList.add('chart-order-split-v47');}
 function enlargeBasket(){const b=$('#view-portfolio .quick-ticket-launch');if(b)b.classList.add('quick-ticket-launch-v47')}
 function enhance(){enhanceBasketLibrary();moveInsights();tradingLayout();enlargeBasket()}
-function start(){enhance();let timer;new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(enhance,80)}).observe(document.body,{childList:true,subtree:true});setInterval(enhance,1200)}
+function syncBasketUi(){enhanceBasketLibrary();tradingLayout();enlargeBasket()}
+function start(){
+  enhance();
+  document.addEventListener('click',syncBasketUi,false);
+  document.addEventListener('input',e=>{if(e.target.closest?.('.bb19-overlay'))enhanceBasketLibrary();},false);
+  document.addEventListener('change',e=>{if(e.target.closest?.('.bb19-overlay'))enhanceBasketLibrary();},false);
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
