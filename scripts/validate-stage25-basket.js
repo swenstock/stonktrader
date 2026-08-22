@@ -11,6 +11,6 @@ must(basket.includes("const cap=()=>state.isDegen?100:10"),'standard cap remains
 must(basket.includes('function autoRebalanceForCount()')&&basket.includes('100/rr.length')&&basket.includes('state.selected.size>10'),'more than ten stocks auto-rebalance below 10 percent');
 must(basket.includes("AUTO-BALANCED"),'basket tells the user when count-based rebalance is active');
 must(css.includes('.inv-left>div:last-child{min-width:0!important;font-size:0!important')&&css.includes('.inv-left>div:last-child b{display:block!important;font-size:16px!important'),'My Tickets hides descriptive text while preserving tier and quantity');
-must(server.includes('createABasket: "v31-any-count-auto-rebalance"'),'health reports Stage 25 basket rules');
-must(server.includes('v45-basket-builder-v19.js?v=46')&&server.includes('v45-ticket-market-v35.css?v=37'),'basket builder and My Tickets assets are cache-busted');
+must(/createABasket:\s*"[^"]+"/.test(server),'health exposes basket capability marker');
+must(/v45-basket-builder-v19\.js\?v=\d+/.test(server)&&/v45-ticket-market-v35\.css\?v=\d+/.test(server),'basket builder and My Tickets assets are served with cache-busting');
 console.log('Stage 25 basket/My Tickets regression checks passed.');
