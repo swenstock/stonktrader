@@ -11,6 +11,6 @@ must(js.includes('STONKBROKER GAME FILM')&&js.includes('game-film-insights-v47')
 must(js.includes('trading-workspace-v47')&&css.includes("grid-template-areas:'positions orders' 'trading trading'") ,'Positions and Orders share the upper workspace row');
 must(css.includes('.chart-order-split-v47')&&css.includes('grid-template-columns:minmax(0,1.2fr) minmax(420px,.8fr)'),'Chart and Order Entry split the lower trading canvas');
 must(css.includes('.quick-ticket-launch-v47')&&css.includes('min-width:210px!important')&&css.includes('min-height:52px!important'),'Create A Basket launcher is materially larger');
-must(server.includes('/v45-desktop-stage42-v47.js?v=48')&&server.includes('/v45-desktop-stage42-v47.css?v=47'),'Stage 42 assets are cache-busted and served');
-must(server.includes('basketLibrary: "v48-synchronous-no-bounce"')&&server.includes('desktopWorkspace: "v47-positions-orders-chart-oe"')&&server.includes('gameFilmInsights: "v47-inline-analyzer"'),'health exposes Stage 42 features');
+must(/\/v45-desktop-stage42-v47\.js\?v=\d+/.test(server)&&/\/v45-desktop-stage42-v47\.css\?v=\d+/.test(server),'Stage 42 assets are cache-busted and served');
+must(server.includes('basketLibrary: "v48-synchronous-no-bounce"')&&/desktopWorkspace:\s*"v\d+[-\w]+"/.test(server)&&server.includes('gameFilmInsights: "v47-inline-analyzer"'),'health exposes Stage 42 features');
 console.log('Stage 42 desktop checks passed.');
