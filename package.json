@@ -1,12 +1,12 @@
 {
   "name": "stonk-paper-trading",
   "version": "1.0.0",
-  "description": "Multi-user paper trading contest platform \u2014 real accounts, simulated/live-ready quotes, positions, leaderboard, and contest lifecycle.",
+  "description": "Multi-user paper trading contest platform — real accounts, simulated/live-ready quotes, positions, leaderboard, and contest lifecycle.",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "npm run test:payout && npm run test:settlement && npm run test:settlement-db && npm run test:scheduler-v45 && npm run test:freeroll-reserve && npm run test:rake && npm run test:quotes && npm run test:clock && npm run test:orders-blotter && npm run test:chart-stage2 && npm run test:chart-stage3 && npm run test:chart-stage4 && npm run test:chart-stage4-drawings && npm run test:chart-stage5 && npm run test:chart-stage6 && npm run test:chart-stage6-overlays",
+    "test": "npm run test:payout && npm run test:settlement && npm run test:settlement-db && npm run test:scheduler-v45 && npm run test:freeroll-reserve && npm run test:rake && npm run test:quotes && npm run test:clock && npm run test:orders-blotter && npm run test:chart-stage2 && npm run test:chart-stage3 && npm run test:chart-stage4 && npm run test:chart-stage4-drawings && npm run test:chart-stage5 && npm run test:chart-stage6 && npm run test:chart-stage6-overlays && npm run test:chart-stage103-axis-lock",
     "test:payout": "node server/payoutEngineV2.test.js",
     "test:settlement": "node server/satelliteSettlementPlanV45.test.js",
     "test:settlement-db": "node server/satelliteSettlementExecutorV45.test.js",
@@ -22,7 +22,8 @@
     "test:chart-stage4-drawings": "node server/advancedChartStage4Drawing.test.js",
     "test:chart-stage5": "node server/advancedChartStage5.test.js",
     "test:chart-stage6": "node server/advancedChartStage6.test.js",
-    "test:chart-stage6-overlays": "node server/advancedChartStage6Overlays.test.js"
+    "test:chart-stage6-overlays": "node server/advancedChartStage6Overlays.test.js",
+    "test:chart-stage103-axis-lock": "node server/advancedChartStage103AxisLock.test.js"
   },
   "engines": {
     "node": ">=22.5.0"
