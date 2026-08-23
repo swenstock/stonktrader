@@ -1,7 +1,6 @@
 // v45-advanced-chart-v1.js
-// Standalone additive advanced chart. Stage 4 adds selection, edit handles,
-// handle dragging, and delete for the existing trend/horizontal drawings.
-// Stage 2 DPR/layering and Stage 3 axes/OHLC/price-scale behavior remain intact.
+// Standalone additive advanced chart. Stage 5 persists layout state per symbol/interval.
+// Stage 4 drawing management, Stage 3 axes/OHLC/price-scale, and Stage 2 layering remain intact.
 
 (() => {
   'use strict';
@@ -16,6 +15,90 @@
   };
   const TIMEFRAMES = ['1m', '5m', '15m', '1h', '1D'];
   const DRAWING_HIT_PX = 6;
+  const LAYOUT_PREFIX = 'sbc-chart-layout:';
+  const DEFAULT_CHART_TYPE = 'candles';
+
+  function layoutStorageKey(symbol, interval) {
+    return `${LAYOUT_PREFIX}${String(symbol || '').trim().toUpperCase()}:${String(interval || '').trim()}`;
+  }
+
+  function defaultLayoutState({ chartType = DEFAULT_CHART_TYPE, interval = '5m' } = {}) {
+    return { drawings: [], activeIndicators: [], chartType, interval };
+  }
+
+  function cloneDrawings(drawings) {
+    return Array.isArray(drawings) ? drawings.map(d => ({
+      type: d?.type,
+      points: Array.isArray(d?.points) ? d.points.map(point => ({ time: Number(point.time), price: Number(point.price) })) : [],
+    })) : [];
+  }
+
+  function validDrawing(d) {
+    if (!d || !['trend','horizontal'].includes(d.type) || !Array.isArray(d.points)) return false;
+    const required = d.type === 'trend' ? 2 : 1;
+    if (d.points.length < required) return false;
+    return d.points.slice(0, required).every(p => Number.isFinite(Number(p?.time)) && Number.isFinite(Number(p?.price)));
+  }
+
+  function createLayoutPayload({ drawings, activeIndicators, chartType, interval } = {}) {
+    const indicatorArray = Array.isArray(activeIndicators) ? activeIndicators : [...(activeIndicators || [])];
+    return {
+      drawings: cloneDrawings(drawings).filter(validDrawing),
+      activeIndicators: indicatorArray.filter(id => typeof id === 'string'),
+      chartType: ['candles','line'].includes(chartType) ? chartType : DEFAULT_CHART_TYPE,
+      interval: typeof interval === 'string' && interval ? interval : '5m',
+    };
+  }
+
+  function loadLayout(storage, symbol, interval, defaults = {}) {
+    const fallback = defaultLayoutState({ chartType: defaults.chartType, interval: defaults.interval || interval });
+    try {
+      const raw = storage?.getItem?.(layoutStorageKey(symbol, interval));
+      if (!raw) return fallback;
+      const parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return fallback;
+      if (!Array.isArray(parsed.drawings) || !parsed.drawings.every(validDrawing)) return fallback;
+      if (!Array.isArray(parsed.activeIndicators) || !parsed.activeIndicators.every(id => typeof id === 'string')) return fallback;
+      if (!['candles','line'].includes(parsed.chartType)) return fallback;
+      if (parsed.interval !== interval) return fallback;
+      return createLayoutPayload(parsed);
+    } catch (_) {
+      return fallback;
+    }
+  }
+
+  function saveLayout(storage, symbol, interval, state) {
+    try {
+      const payload = createLayoutPayload(state);
+      storage?.setItem?.(layoutStorageKey(symbol, interval), JSON.stringify(payload));
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function makeDebouncedLayoutSaver({ storage, delay = 400, setTimer = setTimeout, clearTimer = clearTimeout } = {}) {
+    let timer = null;
+    let pending = null;
+    const flush = () => {
+      if (timer !== null) clearTimer(timer);
+      timer = null;
+      if (!pending) return false;
+      const next = pending;
+      pending = null;
+      return saveLayout(storage, next.symbol, next.interval, next.state);
+    };
+    return {
+      schedule(symbol, interval, state) {
+        pending = { symbol, interval, state: createLayoutPayload(state) };
+        if (timer !== null) clearTimer(timer);
+        timer = setTimer(() => { timer = null; const next = pending; pending = null; if (next) saveLayout(storage, next.symbol, next.interval, next.state); }, delay);
+      },
+      flush,
+      cancel() { if (timer !== null) clearTimer(timer); timer = null; pending = null; },
+      get hasPending() { return !!pending; },
+    };
+  }
 
   function makeView(canvasWidth, canvasHeight, padding) {
     const state = { minTime: 0, maxTime: 1, minPrice: 0, maxPrice: 1, w: canvasWidth, h: canvasHeight, pad: padding };
@@ -183,7 +266,7 @@
     return -1;
   }
 
-  function makeDrawingInteractionController({ drawings, view, layers, threshold = DRAWING_HIT_PX }) {
+  function makeDrawingInteractionController({ drawings, view, layers, threshold = DRAWING_HIT_PX, onChange = () => {} }) {
     let selectedIndex = -1;
     let activeHandle = -1;
     return {
@@ -204,6 +287,7 @@
       pointerMove(x, y) {
         if (selectedIndex >= 0 && activeHandle >= 0) {
           dragDrawingHandle(drawings, selectedIndex, activeHandle, view, x, y);
+          onChange('drawing-drag');
           layers.renderScene();
           return 'drag';
         }
@@ -214,6 +298,7 @@
       deleteSelected() {
         selectedIndex = deleteSelectedDrawing(drawings, selectedIndex);
         activeHandle = -1;
+        onChange('drawing-delete');
         layers.renderScene();
         return selectedIndex;
       },
@@ -388,15 +473,44 @@
     const overlay=buildOverlay(), bgCanvas=overlay.querySelector('#advChartCanvas'), fgCanvas=overlay.querySelector('#advChartOverlayCanvas'), priceZone=overlay.querySelector('.adv-price-scale-zone'), statusEl=overlay.querySelector('#advChartStatus');
     const bgCtx=bgCanvas.getContext('2d'), fgCtx=fgCanvas.getContext('2d');
     const pad={l:8,r:56,t:10,b:24}, view=makeView(0,0,pad);
-    let bars=[],symbol='AAPL',interval='5m',chartType='candles',tool='pointer',pendingPoint=null,panStart=null,panDomainStart=null,priceDrag=null,mouseX=-1,mouseY=-1;
+    let bars=[],symbol='AAPL',interval='5m',chartType=DEFAULT_CHART_TYPE,tool='pointer',pendingPoint=null,panStart=null,panDomainStart=null,priceDrag=null,mouseX=-1,mouseY=-1;
     const drawings=[];
     let interactions;
+    let restoredIndicatorIds=[];
+    let indicatorBridge=null;
+    const layoutSaver=makeDebouncedLayoutSaver({storage:window.localStorage,delay:400});
+
+    const currentLayoutState=()=>({drawings,activeIndicators:indicatorBridge?.getActive?.() ?? restoredIndicatorIds,chartType,interval});
+    const scheduleLayoutSave=()=>layoutSaver.schedule(symbol,interval,currentLayoutState());
+    const syncToolbarState=()=>{
+      overlay.querySelectorAll('[data-tf]').forEach(b=>b.classList.toggle('active',b.dataset.tf===interval));
+      overlay.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',b.dataset.type===chartType));
+    };
+    const applyLayout=(layout)=>{
+      drawings.splice(0,drawings.length,...cloneDrawings(layout.drawings));
+      interactions?.setSelectedIndex(-1);
+      chartType=layout.chartType;
+      interval=layout.interval;
+      restoredIndicatorIds=[...layout.activeIndicators];
+      indicatorBridge?.setActive?.(restoredIndicatorIds);
+      syncToolbarState();
+    };
+    const restoreCurrentLayout=()=>{
+      const layout=loadLayout(window.localStorage,symbol,interval,{chartType:DEFAULT_CHART_TYPE,interval});
+      applyLayout(layout);
+      return layout;
+    };
+    const registerIndicatorPersistence=bridge=>{
+      indicatorBridge=bridge || null;
+      if(indicatorBridge?.setActive) indicatorBridge.setActive(restoredIndicatorIds);
+      return [...restoredIndicatorIds];
+    };
 
     const layers=makeLayerRenderer({
       drawBackground(){ drawChart(bgCtx,view,bars,{chartType,showVolume:true,drawings,interval,selectedIndex:interactions?.selectedIndex ?? -1}); },
       drawForeground(){ const {w,h}=view.state; fgCtx.clearRect(0,0,w,h); if(mouseX>=0) drawCrosshair(fgCtx,view,mouseX,mouseY,bars,interval); },
     });
-    interactions=makeDrawingInteractionController({drawings,view,layers});
+    interactions=makeDrawingInteractionController({drawings,view,layers,onChange:scheduleLayoutSave});
 
     function resize(){
       const rect=bgCanvas.parentElement.getBoundingClientRect();
@@ -404,15 +518,15 @@
       layers.renderScene();
     }
     function autoDomain(){ if(!bars.length)return; const times=bars.map(b=>b.t),prices=bars.flatMap(b=>[b.high,b.low]),p2=(Math.max(...prices)-Math.min(...prices))*.08||1; view.setDomain(Math.min(...times),Math.max(...times),Math.min(...prices)-p2,Math.max(...prices)+p2); }
-    async function loadData(){ statusEl.textContent=`Loading ${symbol} ${interval}…`; bars=await fetchBars(symbol,interval); autoDomain(); statusEl.textContent=`${symbol} · ${interval} · ${chartType} · ${bars.length} bars`; layers.renderScene(); }
+    async function loadData({restoreLayout=true}={}){ if(restoreLayout)restoreCurrentLayout(); statusEl.textContent=`Loading ${symbol} ${interval}…`; bars=await fetchBars(symbol,interval); autoDomain(); statusEl.textContent=`${symbol} · ${interval} · ${chartType} · ${bars.length} bars`; layers.renderScene(); }
 
     overlay.querySelector('.adv-toolbar').addEventListener('click',e=>{
       const btn=e.target.closest('button'); if(!btn)return;
-      if(btn.dataset.tf){ interval=btn.dataset.tf; overlay.querySelectorAll('[data-tf]').forEach(b=>b.classList.toggle('active',b===btn)); loadData(); }
-      else if(btn.dataset.type){ chartType=btn.dataset.type; overlay.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',b===btn)); layers.renderScene(); }
+      if(btn.dataset.tf){ layoutSaver.flush(); interval=btn.dataset.tf; loadData(); }
+      else if(btn.dataset.type){ chartType=btn.dataset.type; overlay.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',b===btn)); scheduleLayoutSave(); layers.renderScene(); }
       else if(btn.dataset.tool){ tool=btn.dataset.tool; pendingPoint=null; if(tool!=='pointer') interactions.setSelectedIndex(-1); overlay.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b===btn)); layers.renderScene(); }
-      else if(btn.dataset.action==='clear'){ drawings.splice(0,drawings.length); interactions.setSelectedIndex(-1); layers.renderScene(); }
-      else if(btn.dataset.action==='close') overlay.classList.remove('open');
+      else if(btn.dataset.action==='clear'){ drawings.splice(0,drawings.length); interactions.setSelectedIndex(-1); scheduleLayoutSave(); layers.renderScene(); }
+      else if(btn.dataset.action==='close'){ layoutSaver.flush(); overlay.classList.remove('open'); }
     });
 
     fgCanvas.addEventListener('mousedown',e=>{
@@ -423,9 +537,9 @@
         return;
       }
       const point={time:view.xToTime(x),price:view.yToPrice(y)};
-      if(tool==='horizontal'){ drawings.push({type:'horizontal',points:[point]}); interactions.setSelectedIndex(drawings.length-1); layers.renderScene(); return; }
+      if(tool==='horizontal'){ drawings.push({type:'horizontal',points:[point]}); interactions.setSelectedIndex(drawings.length-1); scheduleLayoutSave(); layers.renderScene(); return; }
       if(!pendingPoint){ pendingPoint=point; return; }
-      drawings.push({type:'trend',points:[pendingPoint,point]}); pendingPoint=null; interactions.setSelectedIndex(drawings.length-1); layers.renderScene();
+      drawings.push({type:'trend',points:[pendingPoint,point]}); pendingPoint=null; interactions.setSelectedIndex(drawings.length-1); scheduleLayoutSave(); layers.renderScene();
     });
 
     priceZone.addEventListener('mousedown',e=>{ e.preventDefault(); e.stopPropagation(); priceDrag={startY:e.clientY,domain:{minPrice:view.state.minPrice,maxPrice:view.state.maxPrice}}; });
@@ -448,12 +562,13 @@
     fgCanvas.addEventListener('wheel',e=>{ e.preventDefault(); const factor=e.deltaY>0?1.1:.9,{minTime,maxTime}=view.state,center=view.xToTime(mouseX); view.setDomain(center-(center-minTime)*factor,center+(maxTime-center)*factor,view.state.minPrice,view.state.maxPrice); layers.renderScene(); },{passive:false});
     fgCanvas.addEventListener('dblclick',()=>{autoDomain();layers.renderScene();});
 
-    trigger.addEventListener('click',()=>{ const selected=String(document.querySelector('#view-portfolio .trade-search-row select,#view-portfolio .quick-trade-clean select,#view-portfolio select')?.value||'').trim().toUpperCase(),changed=selected&&selected!==symbol; if(selected)symbol=selected; overlay.classList.add('open'); requestAnimationFrame(()=>{resize();if(!bars.length||changed)loadData();}); });
+    trigger.addEventListener('click',()=>{ const selected=String(document.querySelector('#view-portfolio .trade-search-row select,#view-portfolio .quick-trade-clean select,#view-portfolio select')?.value||'').trim().toUpperCase(),changed=selected&&selected!==symbol; if(changed)layoutSaver.flush(); if(selected)symbol=selected; overlay.classList.add('open'); requestAnimationFrame(()=>{resize();if(!bars.length||changed)loadData();}); });
     window.addEventListener('resize',()=>{if(overlay.classList.contains('open'))resize();});
-    window.__advChartV1Internals={makeView,resizeLayersForDpr,makeLayerRenderer,medianVisibleSpacingMs,candleWidthPx,nearestBarByTime,priceScaleDomainFromDrag,hitTestDrawing,hitTestHandle,dragDrawingHandle,deleteSelectedDrawing,makeDrawingInteractionController,drawChart,drawCrosshair,fetchBars,offlineSampleBars,view,layers,drawings,interactions};
+    window.addEventListener('beforeunload',()=>layoutSaver.flush());
+    window.__advChartV1Internals={makeView,resizeLayersForDpr,makeLayerRenderer,medianVisibleSpacingMs,candleWidthPx,nearestBarByTime,priceScaleDomainFromDrag,hitTestDrawing,hitTestHandle,dragDrawingHandle,deleteSelectedDrawing,makeDrawingInteractionController,drawChart,drawCrosshair,fetchBars,offlineSampleBars,layoutStorageKey,createLayoutPayload,loadLayout,saveLayout,makeDebouncedLayoutSaver,view,layers,drawings,interactions,registerIndicatorPersistence,notifyLayoutChanged:scheduleLayoutSave,restoreCurrentLayout,flushLayout:()=>layoutSaver.flush(),getLayoutState:currentLayoutState};
   }
 
-  const exported={makeView,resizeLayersForDpr,makeLayerRenderer,medianVisibleSpacingMs,candleWidthPx,nearestBarByTime,priceScaleDomainFromDrag,formatAxisTime,hitTestDrawing,hitTestHandle,dragDrawingHandle,deleteSelectedDrawing,makeDrawingInteractionController};
+  const exported={makeView,resizeLayersForDpr,makeLayerRenderer,medianVisibleSpacingMs,candleWidthPx,nearestBarByTime,priceScaleDomainFromDrag,formatAxisTime,hitTestDrawing,hitTestHandle,dragDrawingHandle,deleteSelectedDrawing,makeDrawingInteractionController,layoutStorageKey,defaultLayoutState,createLayoutPayload,loadLayout,saveLayout,makeDebouncedLayoutSaver};
   if(typeof module!=='undefined'&&module.exports) module.exports=exported;
   if(typeof document!=='undefined'){ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true}); else start(); }
 })();
