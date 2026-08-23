@@ -1,22 +1,7 @@
 // v45-advanced-chart-v1.js
-//
-// STANDALONE, ADDITIVE ONLY. Does not modify, wrap, or touch any existing
-// function, view, or the existing SVG chart in #view-portfolio. Injects its
-// own trigger button and opens as a full-screen overlay. Built as Stage 1
-// per the spec's own recommended development order: candles, volume, real
-// pan/zoom, crosshair, timeframe switching. Not the full drawing/indicator
-// suite from the spec - that's staged deliberately, not an oversight.
-//
-// Data: fetches from GET /api/quotes/bars (new, additive route - see
-// routes_quoteBars.js). Falls back to a clearly-labeled offline sample if
-// that endpoint isn't reachable, so the chart is never silently blank.
-//
-// Coordinate architecture (per spec section 36 - this is the part that
-// matters most to get right): every drawing object is stored as
-// {time, price} pairs, NEVER as raw pixel x/y. Pixel positions are only
-// ever computed at render time via timeToX/xToTime/priceToY/yToPrice. This
-// is what makes drawings track correctly through pan/zoom instead of
-// drifting.
+// Standalone additive advanced chart. Stage 2 adds DPR-safe canvas sizing and
+// true layered rendering while preserving the Stage 1 market-coordinate model
+// and time-only wheel zoom.
 
 (() => {
   'use strict';
@@ -57,6 +42,31 @@
         const { minPrice, maxPrice, h, pad } = state;
         const span = maxPrice - minPrice || 1;
         return minPrice + (1 - (y - pad.t) / (h - pad.t - pad.b)) * span;
+      },
+    };
+  }
+
+  function resizeLayersForDpr({ canvases, contexts, view, width, height, dpr }) {
+    const scale = Number(dpr) > 0 ? Number(dpr) : 1;
+    for (let i = 0; i < canvases.length; i++) {
+      const canvas = canvases[i], ctx = contexts[i];
+      canvas.width = Math.max(1, Math.round(width * scale));
+      canvas.height = Math.max(1, Math.round(height * scale));
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    }
+    view.setSize(width, height);
+  }
+
+  function makeLayerRenderer({ drawBackground, drawForeground }) {
+    return {
+      renderScene() {
+        drawBackground();
+        drawForeground();
+      },
+      renderCrosshair() {
+        drawForeground();
       },
     };
   }
@@ -182,9 +192,11 @@
       .adv-toolbar .sep{width:1px;height:20px;background:${COLORS.line};margin:0 4px}
       .adv-toolbar .grow{flex:1}
       .adv-close{background:transparent!important;border:0!important;font-size:16px!important;padding:4px 10px!important}
-      .adv-chart-wrap{flex:1;position:relative}
-      #advChartCanvas{width:100%;height:100%;display:block;cursor:crosshair}
-      .adv-status{position:absolute;bottom:8px;left:12px;font-size:10px;color:${COLORS.muted}}
+      .adv-chart-wrap{flex:1;position:relative;overflow:hidden}
+      #advChartCanvas,#advChartOverlayCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+      #advChartCanvas{pointer-events:none}
+      #advChartOverlayCanvas{z-index:1;cursor:crosshair}
+      .adv-status{position:absolute;z-index:2;bottom:8px;left:12px;font-size:10px;color:${COLORS.muted};pointer-events:none}
     `;
     document.head.appendChild(s);
   }
@@ -208,6 +220,7 @@
       </div>
       <div class="adv-chart-wrap">
         <canvas id="advChartCanvas"></canvas>
+        <canvas id="advChartOverlayCanvas"></canvas>
         <div class="adv-status" id="advChartStatus">Loading…</div>
       </div>`;
     document.body.appendChild(overlay);
@@ -222,9 +235,11 @@
     document.body.appendChild(trigger);
 
     const overlay = buildOverlay();
-    const canvas = overlay.querySelector('#advChartCanvas');
+    const bgCanvas = overlay.querySelector('#advChartCanvas');
+    const fgCanvas = overlay.querySelector('#advChartOverlayCanvas');
     const statusEl = overlay.querySelector('#advChartStatus');
-    const ctx = canvas.getContext('2d');
+    const bgCtx = bgCanvas.getContext('2d');
+    const fgCtx = fgCanvas.getContext('2d');
 
     const pad = { l: 8, r: 56, t: 10, b: 24 };
     const view = makeView(0, 0, pad);
@@ -235,11 +250,28 @@
     let panStart = null, panDomainStart = null;
     let mouseX = -1, mouseY = -1;
 
+    const layers = makeLayerRenderer({
+      drawBackground() {
+        drawChart(bgCtx, view, bars, { chartType, showVolume: true, drawings });
+      },
+      drawForeground() {
+        const { w, h } = view.state;
+        fgCtx.clearRect(0, 0, w, h);
+        if (mouseX >= 0) drawCrosshair(fgCtx, view, mouseX, mouseY);
+      },
+    });
+
     function resize() {
-      const rect = canvas.parentElement.getBoundingClientRect();
-      canvas.width = rect.width; canvas.height = rect.height;
-      view.setSize(rect.width, rect.height);
-      render();
+      const rect = bgCanvas.parentElement.getBoundingClientRect();
+      resizeLayersForDpr({
+        canvases: [bgCanvas, fgCanvas],
+        contexts: [bgCtx, fgCtx],
+        view,
+        width: rect.width,
+        height: rect.height,
+        dpr: window.devicePixelRatio || 1,
+      });
+      layers.renderScene();
     }
 
     function autoDomain() {
@@ -250,17 +282,12 @@
       view.setDomain(Math.min(...times), Math.max(...times), Math.min(...prices) - pad2, Math.max(...prices) + pad2);
     }
 
-    function render() {
-      drawChart(ctx, view, bars, { chartType, showVolume: true, drawings });
-      if (mouseX >= 0) drawCrosshair(ctx, view, mouseX, mouseY);
-    }
-
     async function loadData() {
       statusEl.textContent = `Loading ${symbol} ${interval}…`;
       bars = await fetchBars(symbol, interval);
       autoDomain();
       statusEl.textContent = `${symbol} · ${interval} · ${chartType} · ${bars.length} bars`;
-      render();
+      layers.renderScene();
     }
 
     overlay.querySelector('.adv-toolbar').addEventListener('click', (e) => {
@@ -272,19 +299,19 @@
       } else if (btn.dataset.type) {
         chartType = btn.dataset.type;
         overlay.querySelectorAll('[data-type]').forEach(b => b.classList.toggle('active', b === btn));
-        render();
+        layers.renderScene();
       } else if (btn.dataset.tool) {
         tool = btn.dataset.tool; pendingPoint = null;
         overlay.querySelectorAll('[data-tool]').forEach(b => b.classList.toggle('active', b === btn));
       } else if (btn.dataset.action === 'clear') {
-        drawings = []; render();
+        drawings = []; layers.renderScene();
       } else if (btn.dataset.action === 'close') {
         overlay.classList.remove('open');
       }
     });
 
-    canvas.addEventListener('mousedown', (e) => {
-      const rect = canvas.getBoundingClientRect();
+    fgCanvas.addEventListener('mousedown', (e) => {
+      const rect = fgCanvas.getBoundingClientRect();
       const x = e.clientX - rect.left, y = e.clientY - rect.top;
       if (tool === 'pointer') {
         panStart = { x, y }; panDomainStart = { ...view.state };
@@ -292,36 +319,39 @@
       }
       const point = { time: view.xToTime(x), price: view.yToPrice(y) };
       if (tool === 'horizontal') {
-        drawings.push({ type: 'horizontal', points: [point] }); render(); return;
+        drawings.push({ type: 'horizontal', points: [point] }); layers.renderScene(); return;
       }
       if (!pendingPoint) { pendingPoint = point; return; }
       drawings.push({ type: 'trend', points: [pendingPoint, point] });
-      pendingPoint = null; render();
+      pendingPoint = null; layers.renderScene();
     });
 
     window.addEventListener('mousemove', (e) => {
-      const rect = canvas.getBoundingClientRect();
+      if (!overlay.classList.contains('open')) return;
+      const rect = fgCanvas.getBoundingClientRect();
       mouseX = e.clientX - rect.left; mouseY = e.clientY - rect.top;
       if (panStart) {
         const dx = mouseX - panStart.x;
         const span = panDomainStart.maxTime - panDomainStart.minTime;
         const shift = -(dx / (view.state.w - pad.l - pad.r)) * span;
         view.setDomain(panDomainStart.minTime + shift, panDomainStart.maxTime + shift, panDomainStart.minPrice, panDomainStart.maxPrice);
+        layers.renderScene();
+      } else {
+        layers.renderCrosshair();
       }
-      if (overlay.classList.contains('open')) render();
     });
     window.addEventListener('mouseup', () => { panStart = null; });
 
-    canvas.addEventListener('wheel', (e) => {
+    fgCanvas.addEventListener('wheel', (e) => {
       e.preventDefault();
       const factor = e.deltaY > 0 ? 1.1 : 0.9;
       const { minTime, maxTime } = view.state;
       const center = view.xToTime(mouseX);
       view.setDomain(center - (center - minTime) * factor, center + (maxTime - center) * factor, view.state.minPrice, view.state.maxPrice);
-      render();
+      layers.renderScene();
     }, { passive: false });
 
-    canvas.addEventListener('dblclick', () => { autoDomain(); render(); });
+    fgCanvas.addEventListener('dblclick', () => { autoDomain(); layers.renderScene(); });
 
     trigger.addEventListener('click', () => {
       const selected = String(document.querySelector('#view-portfolio .trade-search-row select,#view-portfolio .quick-trade-clean select,#view-portfolio select')?.value || '').trim().toUpperCase();
@@ -332,7 +362,11 @@
     });
     window.addEventListener('resize', () => { if (overlay.classList.contains('open')) resize(); });
 
-    window.__advChartV1Internals = { makeView, drawChart, fetchBars, offlineSampleBars };
+    window.__advChartV1Internals = { makeView, resizeLayersForDpr, makeLayerRenderer, drawChart, drawCrosshair, fetchBars, offlineSampleBars, view, layers };
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { makeView, resizeLayersForDpr, makeLayerRenderer };
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
