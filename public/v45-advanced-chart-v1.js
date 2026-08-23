@@ -349,6 +349,100 @@
     return bars;
   }
 
+
+  function normalizeSymbol(symbol) {
+    return String(symbol || '').trim().toUpperCase();
+  }
+
+  function positionAverageCost(portfolio, symbol) {
+    const target = normalizeSymbol(symbol);
+    if (!target || !portfolio) return null;
+    const list = Array.isArray(portfolio.positions) ? portfolio.positions : [];
+    const fromList = list.find(p => normalizeSymbol(p?.symbol) === target);
+    if (fromList) {
+      const qty = Number(fromList.quantity ?? fromList.shares ?? 0);
+      const avg = Number(fromList.avgCost ?? fromList.avg_cost ?? fromList.averageCost ?? fromList.avgPrice);
+      if (qty > 0 && Number.isFinite(avg) && avg > 0) return avg;
+    }
+    const holdings = portfolio.holdings || {};
+    const key = Object.keys(holdings).find(k => normalizeSymbol(k) === target);
+    const h = key ? holdings[key] : null;
+    if (!h) return null;
+    const qty = Number(h.shares ?? h.quantity ?? 0);
+    let avg = Number(h.avgCost ?? h.avg_cost ?? h.averageCost ?? h.avgPrice);
+    if ((!Number.isFinite(avg) || avg <= 0) && qty > 0 && Number.isFinite(Number(h.costBasis))) avg = Number(h.costBasis) / qty;
+    return qty > 0 && Number.isFinite(avg) && avg > 0 ? avg : null;
+  }
+
+  function workingOrderTriggerPrice(order) {
+    const type = String(order?.orderType || '').toLowerCase();
+    if (type === 'limit') return Number(order.limitPrice);
+    if (type === 'stop' || type === 'stop_limit') return Number(order.stopPrice);
+    return NaN;
+  }
+
+  function buildAccountOverlays(symbol, orders = [], portfolio = null) {
+    const target = normalizeSymbol(symbol);
+    if (!target) return [];
+    const overlays = [];
+    const avgCost = positionAverageCost(portfolio, target);
+    if (Number.isFinite(avgCost)) overlays.push({ kind:'position', symbol:target, price:avgCost, label:`AVG COST $${avgCost.toFixed(2)}` });
+    for (const order of Array.isArray(orders) ? orders : []) {
+      if (String(order?.status) !== 'pending' || String(order?.orderType) === 'market' || normalizeSymbol(order?.symbol) !== target) continue;
+      const price = workingOrderTriggerPrice(order);
+      if (!(Number.isFinite(price) && price > 0)) continue;
+      const side = String(order?.side || 'buy').toLowerCase() === 'sell' ? 'sell' : 'buy';
+      const type = String(order.orderType || '').replace('_',' ').toUpperCase();
+      overlays.push({ kind:'order', symbol:target, price, side, orderType:String(order.orderType || ''), orderId:order.id ?? null, label:`${side.toUpperCase()} ${type} $${price.toFixed(2)}` });
+    }
+    return overlays;
+  }
+
+  function drawAccountOverlays(ctx, view, overlays = []) {
+    const { w, pad } = view.state;
+    const drawn = [];
+    ctx.save?.();
+    ctx.font = '10px Inter, system-ui, sans-serif';
+    ctx.setLineDash([6,4]);
+    for (const overlay of overlays) {
+      const price = Number(overlay?.price);
+      if (!Number.isFinite(price)) continue;
+      const y = view.priceToY(price);
+      if (!Number.isFinite(y) || y < view.state.pad.t || y > view.state.h - view.state.pad.b) continue;
+      const color = overlay.kind === 'position' ? COLORS.gold : overlay.side === 'sell' ? COLORS.down : COLORS.up;
+      ctx.strokeStyle = color; ctx.fillStyle = color; ctx.lineWidth = overlay.kind === 'position' ? 1.5 : 1.25; ctx.globalAlpha = .9;
+      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke(); ctx.globalAlpha = 1;
+      const label = String(overlay.label || '');
+      if (label) {
+        const width = Math.min(190, Math.max(78, (ctx.measureText?.(label)?.width || label.length * 6) + 12));
+        const x = Math.max(pad.l + 4, w - pad.r - width - 4);
+        ctx.fillStyle = 'rgba(13,17,23,.88)'; ctx.fillRect(x, y - 9, width, 18); ctx.fillStyle = color; ctx.fillText(label, x + 6, y + 3);
+      }
+      drawn.push({ ...overlay, y });
+    }
+    ctx.setLineDash([]); ctx.globalAlpha = 1; ctx.restore?.();
+    return drawn;
+  }
+
+  function makeAccountOverlayController({ getOrders = () => [], getPortfolio = () => null, refreshOrders = async () => {}, render = () => {} } = {}) {
+    let symbol = '', overlays = [], generation = 0;
+    const clear = nextSymbol => { symbol = normalizeSymbol(nextSymbol); generation++; overlays = []; render(overlays); return overlays; };
+    const refresh = async ({ clearFirst = false } = {}) => {
+      const requestedSymbol = symbol, requestGeneration = generation;
+      if (clearFirst) { overlays = []; render(overlays); }
+      try {
+        await refreshOrders();
+        if (requestGeneration !== generation || requestedSymbol !== symbol) return overlays;
+        overlays = buildAccountOverlays(requestedSymbol, getOrders(), getPortfolio());
+      } catch (_) {
+        if (requestGeneration === generation && requestedSymbol === symbol) overlays = [];
+      }
+      if (requestGeneration === generation && requestedSymbol === symbol) render(overlays);
+      return overlays;
+    };
+    return { get symbol(){return symbol;}, get overlays(){return overlays;}, setSymbol(nextSymbol){clear(nextSymbol);return refresh();}, refresh, clear };
+  }
+
   function drawTimeAxis(ctx, view, interval) {
     const { w, h, pad, minTime, maxTime } = view.state;
     ctx.fillStyle = COLORS.muted;
@@ -416,6 +510,8 @@
       bars.forEach((b,i)=>{ const x=view.timeToX(b.t), y=view.priceToY(b.close); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
       ctx.stroke(); ctx.lineWidth=1;
     }
+
+    drawAccountOverlays(ctx, view, opts.accountOverlays || []);
 
     for (let i = 0; i < opts.drawings.length; i++) {
       const d = opts.drawings[i], selected = i === opts.selectedIndex;
@@ -493,7 +589,9 @@
     let interactions;
     let restoredIndicatorIds=[];
     let indicatorBridge=null;
+    let accountOverlayController=null;
     const layoutSaver=makeDebouncedLayoutSaver({storage:window.localStorage,delay:400});
+    const currentPortfolioState=()=>{ try { return typeof currentPortfolio==='function' ? currentPortfolio() : null; } catch (_) { return null; } };
 
     const currentLayoutState=()=>({drawings,activeIndicators:indicatorBridge?.getActive?.() ?? restoredIndicatorIds,chartType,interval});
     const scheduleLayoutSave=()=>layoutSaver.schedule(symbol,interval,currentLayoutState());
@@ -522,10 +620,16 @@
     };
 
     const layers=makeLayerRenderer({
-      drawBackground(){ drawChart(bgCtx,view,bars,{chartType,showVolume:true,drawings,interval,selectedIndex:interactions?.selectedIndex ?? -1}); },
+      drawBackground(){ drawChart(bgCtx,view,bars,{chartType,showVolume:true,drawings,interval,selectedIndex:interactions?.selectedIndex ?? -1,accountOverlays:accountOverlayController?.overlays || []}); },
       drawForeground(){ const {w,h}=view.state; fgCtx.clearRect(0,0,w,h); if(mouseX>=0) drawCrosshair(fgCtx,view,mouseX,mouseY,bars,interval); },
     });
     interactions=makeDrawingInteractionController({drawings,view,layers,onChange:scheduleLayoutSave});
+    accountOverlayController=makeAccountOverlayController({
+      getOrders:()=>window.SBCAdvancedOrdersV15?.cache?.orders || [],
+      getPortfolio:currentPortfolioState,
+      refreshOrders:async()=>{ await window.SBCAdvancedOrdersV15?.refresh?.(false); },
+      render:()=>layers.renderScene(),
+    });
 
     function resize(){
       const rect=bgCanvas.parentElement.getBoundingClientRect();
@@ -533,7 +637,16 @@
       layers.renderScene();
     }
     function autoDomain(){ if(!bars.length)return; const times=bars.map(b=>b.t),prices=bars.flatMap(b=>[b.high,b.low]),p2=(Math.max(...prices)-Math.min(...prices))*.08||1; view.setDomain(Math.min(...times),Math.max(...times),Math.min(...prices)-p2,Math.max(...prices)+p2); }
-    async function loadData({restoreLayout=true}={}){ if(restoreLayout)restoreCurrentLayout(); statusEl.textContent=`Loading ${symbol} ${interval}…`; bars=await fetchBars(symbol,interval); autoDomain(); statusEl.textContent=`${symbol} · ${interval} · ${chartType} · ${bars.length} bars`; layers.renderScene(); }
+    async function loadData({restoreLayout=true}={}){
+      if(restoreLayout)restoreCurrentLayout();
+      statusEl.textContent=`Loading ${symbol} ${interval}…`;
+      const overlayRefresh=accountOverlayController.setSymbol(symbol);
+      bars=await fetchBars(symbol,interval);
+      autoDomain();
+      statusEl.textContent=`${symbol} · ${interval} · ${chartType} · ${bars.length} bars`;
+      layers.renderScene();
+      await overlayRefresh;
+    }
 
     overlay.querySelector('.adv-toolbar').addEventListener('click',e=>{
       const btn=e.target.closest('button'); if(!btn)return;
@@ -593,11 +706,13 @@
 
     trigger.addEventListener('click',()=>{ const selected=String(document.querySelector('#view-portfolio .trade-search-row select,#view-portfolio .quick-trade-clean select,#view-portfolio select')?.value||'').trim().toUpperCase(),changed=selected&&selected!==symbol; if(changed)layoutSaver.flush(); if(selected)symbol=selected; overlay.classList.add('open'); requestAnimationFrame(()=>{resize();if(!bars.length||changed)loadData();}); });
     window.addEventListener('resize',()=>{if(overlay.classList.contains('open'))resize();});
+    window.addEventListener('sbc:orders-change',()=>{if(overlay.classList.contains('open'))accountOverlayController.refresh();});
+    setInterval(()=>{if(overlay.classList.contains('open'))accountOverlayController.refresh();},3000);
     window.addEventListener('beforeunload',()=>layoutSaver.flush());
-    window.__advChartV1Internals={makeView,resizeLayersForDpr,makeLayerRenderer,medianVisibleSpacingMs,candleWidthPx,nearestBarByTime,priceScaleDomainFromDrag,panDomainFromDrag,hitTestDrawing,hitTestHandle,dragDrawingHandle,deleteSelectedDrawing,makeDrawingInteractionController,drawChart,drawCrosshair,fetchBars,offlineSampleBars,layoutStorageKey,createLayoutPayload,loadLayout,saveLayout,makeDebouncedLayoutSaver,view,layers,drawings,interactions,registerIndicatorPersistence,notifyLayoutChanged:scheduleLayoutSave,restoreCurrentLayout,flushLayout:()=>layoutSaver.flush(),getLayoutState:currentLayoutState};
+    window.__advChartV1Internals={makeView,resizeLayersForDpr,makeLayerRenderer,medianVisibleSpacingMs,candleWidthPx,nearestBarByTime,priceScaleDomainFromDrag,panDomainFromDrag,hitTestDrawing,hitTestHandle,dragDrawingHandle,deleteSelectedDrawing,makeDrawingInteractionController,positionAverageCost,workingOrderTriggerPrice,buildAccountOverlays,drawAccountOverlays,makeAccountOverlayController,drawChart,drawCrosshair,fetchBars,offlineSampleBars,layoutStorageKey,createLayoutPayload,loadLayout,saveLayout,makeDebouncedLayoutSaver,view,layers,drawings,interactions,accountOverlayController,registerIndicatorPersistence,notifyLayoutChanged:scheduleLayoutSave,restoreCurrentLayout,flushLayout:()=>layoutSaver.flush(),getLayoutState:currentLayoutState};
   }
 
-  const exported={makeView,resizeLayersForDpr,makeLayerRenderer,medianVisibleSpacingMs,candleWidthPx,nearestBarByTime,priceScaleDomainFromDrag,panDomainFromDrag,formatAxisTime,hitTestDrawing,hitTestHandle,dragDrawingHandle,deleteSelectedDrawing,makeDrawingInteractionController,layoutStorageKey,defaultLayoutState,createLayoutPayload,loadLayout,saveLayout,makeDebouncedLayoutSaver};
+  const exported={makeView,resizeLayersForDpr,makeLayerRenderer,medianVisibleSpacingMs,candleWidthPx,nearestBarByTime,priceScaleDomainFromDrag,panDomainFromDrag,formatAxisTime,hitTestDrawing,hitTestHandle,dragDrawingHandle,deleteSelectedDrawing,makeDrawingInteractionController,positionAverageCost,workingOrderTriggerPrice,buildAccountOverlays,drawAccountOverlays,makeAccountOverlayController,layoutStorageKey,defaultLayoutState,createLayoutPayload,loadLayout,saveLayout,makeDebouncedLayoutSaver};
   if(typeof module!=='undefined'&&module.exports) module.exports=exported;
   if(typeof document!=='undefined'){ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true}); else start(); }
 })();
