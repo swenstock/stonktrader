@@ -1,7 +1,7 @@
 // v45-advanced-chart-v1.js
-// Standalone additive advanced chart. Stage 3 adds time-axis labels,
-// OHLC-under-cursor + crosshair time label, price-scale drag zoom, and
-// median visible-bar candle spacing. Stage 2 DPR/layering remains intact.
+// Standalone additive advanced chart. Stage 4 adds selection, edit handles,
+// handle dragging, and delete for the existing trend/horizontal drawings.
+// Stage 2 DPR/layering and Stage 3 axes/OHLC/price-scale behavior remain intact.
 
 (() => {
   'use strict';
@@ -15,6 +15,7 @@
     up: '#2ee6a6', down: '#ff5d5d', gold: '#ffc928', blue: '#2ab5ff', crosshair: 'rgba(255,255,255,.35)',
   };
   const TIMEFRAMES = ['1m', '5m', '15m', '1h', '1D'];
+  const DRAWING_HIT_PX = 6;
 
   function makeView(canvasWidth, canvasHeight, padding) {
     const state = { minTime: 0, maxTime: 1, minPrice: 0, maxPrice: 1, w: canvasWidth, h: canvasHeight, pad: padding };
@@ -126,6 +127,104 @@
     return d.toLocaleString([], { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
   }
 
+  function pointSegmentDistancePx(px, py, ax, ay, bx, by) {
+    const dx = bx - ax, dy = by - ay;
+    const denom = dx * dx + dy * dy;
+    if (!denom) return Math.hypot(px - ax, py - ay);
+    const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / denom));
+    const qx = ax + t * dx, qy = ay + t * dy;
+    return Math.hypot(px - qx, py - qy);
+  }
+
+  function hitTestDrawing(drawings, view, x, y, threshold = DRAWING_HIT_PX) {
+    for (let i = drawings.length - 1; i >= 0; i--) {
+      const d = drawings[i];
+      if (!d || !Array.isArray(d.points) || !d.points.length) continue;
+      if (d.type === 'trend' && d.points.length >= 2) {
+        const a = d.points[0], b = d.points[1];
+        const dist = pointSegmentDistancePx(
+          x, y,
+          view.timeToX(a.time), view.priceToY(a.price),
+          view.timeToX(b.time), view.priceToY(b.price)
+        );
+        if (dist <= threshold) return i;
+      } else if (d.type === 'horizontal') {
+        const dist = Math.abs(y - view.priceToY(d.points[0].price));
+        if (dist <= threshold) return i;
+      }
+    }
+    return -1;
+  }
+
+  function hitTestHandle(drawings, selectedIndex, view, x, y, threshold = DRAWING_HIT_PX) {
+    const d = drawings[selectedIndex];
+    if (!d || !Array.isArray(d.points)) return -1;
+    for (let i = 0; i < d.points.length; i++) {
+      const p = d.points[i];
+      const hx = d.type === 'horizontal' ? view.state.w - view.state.pad.r - 16 : view.timeToX(p.time);
+      const hy = view.priceToY(p.price);
+      if (Math.hypot(x - hx, y - hy) <= threshold + 2) return i;
+    }
+    return -1;
+  }
+
+  function dragDrawingHandle(drawings, selectedIndex, handleIndex, view, x, y) {
+    const d = drawings[selectedIndex];
+    const p = d?.points?.[handleIndex];
+    if (!p) return false;
+    p.time = view.xToTime(x);
+    p.price = view.yToPrice(y);
+    return true;
+  }
+
+  function deleteSelectedDrawing(drawings, selectedIndex) {
+    if (selectedIndex < 0 || selectedIndex >= drawings.length) return -1;
+    drawings.splice(selectedIndex, 1);
+    return -1;
+  }
+
+  function makeDrawingInteractionController({ drawings, view, layers, threshold = DRAWING_HIT_PX }) {
+    let selectedIndex = -1;
+    let activeHandle = -1;
+    return {
+      get selectedIndex() { return selectedIndex; },
+      get activeHandle() { return activeHandle; },
+      setSelectedIndex(index) { selectedIndex = index; activeHandle = -1; return selectedIndex; },
+      pointerDown(x, y) {
+        const handle = hitTestHandle(drawings, selectedIndex, view, x, y, threshold);
+        if (handle >= 0) {
+          activeHandle = handle;
+          return { type:'handle', selectedIndex, handleIndex:handle };
+        }
+        selectedIndex = hitTestDrawing(drawings, view, x, y, threshold);
+        activeHandle = -1;
+        layers.renderScene();
+        return { type:'selection', selectedIndex };
+      },
+      pointerMove(x, y) {
+        if (selectedIndex >= 0 && activeHandle >= 0) {
+          dragDrawingHandle(drawings, selectedIndex, activeHandle, view, x, y);
+          layers.renderScene();
+          return 'drag';
+        }
+        layers.renderCrosshair();
+        return 'crosshair';
+      },
+      pointerUp() { activeHandle = -1; },
+      deleteSelected() {
+        selectedIndex = deleteSelectedDrawing(drawings, selectedIndex);
+        activeHandle = -1;
+        layers.renderScene();
+        return selectedIndex;
+      },
+      clearSelection() {
+        selectedIndex = -1;
+        activeHandle = -1;
+        layers.renderScene();
+      },
+    };
+  }
+
   async function fetchBars(symbol, interval) {
     try {
       const r = await fetch(`/api/quotes/bars?symbol=${encodeURIComponent(symbol)}&interval=${interval}`, { cache: 'no-store' });
@@ -162,6 +261,16 @@
       ctx.fillText(formatAxisTime(t, interval), x, h - 7);
     }
     ctx.textAlign = 'start';
+  }
+
+  function drawHandle(ctx, x, y) {
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = COLORS.bg;
+    ctx.fill();
+    ctx.strokeStyle = COLORS.gold;
+    ctx.lineWidth = 2;
+    ctx.stroke();
   }
 
   function drawChart(ctx, view, bars, opts) {
@@ -208,12 +317,21 @@
       ctx.stroke(); ctx.lineWidth=1;
     }
 
-    ctx.strokeStyle=COLORS.blue; ctx.lineWidth=1.5;
-    for (const d of opts.drawings) {
+    for (let i = 0; i < opts.drawings.length; i++) {
+      const d = opts.drawings[i], selected = i === opts.selectedIndex;
+      ctx.strokeStyle = selected ? COLORS.gold : COLORS.blue;
+      ctx.lineWidth = selected ? 2.75 : 1.5;
       if (d.type === 'trend') {
-        const [a,b]=d.points; ctx.beginPath(); ctx.moveTo(view.timeToX(a.time),view.priceToY(a.price)); ctx.lineTo(view.timeToX(b.time),view.priceToY(b.price)); ctx.stroke();
+        const [a,b]=d.points;
+        ctx.beginPath(); ctx.moveTo(view.timeToX(a.time),view.priceToY(a.price)); ctx.lineTo(view.timeToX(b.time),view.priceToY(b.price)); ctx.stroke();
+        if (selected) {
+          drawHandle(ctx, view.timeToX(a.time), view.priceToY(a.price));
+          drawHandle(ctx, view.timeToX(b.time), view.priceToY(b.price));
+        }
       } else if (d.type === 'horizontal') {
-        const y=view.priceToY(d.points[0].price); ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+        const p=d.points[0], y=view.priceToY(p.price);
+        ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
+        if (selected) drawHandle(ctx, w-pad.r-16, y);
       }
     }
     ctx.lineWidth=1;
@@ -270,12 +388,15 @@
     const overlay=buildOverlay(), bgCanvas=overlay.querySelector('#advChartCanvas'), fgCanvas=overlay.querySelector('#advChartOverlayCanvas'), priceZone=overlay.querySelector('.adv-price-scale-zone'), statusEl=overlay.querySelector('#advChartStatus');
     const bgCtx=bgCanvas.getContext('2d'), fgCtx=fgCanvas.getContext('2d');
     const pad={l:8,r:56,t:10,b:24}, view=makeView(0,0,pad);
-    let bars=[],symbol='AAPL',interval='5m',chartType='candles',tool='pointer',drawings=[],pendingPoint=null,panStart=null,panDomainStart=null,priceDrag=null,mouseX=-1,mouseY=-1;
+    let bars=[],symbol='AAPL',interval='5m',chartType='candles',tool='pointer',pendingPoint=null,panStart=null,panDomainStart=null,priceDrag=null,mouseX=-1,mouseY=-1;
+    const drawings=[];
+    let interactions;
 
     const layers=makeLayerRenderer({
-      drawBackground(){ drawChart(bgCtx,view,bars,{chartType,showVolume:true,drawings,interval}); },
+      drawBackground(){ drawChart(bgCtx,view,bars,{chartType,showVolume:true,drawings,interval,selectedIndex:interactions?.selectedIndex ?? -1}); },
       drawForeground(){ const {w,h}=view.state; fgCtx.clearRect(0,0,w,h); if(mouseX>=0) drawCrosshair(fgCtx,view,mouseX,mouseY,bars,interval); },
     });
+    interactions=makeDrawingInteractionController({drawings,view,layers});
 
     function resize(){
       const rect=bgCanvas.parentElement.getBoundingClientRect();
@@ -289,18 +410,22 @@
       const btn=e.target.closest('button'); if(!btn)return;
       if(btn.dataset.tf){ interval=btn.dataset.tf; overlay.querySelectorAll('[data-tf]').forEach(b=>b.classList.toggle('active',b===btn)); loadData(); }
       else if(btn.dataset.type){ chartType=btn.dataset.type; overlay.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',b===btn)); layers.renderScene(); }
-      else if(btn.dataset.tool){ tool=btn.dataset.tool; pendingPoint=null; overlay.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b===btn)); }
-      else if(btn.dataset.action==='clear'){ drawings=[]; layers.renderScene(); }
+      else if(btn.dataset.tool){ tool=btn.dataset.tool; pendingPoint=null; if(tool!=='pointer') interactions.setSelectedIndex(-1); overlay.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b===btn)); layers.renderScene(); }
+      else if(btn.dataset.action==='clear'){ drawings.splice(0,drawings.length); interactions.setSelectedIndex(-1); layers.renderScene(); }
       else if(btn.dataset.action==='close') overlay.classList.remove('open');
     });
 
     fgCanvas.addEventListener('mousedown',e=>{
       const rect=fgCanvas.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top;
-      if(tool==='pointer'){ panStart={x,y}; panDomainStart={...view.state}; return; }
+      if(tool==='pointer'){
+        const action=interactions.pointerDown(x,y);
+        if(action.type==='selection' && action.selectedIndex < 0){ panStart={x,y}; panDomainStart={...view.state}; }
+        return;
+      }
       const point={time:view.xToTime(x),price:view.yToPrice(y)};
-      if(tool==='horizontal'){ drawings.push({type:'horizontal',points:[point]}); layers.renderScene(); return; }
+      if(tool==='horizontal'){ drawings.push({type:'horizontal',points:[point]}); interactions.setSelectedIndex(drawings.length-1); layers.renderScene(); return; }
       if(!pendingPoint){ pendingPoint=point; return; }
-      drawings.push({type:'trend',points:[pendingPoint,point]}); pendingPoint=null; layers.renderScene();
+      drawings.push({type:'trend',points:[pendingPoint,point]}); pendingPoint=null; interactions.setSelectedIndex(drawings.length-1); layers.renderScene();
     });
 
     priceZone.addEventListener('mousedown',e=>{ e.preventDefault(); e.stopPropagation(); priceDrag={startY:e.clientY,domain:{minPrice:view.state.minPrice,maxPrice:view.state.maxPrice}}; });
@@ -309,20 +434,26 @@
       if(!overlay.classList.contains('open'))return;
       const rect=fgCanvas.getBoundingClientRect(); mouseX=e.clientX-rect.left; mouseY=e.clientY-rect.top;
       if(priceDrag){ const next=priceScaleDomainFromDrag(priceDrag.domain,priceDrag.startY,e.clientY,view.state.h-pad.t-pad.b); view.setDomain(view.state.minTime,view.state.maxTime,next.minPrice,next.maxPrice); layers.renderScene(); return; }
+      if(tool==='pointer' && interactions.activeHandle >= 0){ interactions.pointerMove(mouseX,mouseY); return; }
       if(panStart){ const dx=mouseX-panStart.x,span=panDomainStart.maxTime-panDomainStart.minTime,shift=-(dx/(view.state.w-pad.l-pad.r))*span; view.setDomain(panDomainStart.minTime+shift,panDomainStart.maxTime+shift,panDomainStart.minPrice,panDomainStart.maxPrice); layers.renderScene(); }
       else layers.renderCrosshair();
     });
-    window.addEventListener('mouseup',()=>{ panStart=null; priceDrag=null; });
+    window.addEventListener('mouseup',()=>{ panStart=null; priceDrag=null; interactions.pointerUp(); });
+
+    window.addEventListener('keydown',e=>{
+      if(!overlay.classList.contains('open') || tool!=='pointer') return;
+      if((e.key==='Delete'||e.key==='Backspace') && interactions.selectedIndex>=0){ e.preventDefault(); interactions.deleteSelected(); }
+    });
 
     fgCanvas.addEventListener('wheel',e=>{ e.preventDefault(); const factor=e.deltaY>0?1.1:.9,{minTime,maxTime}=view.state,center=view.xToTime(mouseX); view.setDomain(center-(center-minTime)*factor,center+(maxTime-center)*factor,view.state.minPrice,view.state.maxPrice); layers.renderScene(); },{passive:false});
     fgCanvas.addEventListener('dblclick',()=>{autoDomain();layers.renderScene();});
 
     trigger.addEventListener('click',()=>{ const selected=String(document.querySelector('#view-portfolio .trade-search-row select,#view-portfolio .quick-trade-clean select,#view-portfolio select')?.value||'').trim().toUpperCase(),changed=selected&&selected!==symbol; if(selected)symbol=selected; overlay.classList.add('open'); requestAnimationFrame(()=>{resize();if(!bars.length||changed)loadData();}); });
     window.addEventListener('resize',()=>{if(overlay.classList.contains('open'))resize();});
-    window.__advChartV1Internals={makeView,resizeLayersForDpr,makeLayerRenderer,medianVisibleSpacingMs,candleWidthPx,nearestBarByTime,priceScaleDomainFromDrag,drawChart,drawCrosshair,fetchBars,offlineSampleBars,view,layers};
+    window.__advChartV1Internals={makeView,resizeLayersForDpr,makeLayerRenderer,medianVisibleSpacingMs,candleWidthPx,nearestBarByTime,priceScaleDomainFromDrag,hitTestDrawing,hitTestHandle,dragDrawingHandle,deleteSelectedDrawing,makeDrawingInteractionController,drawChart,drawCrosshair,fetchBars,offlineSampleBars,view,layers,drawings,interactions};
   }
 
-  const exported={makeView,resizeLayersForDpr,makeLayerRenderer,medianVisibleSpacingMs,candleWidthPx,nearestBarByTime,priceScaleDomainFromDrag,formatAxisTime};
+  const exported={makeView,resizeLayersForDpr,makeLayerRenderer,medianVisibleSpacingMs,candleWidthPx,nearestBarByTime,priceScaleDomainFromDrag,formatAxisTime,hitTestDrawing,hitTestHandle,dragDrawingHandle,deleteSelectedDrawing,makeDrawingInteractionController};
   if(typeof module!=='undefined'&&module.exports) module.exports=exported;
   if(typeof document!=='undefined'){ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true}); else start(); }
 })();
