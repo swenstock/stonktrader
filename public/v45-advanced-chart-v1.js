@@ -1,6 +1,6 @@
 // v45-advanced-chart-v1.js
-// Standalone additive advanced chart. Stage 5 persists layout state per symbol/interval.
-// Stage 4 drawing management, Stage 3 axes/OHLC/price-scale, and Stage 2 layering remain intact.
+// Standalone additive advanced chart. Stage 6 improves direct chart navigation.
+// Price-axis drag scales price; plot drag pans time + price. Prior persistence/drawing/layering remain intact.
 
 (() => {
   'use strict';
@@ -196,6 +196,21 @@
     const center = (min + max) / 2;
     const nextSpan = Math.max(1e-9, span * factor);
     return { minPrice: center - nextSpan / 2, maxPrice: center + nextSpan / 2 };
+  }
+
+  function panDomainFromDrag(domain, startX, startY, currentX, currentY, plotWidth, plotHeight) {
+    const timeSpan = Math.max(1, Number(domain.maxTime) - Number(domain.minTime));
+    const priceSpan = Math.max(1e-9, Number(domain.maxPrice) - Number(domain.minPrice));
+    const dx = Number(currentX) - Number(startX);
+    const dy = Number(currentY) - Number(startY);
+    const timeShift = -(dx / Math.max(1, Number(plotWidth) || 1)) * timeSpan;
+    const priceShift = (dy / Math.max(1, Number(plotHeight) || 1)) * priceSpan;
+    return {
+      minTime: Number(domain.minTime) + timeShift,
+      maxTime: Number(domain.maxTime) + timeShift,
+      minPrice: Number(domain.minPrice) + priceShift,
+      maxPrice: Number(domain.maxPrice) + priceShift,
+    };
   }
 
   function formatAxisTime(ms, interval) {
@@ -457,7 +472,7 @@
       .adv-toolbar button{background:#1a2029;color:${COLORS.text};border:1px solid ${COLORS.line};border-radius:6px;padding:6px 10px;font-size:11px;cursor:pointer;font-weight:700}.adv-toolbar button.active{background:${COLORS.gold};color:#1a1607;border-color:${COLORS.gold}}
       .adv-toolbar .sep{width:1px;height:20px;background:${COLORS.line};margin:0 4px}.adv-toolbar .grow{flex:1}.adv-close{background:transparent!important;border:0!important;font-size:16px!important;padding:4px 10px!important}
       .adv-chart-wrap{flex:1;position:relative;overflow:hidden}#advChartCanvas,#advChartOverlayCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}#advChartCanvas{pointer-events:none}#advChartOverlayCanvas{z-index:1;cursor:crosshair}.adv-status{position:absolute;z-index:2;bottom:8px;left:12px;font-size:10px;color:${COLORS.muted};pointer-events:none}
-      .adv-price-scale-zone{position:absolute;z-index:3;top:0;right:0;bottom:24px;width:56px;cursor:ns-resize;background:transparent}
+      .adv-price-scale-zone{position:absolute;z-index:5;top:0;right:0;bottom:24px;width:72px;cursor:ns-resize;background:transparent;touch-action:none;user-select:none}#advChartOverlayCanvas.grabbing{cursor:grabbing!important}
     `; document.head.appendChild(s);
   }
 
@@ -531,9 +546,17 @@
 
     fgCanvas.addEventListener('mousedown',e=>{
       const rect=fgCanvas.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top;
+      if(x >= view.state.w - pad.r){
+        e.preventDefault();
+        priceDrag={startY:e.clientY,domain:{minPrice:view.state.minPrice,maxPrice:view.state.maxPrice}};
+        return;
+      }
       if(tool==='pointer'){
         const action=interactions.pointerDown(x,y);
-        if(action.type==='selection' && action.selectedIndex < 0){ panStart={x,y}; panDomainStart={...view.state}; }
+        if(action.type==='selection' && action.selectedIndex < 0){
+          panStart={x,y}; panDomainStart={...view.state};
+          fgCanvas.classList.add('grabbing');
+        }
         return;
       }
       const point={time:view.xToTime(x),price:view.yToPrice(y)};
@@ -542,17 +565,23 @@
       drawings.push({type:'trend',points:[pendingPoint,point]}); pendingPoint=null; interactions.setSelectedIndex(drawings.length-1); scheduleLayoutSave(); layers.renderScene();
     });
 
-    priceZone.addEventListener('mousedown',e=>{ e.preventDefault(); e.stopPropagation(); priceDrag={startY:e.clientY,domain:{minPrice:view.state.minPrice,maxPrice:view.state.maxPrice}}; });
+    priceZone.addEventListener('mousedown',e=>{
+      e.preventDefault(); e.stopPropagation();
+      priceDrag={startY:e.clientY,domain:{minPrice:view.state.minPrice,maxPrice:view.state.maxPrice}};
+    });
 
     window.addEventListener('mousemove',e=>{
       if(!overlay.classList.contains('open'))return;
       const rect=fgCanvas.getBoundingClientRect(); mouseX=e.clientX-rect.left; mouseY=e.clientY-rect.top;
       if(priceDrag){ const next=priceScaleDomainFromDrag(priceDrag.domain,priceDrag.startY,e.clientY,view.state.h-pad.t-pad.b); view.setDomain(view.state.minTime,view.state.maxTime,next.minPrice,next.maxPrice); layers.renderScene(); return; }
       if(tool==='pointer' && interactions.activeHandle >= 0){ interactions.pointerMove(mouseX,mouseY); return; }
-      if(panStart){ const dx=mouseX-panStart.x,span=panDomainStart.maxTime-panDomainStart.minTime,shift=-(dx/(view.state.w-pad.l-pad.r))*span; view.setDomain(panDomainStart.minTime+shift,panDomainStart.maxTime+shift,panDomainStart.minPrice,panDomainStart.maxPrice); layers.renderScene(); }
-      else layers.renderCrosshair();
+      if(panStart){
+        const next=panDomainFromDrag(panDomainStart,panStart.x,panStart.y,mouseX,mouseY,view.state.w-pad.l-pad.r,view.state.h-pad.t-pad.b);
+        view.setDomain(next.minTime,next.maxTime,next.minPrice,next.maxPrice);
+        layers.renderScene();
+      } else layers.renderCrosshair();
     });
-    window.addEventListener('mouseup',()=>{ panStart=null; priceDrag=null; interactions.pointerUp(); });
+    window.addEventListener('mouseup',()=>{ panStart=null; priceDrag=null; interactions.pointerUp(); fgCanvas.classList.remove('grabbing'); });
 
     window.addEventListener('keydown',e=>{
       if(!overlay.classList.contains('open') || tool!=='pointer') return;
@@ -565,10 +594,10 @@
     trigger.addEventListener('click',()=>{ const selected=String(document.querySelector('#view-portfolio .trade-search-row select,#view-portfolio .quick-trade-clean select,#view-portfolio select')?.value||'').trim().toUpperCase(),changed=selected&&selected!==symbol; if(changed)layoutSaver.flush(); if(selected)symbol=selected; overlay.classList.add('open'); requestAnimationFrame(()=>{resize();if(!bars.length||changed)loadData();}); });
     window.addEventListener('resize',()=>{if(overlay.classList.contains('open'))resize();});
     window.addEventListener('beforeunload',()=>layoutSaver.flush());
-    window.__advChartV1Internals={makeView,resizeLayersForDpr,makeLayerRenderer,medianVisibleSpacingMs,candleWidthPx,nearestBarByTime,priceScaleDomainFromDrag,hitTestDrawing,hitTestHandle,dragDrawingHandle,deleteSelectedDrawing,makeDrawingInteractionController,drawChart,drawCrosshair,fetchBars,offlineSampleBars,layoutStorageKey,createLayoutPayload,loadLayout,saveLayout,makeDebouncedLayoutSaver,view,layers,drawings,interactions,registerIndicatorPersistence,notifyLayoutChanged:scheduleLayoutSave,restoreCurrentLayout,flushLayout:()=>layoutSaver.flush(),getLayoutState:currentLayoutState};
+    window.__advChartV1Internals={makeView,resizeLayersForDpr,makeLayerRenderer,medianVisibleSpacingMs,candleWidthPx,nearestBarByTime,priceScaleDomainFromDrag,panDomainFromDrag,hitTestDrawing,hitTestHandle,dragDrawingHandle,deleteSelectedDrawing,makeDrawingInteractionController,drawChart,drawCrosshair,fetchBars,offlineSampleBars,layoutStorageKey,createLayoutPayload,loadLayout,saveLayout,makeDebouncedLayoutSaver,view,layers,drawings,interactions,registerIndicatorPersistence,notifyLayoutChanged:scheduleLayoutSave,restoreCurrentLayout,flushLayout:()=>layoutSaver.flush(),getLayoutState:currentLayoutState};
   }
 
-  const exported={makeView,resizeLayersForDpr,makeLayerRenderer,medianVisibleSpacingMs,candleWidthPx,nearestBarByTime,priceScaleDomainFromDrag,formatAxisTime,hitTestDrawing,hitTestHandle,dragDrawingHandle,deleteSelectedDrawing,makeDrawingInteractionController,layoutStorageKey,defaultLayoutState,createLayoutPayload,loadLayout,saveLayout,makeDebouncedLayoutSaver};
+  const exported={makeView,resizeLayersForDpr,makeLayerRenderer,medianVisibleSpacingMs,candleWidthPx,nearestBarByTime,priceScaleDomainFromDrag,panDomainFromDrag,formatAxisTime,hitTestDrawing,hitTestHandle,dragDrawingHandle,deleteSelectedDrawing,makeDrawingInteractionController,layoutStorageKey,defaultLayoutState,createLayoutPayload,loadLayout,saveLayout,makeDebouncedLayoutSaver};
   if(typeof module!=='undefined'&&module.exports) module.exports=exported;
   if(typeof document!=='undefined'){ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true}); else start(); }
 })();
