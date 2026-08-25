@@ -1,0 +1,30 @@
+name: Junior Broker Experiment
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'public/junior/**'
+      - 'server/juniorBrokerExperiment.test.js'
+      - '.github/workflows/junior-broker-experiment.yml'
+  push:
+    branches: [feature-junior-broker-experiment]
+    paths:
+      - 'public/junior/**'
+      - 'server/juniorBrokerExperiment.test.js'
+      - '.github/workflows/junior-broker-experiment.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: Syntax check isolated build
+        run: |
+          node --check public/junior/junior.js
+          node --check server/juniorBrokerExperiment.test.js
+      - name: Verify Junior Broker economics and V45 reuse contract
+        run: node server/juniorBrokerExperiment.test.js
