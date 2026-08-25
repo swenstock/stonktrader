@@ -43,6 +43,14 @@ function makeDb() {
   return db;
 }
 
+function formatStonk(subunits) {
+  const whole = subunits / SUBUNITS_PER_STONK;
+  const remainder = subunits % SUBUNITS_PER_STONK;
+  if (remainder === 0n) return whole.toString();
+  const fractional = remainder.toString().padStart(6, '0').replace(/0+$/, '');
+  return `${whole}.${fractional}`;
+}
+
 assert.strictEqual(ASSET_TYPE, 'junior_broker_share');
 assert.notStrictEqual(ASSET_TYPE, 'junior');
 assert.strictEqual(REDEEM_COUNT, 20n);
@@ -72,7 +80,6 @@ assert.strictEqual(minted.overflowSubunits - won.overflowSubunits, 8000000000n, 
 assert.strictEqual(WON_OVERFLOW, 3333400000n);
 assert.strictEqual(MINTED_OVERFLOW, 11333400000n);
 
-// Won and minted issuance both execute the real Stage 1 reserve ledger and update holdings.
 {
   const db = makeDb();
   const wonIssue = issueFundedJuniorBrokerShare(db, { issuanceId: 'won-1', accountId: 1, source: SOURCE_WON });
@@ -110,7 +117,6 @@ assert.strictEqual(MINTED_OVERFLOW, 11333400000n);
   db.close();
 }
 
-// 19 cannot redeem; 20 can; >20 preserves remainder.
 {
   const db = makeDb();
   for (let i = 1; i <= 19; i += 1) {
@@ -144,7 +150,6 @@ assert.strictEqual(MINTED_OVERFLOW, 11333400000n);
   db.close();
 }
 
-// Defensive solvency: even a holder with 20 cannot redeem against a short Broker Reserve.
 {
   const db = makeDb();
   for (let i = 1; i <= 20; i += 1) {
@@ -164,8 +169,8 @@ assert.strictEqual(MINTED_OVERFLOW, 11333400000n);
 }
 
 console.log('Stage 2 Junior Broker share: PASS');
-console.log('Won split:', `${WON_TOTAL / SUBUNITS_PER_STONK} total -> ${BROKER_SHARE / SUBUNITS_PER_STONK} Broker + ${WON_OVERFLOW / SUBUNITS_PER_STONK} Overflow STONK`);
-console.log('Minted split:', `${MINTED_TOTAL / SUBUNITS_PER_STONK} total -> ${BROKER_SHARE / SUBUNITS_PER_STONK} Broker + ${MINTED_OVERFLOW / SUBUNITS_PER_STONK} Overflow STONK`);
+console.log('Won split:', `${formatStonk(WON_TOTAL)} total -> ${formatStonk(BROKER_SHARE)} Broker + ${formatStonk(WON_OVERFLOW)} Overflow STONK`);
+console.log('Minted split:', `${formatStonk(MINTED_TOTAL)} total -> ${formatStonk(BROKER_SHARE)} Broker + ${formatStonk(MINTED_OVERFLOW)} Overflow STONK`);
 console.log('Redemption:', '19 rejected; 20 burns exactly 20; 23 leaves 3');
 console.log('Solvency:', 'short Broker Reserve rejects redemption and rolls back holdings');
 console.log('Identifier:', "junior_broker_share is isolated from existing ticket_type='junior'");
