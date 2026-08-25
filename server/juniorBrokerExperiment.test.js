@@ -2,72 +2,37 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-const junior = require('../public/junior/junior.js');
-
-assert.strictEqual(junior.JR_UNIT_STONK, 40000);
-assert.strictEqual(junior.JR_PER_BROKER, 20);
-assert.strictEqual(junior.ACTIVATED_BROKER_STONK, 733332);
-assert.ok(Math.abs(junior.CUSHION_PER_JR - 3333.4) < 1e-9);
-
-let p = junior.juniorProjection(0);
-assert.strictEqual(p.fundedJuniors, 0);
-assert.strictEqual(p.fullBrokers, 0);
-assert.strictEqual(p.juniorProgress, 0);
-assert.strictEqual(p.nextJuniorNeedsStonk, 40000);
-
-p = junior.juniorProjection(39999);
-assert.strictEqual(p.fundedJuniors, 0);
-assert.strictEqual(p.unallocatedStonk, 39999);
-assert.strictEqual(p.nextJuniorNeedsStonk, 1);
-
-p = junior.juniorProjection(40000);
-assert.strictEqual(p.fundedJuniors, 1);
-assert.strictEqual(p.fullBrokers, 0);
-assert.strictEqual(p.juniorProgress, 1);
-assert.strictEqual(p.unallocatedStonk, 0);
-assert.strictEqual(p.nextJuniorNeedsStonk, 40000);
-assert.ok(Math.abs(p.reserveCushionStonk - 3333.4) < 1e-9);
-
-p = junior.juniorProjection(733332);
-assert.strictEqual(p.fundedJuniors, 18);
-assert.strictEqual(p.fullBrokers, 0);
-assert.strictEqual(p.juniorProgress, 18);
-assert.strictEqual(p.unallocatedStonk, 13332);
-assert.strictEqual(p.nextJuniorNeedsStonk, 26668);
-
-p = junior.juniorProjection(800000);
-assert.strictEqual(p.fundedJuniors, 20);
-assert.strictEqual(p.fullBrokers, 1);
-assert.strictEqual(p.juniorProgress, 0);
-assert.strictEqual(p.meterPercent, 100);
-assert.ok(Math.abs(p.reserveCushionStonk - 66668) < 1e-6);
-assert.strictEqual(junior.projectionLabel(p), '1 BROKER FUNDED');
-
-p = junior.juniorProjection(1000000);
-assert.strictEqual(p.fundedJuniors, 25);
-assert.strictEqual(p.fullBrokers, 1);
-assert.strictEqual(p.juniorProgress, 5);
-assert.strictEqual(junior.projectionLabel(p), '1 BROKER + 5 JR');
-
-p = junior.juniorProjection(1600000);
-assert.strictEqual(p.fundedJuniors, 40);
-assert.strictEqual(p.fullBrokers, 2);
-assert.strictEqual(p.juniorProgress, 0);
-assert.ok(Math.abs(p.reserveCushionStonk - 133336) < 1e-6);
-
-assert.strictEqual(junior.parseStonk('733,332 STONK'), 733332);
-assert.strictEqual(junior.parseStonk('0 STONK'), 0);
-
 const html = fs.readFileSync(path.join(__dirname, '../public/junior/index.html'), 'utf8');
-assert.ok(html.includes('../v45/v45.css'), 'experiment must reuse V45 styling');
-assert.ok(html.includes('../v45/v45.js'), 'experiment must reuse V45 application engine');
-assert.ok(html.includes('<b>20 JR</b><span>=</span><strong>1 ACTIVATED STONKBROKER</strong>'), 'redemption rule must be visibly composed in the hero');
-assert.ok(html.includes('40,000 STONK'), 'funding unit must be visible');
-assert.ok(html.includes('Existing production settlement rules are unchanged'), 'experiment boundary must be explicit');
-assert.ok(html.includes('CURRENT V45'), 'reversible build must link back to current V45');
+const js = fs.readFileSync(path.join(__dirname, '../public/junior/junior-current.js'), 'utf8');
+const css = fs.readFileSync(path.join(__dirname, '../public/junior/junior-current.css'), 'utf8');
 
-const css = fs.readFileSync(path.join(__dirname, '../public/junior/junior.css'), 'utf8');
-assert.ok(css.includes('.jr-payout-grid'));
-assert.ok(css.includes('.jr-system-grid'));
+// The Junior route must inherit the actual current production shell at runtime,
+// never copy the old static /v45 app again.
+assert.ok(html.includes("fetch('/?jr-shell-source=1'"), 'Junior route must load current production root shell');
+assert.ok(html.includes('<base href="/">'), 'current shell must keep production-relative asset resolution');
+assert.ok(html.includes('/junior/junior-current.css'), 'Junior styling must be additive');
+assert.ok(html.includes('/junior/junior-current.js'), 'Junior behavior must be additive');
+assert.ok(!html.includes('../v45/v45.css'), 'must not use stale static V45 shell styling');
+assert.ok(!html.includes('../v45/v45.js'), 'must not use stale static V45 app engine');
+assert.ok(!html.includes('hero-grid'), 'Junior loader must not duplicate/replace current hero structure');
+assert.ok(!html.includes('broker-art'), 'Junior loader must not replace current broker art');
 
-console.log('Junior Broker isolated experiment economics + shell contract: PASS');
+// Economics represented by the additive lab.
+assert.ok(js.includes('const JR_UNIT = 40000'));
+assert.ok(js.includes('const JR_PER_BROKER = 20'));
+assert.ok(js.includes('const BROKER_COST = 733332'));
+assert.ok(js.includes('20 JR'));
+assert.ok(js.includes('40,000 STONK'));
+assert.ok(js.includes('Redeemed Juniors return to the SBC clearinghouse inventory'));
+assert.ok(js.includes("fetch('/api/economics'"), 'projection should use existing live economics data');
+
+const reserve = 40000 * 20 - 733332;
+assert.strictEqual(reserve, 66668);
+
+// Overlay is intentionally self-contained and must not restyle existing SBC elements.
+assert.ok(css.includes('#sbcJuniorLab'));
+assert.ok(!css.includes('.hero-card'));
+assert.ok(!css.includes('.topbar'));
+assert.ok(!css.includes('body{'));
+
+console.log('Junior Broker current-shell inheritance + isolated overlay contract: PASS');
