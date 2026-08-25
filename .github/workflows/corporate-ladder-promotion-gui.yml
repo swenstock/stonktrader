@@ -1,0 +1,51 @@
+name: Corporate Ladder Promotion GUI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'public/v45-broker-race-ui.js'
+      - 'public/v45-prize-info-v65.js'
+      - 'public/v45-mobile-v3.js'
+      - 'public/v45-stage4-junior-ui.js'
+      - 'server/corporateLadderPromotionGui.test.js'
+      - '.github/workflows/corporate-ladder-promotion-gui.yml'
+  push:
+    branches: [corporate-ladder-promotion-gui]
+    paths:
+      - 'public/v45-broker-race-ui.js'
+      - 'public/v45-prize-info-v65.js'
+      - 'public/v45-mobile-v3.js'
+      - 'public/v45-stage4-junior-ui.js'
+      - 'server/corporateLadderPromotionGui.test.js'
+      - '.github/workflows/corporate-ladder-promotion-gui.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: Syntax check promotion UI
+        run: |
+          node --check public/v45-broker-race-ui.js
+          node --check public/v45-prize-info-v65.js
+          node --check public/v45-mobile-v3.js
+          node --check public/v45-stage4-junior-ui.js
+          node --check server/corporateLadderPromotionGui.test.js
+      - name: Re-run Stage 1
+        run: node server/prizeReserveLedgerStage1.test.js
+      - name: Re-run Stage 2
+        run: node server/juniorBrokerStage2.test.js
+      - name: Re-run Stage 3
+        run: node server/tierBurnEngineStage3.test.js
+      - name: Re-run Stage 4
+        run: node server/juniorBrokerStage4.test.js
+      - name: Re-run Prize Integration A
+        run: node server/contestJuniorFundingPool.test.js
+      - name: Re-run Broker Race behavior
+        run: node server/juniorBrokerRace.test.js
+      - name: Execute corporate ladder promotion behavior
+        run: node server/corporateLadderPromotionGui.test.js

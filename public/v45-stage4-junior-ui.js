@@ -110,18 +110,18 @@ function render(snapshot,{signedOut=false,error=''}={}){
   const card=ensureCard();
   if(!card)return;
   if(signedOut){
-    card.innerHTML=`<div class="sbc-jr4-head"><div><small>PRIZE COLLECTION</small><h3>JUNIOR STONK BROKERS</h3></div><span>20 = 1 BROKER</span></div><div class="sbc-jr4-signedout">Sign in to track your Juniors, redemption progress, and prize history.</div>`;
+    card.innerHTML=`<div class="sbc-jr4-head"><div><small>PRIZE COLLECTION</small><h3>JUNIOR STONK BROKERS</h3></div><span>20 = 1 BROKER</span></div><div class="sbc-jr4-signedout">Sign in to track your Juniors, promotion progress, and prize history.</div>`;
     return;
   }
   if(error){card.innerHTML=`<div class="sbc-jr4-head"><div><small>PRIZE COLLECTION</small><h3>JUNIOR STONK BROKERS</h3></div><span>20 = 1 BROKER</span></div><div class="sbc-jr4-signedout">${esc(error)}</div>`;return}
   const vm=buildViewModel(snapshot);
   latest=vm;
   card.innerHTML=`
-    <div class="sbc-jr4-head"><div><small>PRIZE COLLECTION</small><h3>JUNIOR STONK BROKERS</h3></div><span>20 = 1 BROKER</span></div>
+    <div class="sbc-jr4-head"><div><small>PRIZE COLLECTION</small><h3>JUNIOR STONK BROKERS</h3></div><span>COLLECT 20 → GET PROMOTED</span></div>
     <div class="sbc-jr4-grid">
       <div class="sbc-jr4-count"><small>YOU OWN</small><b>${vm.count}</b><span>JUNIORS</span></div>
-      <div class="sbc-jr4-progress"><div class="sbc-jr4-progress-top"><small>NEXT ACTIVATED BROKER</small><b>${vm.progressLabel}</b></div><div class="sbc-jr4-track"><i style="width:${vm.progressPercent}%"></i></div><p>Win Juniors. Stack 20. Claim an Activated Stonk Broker.</p></div>
-      <div class="sbc-jr4-action"><button id="sbcJr4Redeem" ${vm.redeemable?'':'disabled'}>${vm.redeemable?'REDEEM 20':'KEEP STACKING'}</button><small>${vm.redeemable?`${vm.fullRedemptionsAvailable} redemption${vm.fullRedemptionsAvailable===1?'':'s'} available`:`${vm.redeemCount-vm.progress} more to next Broker`}</small></div>
+      <div class="sbc-jr4-progress"><div class="sbc-jr4-progress-top"><small>NEXT PROMOTION</small><b>${vm.progressLabel}</b></div><div class="sbc-jr4-track"><i style="width:${vm.progressPercent}%"></i></div><p>Collect Jr. StonkBrokers. Collect 20. Get promoted to an Activated StonkBroker.</p></div>
+      <div class="sbc-jr4-action"><button id="sbcJr4Redeem" ${vm.redeemable?'':'disabled'}>${vm.redeemable?'GET PROMOTED':'KEEP COLLECTING'}</button><small>${vm.redeemable?`${vm.fullRedemptionsAvailable} promotion${vm.fullRedemptionsAvailable===1?'':'s'} ready`:`${vm.redeemCount-vm.progress} more to promotion`}</small></div>
     </div>
     <button class="sbc-jr4-history-toggle" id="sbcJr4HistoryToggle">TRANSACTION HISTORY <span>+</span></button>
     <div class="sbc-jr4-history" id="sbcJr4History" hidden>${renderHistory(vm)}</div>`;
@@ -143,10 +143,10 @@ async function refresh(){
 
 async function redeemNow(){
   if(!latest?.redeemable)return;
-  if(!confirm('Redeem 20 Juniors for one funded Activated Stonk Broker?'))return;
+  if(!confirm('Collect 20 complete. Get promoted to one funded Activated StonkBroker?'))return;
   const btn=$('#sbcJr4Redeem');
-  if(btn){btn.disabled=true;btn.textContent='REDEEMING…'}
-  try{const d=await api('/api/account/junior-broker/redeem',{method:'POST',body:'{}'});render(d.snapshot);alert('Redemption funded. Your Activated Stonk Broker is pending delivery.')}catch(e){alert(e.message);await refresh()}
+  if(btn){btn.disabled=true;btn.textContent='PROMOTING…'}
+  try{const d=await api('/api/account/junior-broker/redeem',{method:'POST',body:'{}'});render(d.snapshot);alert('Promotion funded. Your Activated StonkBroker is pending delivery.')}catch(e){alert(e.message);await refresh()}
 }
 
 function run(){if(!ensureCard())return;refresh()}

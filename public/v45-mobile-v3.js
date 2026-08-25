@@ -15,9 +15,9 @@
     if(!box||box.dataset.mobileV3==='1')return;
     box.dataset.mobileV3='1';
     const rows=[
-      ['runner','EARN A TICKET','Finish in the money.'],
-      ['trader','PLAY • HOLD • SELL','Use it or trade it.'],
-      ['junior','WIN THE STONKBROKER','Finish #1 in the Main Event.']
+      ['runner','FINISH TOP 10%','Win a protected prize.'],
+      ['trader','COLLECT & CLIMB','Play, hold or sell your tickets.'],
+      ['junior','GET PROMOTED','Collect 20 Jr. StonkBrokers.']
     ];
     box.innerHTML='';
     rows.forEach(([key,title,copy])=>{
@@ -44,8 +44,8 @@
     wrap.dataset.mobileV3='1';
     const steps=[...wrap.children].filter(x=>x.classList.contains('step'));
     const keys=['freeroll','runner','trader','junior'];
-    const titles=['ENTER THE TRADING FLOOR','PICK YOUR FORMAT','EARN YOUR TICKET','WIN THE STONKBROKER'];
-    const copies=['Pick a tier. Pick a session. Trade.','Weekly, daily, morning, afternoon or Degen.','Finish near the top. Play, hold or sell what you win.','Win or buy a Main Event ticket. Finish #1.'];
+    const titles=['ENTER THE TRADING FLOOR','PICK YOUR FORMAT','FINISH TOP 10%','GET PROMOTED'];
+    const copies=['Pick a tier. Pick a session. Trade.','Weekly, daily, morning, afternoon or Degen.','Top 10% win something. Play, hold or sell the tickets you collect.','Collect 20 Jr. StonkBrokers. Get promoted to an Activated StonkBroker.'];
 
     steps.forEach((step,i)=>{
       const num=step.querySelector('.num');const h=step.querySelector('h3');
