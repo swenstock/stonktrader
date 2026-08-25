@@ -1,0 +1,206 @@
+name: Claude Handoff 0691c15
+
+on:
+  push:
+    branches: [claude-handoff-0691c15]
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build exact current source and Claude handoff
+        run: |
+          set -euo pipefail
+          TARGET=0691c15d2b8ce4f45b4c3c733493835188e4caad
+          mkdir -p claude-package
+          git archive --format=zip --prefix=stonktrader-0691c15/ "$TARGET" > claude-package/STONKTRADER_FULL_SOURCE_0691C15.zip
+          cat > claude-package/START_HERE_CLAUDE.md <<'EOF'
+          # CLAUDE — START HERE
+
+          Andrew asked ChatGPT to continue while you were unavailable. This handoff is a full repository snapshot plus the current product/economics state so you can verify what changed and resume from the exact current point.
+
+          ## Exact source identity
+
+          Repository: `swenstock/stonktrader`
+
+          Current `main` commit in this package:
+
+          `0691c15d2b8ce4f45b4c3c733493835188e4caad`
+
+          This ZIP is produced by `git archive` directly from that commit. No delta reconstruction is required.
+
+          ## Product direction now locked
+
+          **There is no Main Event in the new SBC model going forward.**
+
+          The new corporate ladder is:
+
+          **FREE ROLL → RUNNER → CLERK → TRADER → JR. STONKBROKER → COLLECT 20 JR. STONKBROKERS → GET PROMOTED TO AN ACTIVATED STONKBROKER**
+
+          Key public language now being used:
+
+          - **CAN’T AFFORD THE BROKER? CLIMB THE CORPORATE LADDER.**
+          - **COLLECT 20. GET PROMOTED.**
+          - **NEXT IN LINE FOR PROMOTION**
+          - **TOP JR BROKER COLLECTORS / STACKERS** depending on surface
+
+          Important: the repository still contains legacy Main Event mechanics and references. Those are now transitional/obsolete architecture and need a deliberate retirement/consolidation pass. Do not infer from their presence that Main Event remains part of the intended product.
+
+          ## What was completed before this handoff
+
+          ### Stage 1 — prize reserve ledger
+          - two reserve accounts only: `broker_reserve` and `overflow_reserve`
+          - integer 1/1,000,000-STONK sub-units
+          - BigInt arithmetic
+          - duplicate issuance protection
+          - SQLite INTEGER type enforcement
+
+          ### Stage 2 — Junior issuance and redemption
+          - internal identifier: `junior_broker_share`
+          - existing ticket type `'junior'` intentionally remains separate
+          - won Junior: 40,000 total = 36,666.6 Broker backing + 3,333.4 Overflow
+          - minted Junior: 48,000 total = 36,666.6 Broker backing + 11,333.4 Overflow
+          - 20 Juniors redeem for one funded Activated StonkBroker
+          - redemption debits exactly 733,332 STONK from Broker Reserve
+          - status remains `funded_pending_delivery` because no on-chain NFT delivery adapter exists yet
+
+          ### Stage 3 — generic burn engine
+          - one data-driven tier-burn mechanism
+          - Stage 2 Junior → Broker redemption was refactored to use it
+          - future tier logic can be configuration-driven without another burn implementation
+
+          ### Stage 4 — player Junior collection UI
+          - My Contests shows authenticated real Junior holdings
+          - personal `x / 20` progress
+          - redemption button
+          - real issuance/redemption history
+          - current copy uses promotion language: collect 20, get promoted
+
+          ### Prize Integration A — pooled funding foundation
+          - approved architecture for accumulating post-rake contest proceeds across contests
+          - exactly two reserve accounts remain
+          - unallocated funding is derived from Broker Reserve minus outstanding Junior backing liability
+          - pooled won-Junior issuance moves 3,333.4 STONK internally from Broker Reserve to Overflow rather than double-crediting cash
+          - 15% rake helper uses integer sub-units and rejects unrepresentable fractional sub-units
+          - cross-contest carry is preserved
+          - this foundation is built and tested but is **not yet wired into live settlement**
+
+          ### Broker Race GUI / progression leaderboard
+          - homepage platform-wide Broker Race data layer
+          - lifetime StonkBrokers earned
+          - lifetime Juniors awarded/collected
+          - Juniors currently stacked/held
+          - persistent top collectors/stakers separate from contest P&L standings
+          - data is real ledger-derived; no fake activity counters
+
+          ### Promotion GUI pass — PR #117 + cache-bust PR #118
+          Current visible copy was updated to the corporate-ladder concept while preserving the current visual language.
+
+          PR #117 merge:
+          `96f803e1d517e69fdab0544ac2943b7dd37000ee`
+
+          PR #118 cache-bust merge / current main:
+          `0691c15d2b8ce4f45b4c3c733493835188e4caad`
+
+          Promotion GUI changes include:
+          - homepage: climb the ladder / collect 20 / get promoted
+          - Broker Race: next in line for promotion / collectors terminology
+          - How It Works: finish top 10% and get promoted
+          - My Contests: next promotion / keep collecting / get promoted
+          - Prize Funding & Payouts modal: explains protected top-10% two-ticket baseline + bottom-up funding + top-down upgrades + collect 20/get promoted
+
+          ## Important payout discovery
+
+          The lower-tier reverse-funding model Andrew remembered was already implemented in the existing V45 payout engine before this promotion pass.
+
+          The intended concept is:
+          - top 10% of finishers walk away with funded value
+          - protected baseline prizes are funded from the bottom of the paid band upward
+          - baseline prize is two lower-tier tickets according to the existing ladder
+          - remaining prize capacity upgrades top finishers from rank 1 downward
+
+          The promotion GUI behavioral test exercised the real payout engine and confirmed examples such as:
+          - Runner, 20 players → top 2 each receive 2 Runner tickets
+          - Clerk, 20 players → top 2 each receive 2 Runner tickets
+
+          Do not rewrite this engine merely because the copy was stale. Audit and preserve working payout behavior unless the new no-Main-Event ladder requires a deliberate consolidation.
+
+          ## Highest-priority unresolved issue
+
+          **Legacy Main Event retirement / corporate-ladder consolidation is now the next major backend task.**
+
+          Earlier we had planned a “Main Event cutover” into the pooled Junior funding path. Andrew has since explicitly clarified that there should be **no Main Event at all going forward**.
+
+          Therefore the correct next architectural task is broader and cleaner:
+
+          **Retire Main Event as a product concept and consolidate the ladder around Free Roll → Runner → Clerk → Trader → Jr. StonkBroker → Promotion.**
+
+          That retirement should deliberately address remaining Main Event references/mechanics across:
+          - settlement/payout logic
+          - ticket types and exchange surfaces
+          - economics/config constants such as the old 733,332 Main Event target
+          - old Main Event prize wording
+          - any scheduler/contest assumptions that still require a Main Event destination
+
+          Do NOT simply delete code blindly. First identify which old Main Event paths are superseded versus which utility logic is still reused by the current ladder.
+
+          ## Critical sequencing constraint
+
+          Prize Integration A is built but not connected to live contest settlement yet. Before making the Broker Race materially active from contest results, production settlement must feed the approved pooled funding/Junior issuance path without double-spending any existing prize pool.
+
+          Because Main Event is now retired conceptually, do not perform the previously planned Main-Event-only cutover as if Main Event were still the destination. Reframe the settlement integration around the final corporate-ladder model.
+
+          ## Things intentionally NOT done
+
+          - no fabricated Junior/Broker activity
+          - no direct-mint payment rail
+          - no NFT/custody delivery adapter
+          - no speculative Trader/Clerk/Runner future NFT economics beyond current contest/ticket ladder behavior
+          - no satellites were newly cut over into Prize Integration A during these stages
+          - no broad visual redesign; current cockpit/art/typography/layout were preserved
+
+          ## Verification expectations
+
+          Please audit from the source, not this summary alone.
+
+          Useful tests to rerun include:
+          - `node server/prizeReserveLedgerStage1.test.js`
+          - `node server/juniorBrokerStage2.test.js`
+          - `node server/tierBurnEngineStage3.test.js`
+          - `node server/juniorBrokerStage4.test.js`
+          - `node server/contestJuniorFundingPool.test.js`
+          - Broker Race / promotion GUI behavioral tests present in the repo
+
+          Also search the full repo for:
+          - `Main Event`
+          - `main_event`
+          - `733332`
+          - `recordPostRakeContestFunding`
+          - `issueWonJuniorFromContestPool`
+
+          That will make the remaining transitional state obvious.
+
+          ## What Andrew wants next
+
+          Preserve the current look he likes. Do not rebuild the cockpit.
+
+          The next design/code pass should make the entire product tell one coherent story:
+
+          **Climb the corporate ladder. Finish in the paid band. Win tickets. Reach Jr. StonkBroker. Collect 20. Get promoted.**
+
+          The technical priority is to retire obsolete Main Event mechanics and then connect real contest economics into the approved pooled Junior funding path without double-allocation.
+
+          EOF
+
+          git show --format=fuller --no-patch "$TARGET" > claude-package/COMMIT_IDENTITY.txt
+          git ls-tree -r "$TARGET" | awk '{print $3"  "$4}' > claude-package/FULL_REPO_BLOB_MANIFEST.txt
+          sha256sum claude-package/STONKTRADER_FULL_SOURCE_0691C15.zip > claude-package/SOURCE_ZIP_SHA256.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SBC_CLAUDE_HANDOFF_0691C15
+          path: claude-package/
+          if-no-files-found: error
