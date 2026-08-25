@@ -14,11 +14,16 @@ const ICONS={
 };
 
 const GOLD='#ffc928', BLUE='#2ab5ff', BG='#0d1117';
-let api=null,overlay=null,fg=null,wrap=null,visualCanvas=null,ctx=null;
+let api=null,overlay=null,fg=null,wrap=null,priceZone=null,visualCanvas=null,ctx=null;
 let hoverIndex=-1,lineDrag=null,previewPoint=null,lastX=-1,lastY=-1;
 
 function pointerToolActive(){return !!overlay?.querySelector('[data-tool="pointer"].active');}
 function trendToolActive(){return !!overlay?.querySelector('[data-tool="trend"].active');}
+function horizontalToolActive(){return !!overlay?.querySelector('[data-tool="horizontal"].active');}
+function returnToPointer(){
+  const pointer=overlay?.querySelector('[data-tool="pointer"]');
+  if(pointer&&!pointer.classList.contains('active'))pointer.click();
+}
 
 function addStyles(){
   if(document.getElementById('sbcChartVisualPassV1Style'))return;
@@ -91,7 +96,7 @@ function drawVisual(){
     const d=api.drawings?.[hoverIndex];if(!d)return;
     ctx.save();ctx.strokeStyle=BLUE;ctx.globalAlpha=.8;ctx.lineWidth=2.2;
     if(d.type==='trend'&&d.points?.length>=2){const a=d.points[0],b=d.points[1];ctx.beginPath();ctx.moveTo(api.view.timeToX(a.time),api.view.priceToY(a.price));ctx.lineTo(api.view.timeToX(b.time),api.view.priceToY(b.price));ctx.stroke();}
-    else if(d.type==='horizontal'&&d.points?.[0]){const y=api.view.priceToY(d.points[0].price);ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(w-pad.r,y);ctx.stroke();}
+    else if(d.type==='horizontal'&&d.points?.[0]){const y=api.view.priceToY(d.points[0].price);ctx.beginPath();ctx.moveTo(api.view.state.pad.l,y);ctx.lineTo(w-api.view.state.pad.r,y);ctx.stroke();}
     ctx.restore();
   }
 }
@@ -119,8 +124,13 @@ function onMouseDownCapture(e){
   if(e.button!==0)return;
   const {x,y}=canvasPoint(e);lastX=x;lastY=y;
   if(trendToolActive()){
-    if(!previewPoint)previewPoint={time:api.view.xToTime(x),price:api.view.yToPrice(y)};else previewPoint=null;
+    if(!previewPoint)previewPoint={time:api.view.xToTime(x),price:api.view.yToPrice(y)};
+    else {previewPoint=null;setTimeout(returnToPointer,0);}
     requestAnimationFrame(drawVisual);return;
+  }
+  if(horizontalToolActive()){
+    setTimeout(returnToPointer,0);
+    return;
   }
   if(!pointerToolActive())return;
   const si=selectedIndex();if(api.hitTestHandle(api.drawings,si,api.view,x,y,12)>=0)return;
@@ -138,13 +148,30 @@ function onMouseUpCapture(){
   if(!lineDrag)return;
   lineDrag=null;fg.classList.remove('sbc-line-dragging');api.notifyLayoutChanged?.();refreshHover(lastX,lastY);drawVisual();
 }
+function onPriceWheel(e){
+  if(!api?.view||!overlay?.classList.contains('open'))return;
+  e.preventDefault();e.stopImmediatePropagation();
+  const {minPrice,maxPrice,minTime,maxTime}=api.view.state;
+  const factor=e.deltaY>0?1.1:.9;
+  const center=(minPrice+maxPrice)/2,span=Math.max(1e-9,(maxPrice-minPrice)*factor);
+  api.view.setDomain(minTime,maxTime,center-span/2,center+span/2);
+  api.layers.renderScene();drawVisual();
+}
+function onKeyDown(e){
+  if(e.key!=='Escape'||!overlay?.classList.contains('open'))return;
+  if(trendToolActive()||horizontalToolActive()){
+    previewPoint=null;e.preventDefault();returnToPointer();requestAnimationFrame(drawVisual);
+  }
+}
 
 function install(){
-  api=window.__advChartV1Internals;overlay=document.getElementById('advChartOverlay');fg=document.getElementById('advChartOverlayCanvas');wrap=overlay?.querySelector('.adv-chart-wrap');
-  if(!api?.view||!api?.drawings||!api?.interactions||!api?.hitTestDrawing||!api?.hitTestHandle||!overlay||!fg||!wrap)return false;
+  api=window.__advChartV1Internals;overlay=document.getElementById('advChartOverlay');fg=document.getElementById('advChartOverlayCanvas');wrap=overlay?.querySelector('.adv-chart-wrap');priceZone=document.getElementById('advPriceScaleZone');
+  if(!api?.view||!api?.drawings||!api?.interactions||!api?.hitTestDrawing||!api?.hitTestHandle||!overlay||!fg||!wrap||!priceZone)return false;
   addStyles();ensureVisualCanvas();iconizeToolbar();
   const toolbar=overlay.querySelector('.adv-toolbar');new MutationObserver(()=>iconizeToolbar()).observe(toolbar,{childList:true,subtree:true});
   fg.addEventListener('mousedown',onMouseDownCapture,true);window.addEventListener('mousemove',onMouseMoveCapture,true);window.addEventListener('mouseup',onMouseUpCapture,true);
+  priceZone.addEventListener('wheel',onPriceWheel,{passive:false,capture:true});
+  window.addEventListener('keydown',onKeyDown,true);
   toolbar.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.tool!=='trend')previewPoint=null;hoverIndex=-1;fg.classList.remove('sbc-line-hover');requestAnimationFrame(drawVisual);});
   window.addEventListener('resize',resizeVisual);
   overlay.addEventListener('transitionend',resizeVisual);
