@@ -13,9 +13,7 @@
     const juniorProgress = fundedJuniors % JR_PER_BROKER;
     const unallocatedStonk = committed - (fundedJuniors * JR_UNIT_STONK);
     const reserveCushionStonk = fundedJuniors * CUSHION_PER_JR;
-    const nextJuniorNeedsStonk = fundedJuniors === 0 && committed === 0
-      ? JR_UNIT_STONK
-      : unallocatedStonk === 0 ? JR_UNIT_STONK : JR_UNIT_STONK - unallocatedStonk;
+    const nextJuniorNeedsStonk = unallocatedStonk === 0 ? JR_UNIT_STONK : JR_UNIT_STONK - unallocatedStonk;
     return {
       committed,
       fundedJuniors,
@@ -50,6 +48,10 @@
     return;
   }
 
+  function setText(el, value) {
+    if (el && el.textContent !== value) el.textContent = value;
+  }
+
   function syncFundingCard() {
     const reserveEl = document.querySelector('#fundReserve');
     if (!reserveEl) return;
@@ -61,17 +63,17 @@
     const full = document.querySelector('#jrFullBrokers');
     const next = document.querySelector('#jrNextBroker');
     const note = document.querySelector('#jrReserveNote');
-    if (pct) pct.textContent = projectionLabel(p);
+    setText(pct, projectionLabel(p));
     if (fill) fill.style.width = `${Math.max(0, Math.min(100, p.meterPercent))}%`;
-    if (current) current.textContent = p.fullBrokers
+    setText(current, p.fullBrokers
       ? `${p.fullBrokers} FULL + ${p.juniorProgress} JR FUNDED`
-      : `${p.fundedJuniors} JR FUNDED`;
-    if (target) target.textContent = p.fundedJuniors
+      : `${p.fundedJuniors} JR FUNDED`);
+    setText(target, p.fundedJuniors
       ? `Next Jr: ${fmt(p.nextJuniorNeedsStonk)} STONK`
-      : '20 JR = 1 ACTIVATED BROKER';
-    if (full) full.textContent = fmt(p.fullBrokers);
-    if (next) next.textContent = `${p.juniorProgress} / ${JR_PER_BROKER}`;
-    if (note) note.textContent = `Funded Jr cushion: ${fmt(p.reserveCushionStonk)} STONK • Unallocated toward next Jr: ${fmt(p.unallocatedStonk)} STONK`;
+      : '20 JR = 1 ACTIVATED BROKER');
+    setText(full, fmt(p.fullBrokers));
+    setText(next, `${p.juniorProgress} / ${JR_PER_BROKER}`);
+    setText(note, `Funded Jr cushion: ${fmt(p.reserveCushionStonk)} STONK • Unallocated toward next Jr: ${fmt(p.unallocatedStonk)} STONK`);
   }
 
   function distinguishJuniorTicket() {
@@ -84,7 +86,7 @@
       btn.title = 'Existing Junior event-entry ticket — separate from Junior Broker prize collectibles in this experiment.';
     }
     const bookType = document.querySelector('#bookType');
-    if (bookType?.textContent.trim() === 'JR. STONKBROKER') bookType.textContent = 'JR EVENT TICKET';
+    if (bookType?.textContent.trim() === 'JR. STONKBROKER') setText(bookType, 'JR EVENT TICKET');
   }
 
   function decorateFloor() {
@@ -131,16 +133,23 @@
     }, true);
   }
 
+  let syncQueued = false;
   function syncAll() {
+    syncQueued = false;
     syncFundingCard();
     distinguishJuniorTicket();
     decorateFloor();
     addClearinghouseNote();
   }
+  function queueSync() {
+    if (syncQueued) return;
+    syncQueued = true;
+    requestAnimationFrame(syncAll);
+  }
 
   installLinks();
   syncAll();
-  const observer = new MutationObserver(() => requestAnimationFrame(syncAll));
+  const observer = new MutationObserver(queueSync);
   observer.observe(document.body, { childList:true, subtree:true, characterData:true });
   window.__sbcJuniorBrokerExperiment = { juniorProjection, projectionLabel, syncAll };
 })();
