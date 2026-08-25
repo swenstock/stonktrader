@@ -22,7 +22,7 @@ jobs:
           node-version: '22.x'
       - name: Reconstruct exact verified payload
         run: |
-          cat .tmp-chart-fix/payload.part1 .tmp-chart-fix/payload.part2 .tmp-chart-fix/payload.part3 > /tmp/chart-fix.b64
+          cat .tmp-chart-fix/payload.part1 .tmp-chart-fix/payload.part2 .tmp-chart-fix/payload.part3a .tmp-chart-fix/payload.part3b > /tmp/chart-fix.b64
           base64 -d /tmp/chart-fix.b64 > /tmp/chart-fix.tgz
           echo '3399106884ca5355b15e726371727eb756f347c984c31d4251fcad0878c47987  /tmp/chart-fix.tgz' | sha256sum -c -
           tar -xzf /tmp/chart-fix.tgz
