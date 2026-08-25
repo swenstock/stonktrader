@@ -61,7 +61,7 @@ assert.strictEqual(junior.parseStonk('0 STONK'), 0);
 const html = fs.readFileSync(path.join(__dirname, '../public/junior/index.html'), 'utf8');
 assert.ok(html.includes('../v45/v45.css'), 'experiment must reuse V45 styling');
 assert.ok(html.includes('../v45/v45.js'), 'experiment must reuse V45 application engine');
-assert.ok(html.includes('20 JR = 1 ACTIVATED STONKBROKER'), 'redemption rule must be visible');
+assert.ok(html.includes('<b>20 JR</b><span>=</span><strong>1 ACTIVATED STONKBROKER</strong>'), 'redemption rule must be visibly composed in the hero');
 assert.ok(html.includes('40,000 STONK'), 'funding unit must be visible');
 assert.ok(html.includes('Existing production settlement rules are unchanged'), 'experiment boundary must be explicit');
 assert.ok(html.includes('CURRENT V45'), 'reversible build must link back to current V45');
