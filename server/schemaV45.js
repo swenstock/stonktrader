@@ -2,6 +2,7 @@
 // Runs after db.js creates the legacy schema. Never drops existing data.
 
 const db = require('./db');
+const { ensureSchema: ensurePrizeReserveSchema } = require('./prizeReserveLedger');
 
 function columns(table) {
   return new Set(db.prepare(`PRAGMA table_info(${table})`).all().map(r => r.name));
@@ -102,6 +103,10 @@ function run() {
               'protected_freeroll_contribution', 'freeroll_fund', NULL);
     END;
   `);
+
+  // Stage 1 prize ladder foundation: two isolated integer-only reserve accounts.
+  // No player-facing Junior issuance/redemption behavior is activated here.
+  ensurePrizeReserveSchema(db);
 }
 
 module.exports = { run };
