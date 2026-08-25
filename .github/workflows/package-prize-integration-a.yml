@@ -1,0 +1,77 @@
+name: Package Prize Integration A Exact Source
+
+on:
+  push:
+    branches: [package-prize-integration-a-artifact]
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build exact merged source package
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET=1f7a702af87e6c5c85f2a6e8295c828abe245744
+          mkdir -p audit
+          git cat-file -e "$TARGET^{commit}"
+          git archive --format=zip --prefix=SBC_PRIZE_INTEGRATION_A_FULL_SOURCE/ -o audit/SBC_PRIZE_INTEGRATION_A_FULL_SOURCE.zip "$TARGET"
+          {
+            echo "Prize Integration A exact-source package"
+            echo "Repository: swenstock/stonktrader"
+            echo "Merge commit: $TARGET"
+            echo
+            echo "Changed-file Git blobs:"
+            for f in \
+              .github/workflows/prize-integration-a-pool-foundation.yml \
+              PRIZE_INTEGRATION_A_POOL_FOUNDATION_HANDOFF.md \
+              server/contestJuniorFundingPool.js \
+              server/contestJuniorFundingPool.test.js \
+              server/juniorBrokerStage2.js \
+              server/prizeReserveLedger.js \
+              server/schemaV45.js
+            do
+              printf '%s  %s\n' "$(git rev-parse "$TARGET:$f")" "$f"
+            done
+            echo
+            sha256sum audit/SBC_PRIZE_INTEGRATION_A_FULL_SOURCE.zip
+          } > audit/EXACT_INTEGRATION_A_MANIFEST.txt
+          cat > audit/START_HERE_CLAUDE.txt <<'EOF'
+          PRIZE INTEGRATION A — CLAUDE AUDIT
+
+          Exact source commit:
+          1f7a702af87e6c5c85f2a6e8295c828abe245744
+
+          Unzip SBC_PRIZE_INTEGRATION_A_FULL_SOURCE.zip. It is a git archive made directly from that exact merge commit, not a reconstructed overlay.
+
+          Run:
+            node server/prizeReserveLedgerStage1.test.js
+            node server/juniorBrokerStage2.test.js
+            node server/tierBurnEngineStage3.test.js
+            node server/juniorBrokerStage4.test.js
+            node server/contestJuniorFundingPool.test.js
+
+          Review especially:
+          - exactly two reserve accounts remain;
+          - unallocated pool = Broker Reserve balance - outstanding Junior backing liability;
+          - pooled issuance does not double-credit reserve cash;
+          - 3,333.4 STONK moves internally Broker -> Overflow per won Junior;
+          - cross-contest carry remains exact;
+          - BigInt/integer-only pool math;
+          - live Main Event and satellite settlement are NOT hooked into this pool yet;
+          - the future production cutover must retire the old prize destination in the same atomic change that begins feeding the new pool.
+
+          Known non-blocking hardening notes in the exact merged source:
+          - sourceId is stringified before validation, so null/undefined are not rejected as strictly as they could be;
+          - recordJuniorIssuanceInTransaction validates the source but does not independently compare a caller-supplied split object against the canonical split.
+          These are not claimed as fixed.
+          EOF
+      - name: Upload exact source artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SBC_PRIZE_INTEGRATION_A_EXACT_SOURCE_FOR_CLAUDE
+          path: audit/
+          if-no-files-found: error
