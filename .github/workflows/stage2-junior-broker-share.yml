@@ -1,0 +1,38 @@
+name: Stage 2 Junior Broker Share
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server/prizeReserveLedger.js'
+      - 'server/juniorBrokerStage2.js'
+      - 'server/juniorBrokerStage2.test.js'
+      - 'server/schemaV45.js'
+      - '.github/workflows/stage2-junior-broker-share.yml'
+  push:
+    branches: [stage2-junior-broker-share]
+    paths:
+      - 'server/prizeReserveLedger.js'
+      - 'server/juniorBrokerStage2.js'
+      - 'server/juniorBrokerStage2.test.js'
+      - 'server/schemaV45.js'
+      - '.github/workflows/stage2-junior-broker-share.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: Syntax check Stage 2
+        run: |
+          node --check server/prizeReserveLedger.js
+          node --check server/juniorBrokerStage2.js
+          node --check server/juniorBrokerStage2.test.js
+          node --check server/schemaV45.js
+      - name: Re-run Stage 1 reserve behavior
+        run: node server/prizeReserveLedgerStage1.test.js
+      - name: Execute Stage 2 issuance and redemption behavior
+        run: node server/juniorBrokerStage2.test.js
