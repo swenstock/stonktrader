@@ -1,0 +1,54 @@
+name: Claude Full Source Package f6ced668
+
+on:
+  push:
+    branches: [claude-package-f6ced668]
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build exact source archive
+        run: |
+          set -euo pipefail
+          TARGET=f6ced668774c064492410eab02a36061c4a60666
+          mkdir -p claude-package
+          git archive --format=zip --prefix=stonktrader-f6ced668/ "$TARGET" > claude-package/STONKTRADER_FULL_SOURCE_F6CED668.zip
+          cat > claude-package/START_HERE_CLAUDE.md <<'EOF'
+          # Claude — Full Source Handoff
+
+          Exact SBC repository snapshot:
+          `f6ced668774c064492410eab02a36061c4a60666`
+
+          This is a full `git archive` of the repository at the merged Broker Race GUI commit. No nested delta reconstruction is required.
+
+          Current verified progression/economics stack:
+          - Stage 1 prize reserve ledger
+          - Stage 2 Junior issuance/redemption
+          - Stage 3 generic burn engine
+          - Stage 4 Junior collection UI
+          - Prize Integration A pooled post-rake funding foundation
+          - Broker Race GUI / platform-wide Junior stacker leaderboard
+
+          Broker Race behavior verified in CI:
+          - lifetime StonkBrokers earned
+          - lifetime Juniors awarded
+          - currently stacked Juniors
+          - persistent platform-wide Top Stackers separate from contest P&L standings
+          - a player who redeems 20 drops by 20 in current holdings while lifetime award/redemption totals remain historical
+
+          The Main Event settlement cutover has NOT been performed yet. Satellites are also NOT cut over.
+
+          Run the relevant behavioral tests before recommending the next production settlement change.
+          EOF
+          git show --format=fuller --no-patch "$TARGET" > claude-package/COMMIT_IDENTITY.txt
+          git ls-tree -r "$TARGET" | awk '{print $3"  "$4}' > claude-package/FULL_REPO_BLOB_MANIFEST.txt
+          sha256sum claude-package/STONKTRADER_FULL_SOURCE_F6CED668.zip > claude-package/SOURCE_ZIP_SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SBC_CLAUDE_FULL_SOURCE_F6CED668
+          path: claude-package/
+          if-no-files-found: error
