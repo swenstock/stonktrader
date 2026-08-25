@@ -15,6 +15,20 @@
   };
   const TIMEFRAMES = ['1m', '5m', '15m', '1h', '1D'];
   const DRAWING_HIT_PX = 6;
+  const VOLUME_ZONE_PX = 70, VOLUME_GAP_PX = 6, AXIS_LABEL_PX = 24;
+
+  // Toolbar icon set - stroke="currentColor" so every icon automatically
+  // matches its button's active/inactive text color with zero extra CSS.
+  const ICONS = {
+    pointer: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l5.5 15 2-6.2L19 9.7z"/></svg>',
+    trend: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="5" cy="18" r="2"/><circle cx="19" cy="6" r="2"/><path d="M6.6 16.6L17.4 7.4"/></svg>',
+    horizontal: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="4.5" cy="12" r="2"/><path d="M8 12h13"/></svg>',
+    clear: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9 7V4.5h6V7"/><path d="M6 7l1 12.5A1.5 1.5 0 0 0 8.5 21h7a1.5 1.5 0 0 0 1.5-1.5L18 7"/></svg>',
+    candles: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 4v4M6 14v6M18 4v6M18 16v4"/><rect x="4" y="8" width="4" height="6" rx=".5"/><rect x="16" y="10" width="4" height="6" rx=".5"/></svg>',
+    line: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l5-7 4 4 7-9"/></svg>',
+    indicators: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 12h3l2-6 4 12 2-6h5"/></svg>',
+  };
+  function iconBtn(icon, label, attrs, active) { return `<button class="icon-btn${active?' active':''}" ${attrs} title="${label}" aria-label="${label}">${ICONS[icon]}</button>`; }
   const LAYOUT_PREFIX = 'sbc-chart-layout:';
   const DEFAULT_CHART_TYPE = 'candles';
 
@@ -261,7 +275,7 @@
       const p = d.points[i];
       const hx = d.type === 'horizontal' ? view.state.w - view.state.pad.r - 16 : view.timeToX(p.time);
       const hy = view.priceToY(p.price);
-      if (Math.hypot(x - hx, y - hy) <= threshold + 2) return i;
+      if (Math.hypot(x - hx, y - hy) <= threshold + 6) return i;
     }
     return -1;
   }
@@ -275,6 +289,36 @@
     return true;
   }
 
+  // Whole-line translation. Stores the click's origin and the drawing's
+  // ORIGINAL points (not deltas-from-deltas, to avoid drift across a long
+  // drag), then on each move applies one clean delta computed from the
+  // origin - same time/price-not-pixels rule as every other coordinate
+  // write in this file. Horizontal lines only translate in price - they
+  // have no meaningful time extent to shift.
+  function beginLineDrag(drawings, selectedIndex, view, x, y) {
+    const d = drawings[selectedIndex];
+    if (!d || !Array.isArray(d.points)) return null;
+    return {
+      selectedIndex,
+      originPoints: d.points.map(p => ({ time: p.time, price: p.price })),
+      originTime: view.xToTime(x),
+      originPrice: view.yToPrice(y),
+    };
+  }
+
+  function applyLineDrag(drawings, lineDrag, view, x, y) {
+    const d = drawings[lineDrag.selectedIndex];
+    if (!d) return false;
+    const dTime = view.xToTime(x) - lineDrag.originTime;
+    const dPrice = view.yToPrice(y) - lineDrag.originPrice;
+    d.points.forEach((p, i) => {
+      const origin = lineDrag.originPoints[i];
+      if (d.type !== 'horizontal') p.time = origin.time + dTime;
+      p.price = origin.price + dPrice;
+    });
+    return true;
+  }
+
   function deleteSelectedDrawing(drawings, selectedIndex) {
     if (selectedIndex < 0 || selectedIndex >= drawings.length) return -1;
     drawings.splice(selectedIndex, 1);
@@ -284,18 +328,28 @@
   function makeDrawingInteractionController({ drawings, view, layers, threshold = DRAWING_HIT_PX, onChange = () => {} }) {
     let selectedIndex = -1;
     let activeHandle = -1;
+    let lineDrag = null;
     return {
       get selectedIndex() { return selectedIndex; },
       get activeHandle() { return activeHandle; },
-      setSelectedIndex(index) { selectedIndex = index; activeHandle = -1; return selectedIndex; },
+      get isLineDragging() { return !!lineDrag; },
+      setSelectedIndex(index) { selectedIndex = index; activeHandle = -1; lineDrag = null; return selectedIndex; },
       pointerDown(x, y) {
         const handle = hitTestHandle(drawings, selectedIndex, view, x, y, threshold);
         if (handle >= 0) {
-          activeHandle = handle;
+          activeHandle = handle; lineDrag = null;
           return { type:'handle', selectedIndex, handleIndex:handle };
         }
-        selectedIndex = hitTestDrawing(drawings, view, x, y, threshold);
+        const hit = hitTestDrawing(drawings, view, x, y, threshold);
         activeHandle = -1;
+        if (hit >= 0) {
+          selectedIndex = hit;
+          lineDrag = beginLineDrag(drawings, selectedIndex, view, x, y);
+          layers.renderScene();
+          return { type:'line-drag-start', selectedIndex };
+        }
+        selectedIndex = -1;
+        lineDrag = null;
         layers.renderScene();
         return { type:'selection', selectedIndex };
       },
@@ -306,20 +360,26 @@
           layers.renderScene();
           return 'drag';
         }
+        if (selectedIndex >= 0 && lineDrag) {
+          applyLineDrag(drawings, lineDrag, view, x, y);
+          onChange('drawing-move');
+          layers.renderScene();
+          return 'move';
+        }
         layers.renderCrosshair();
         return 'crosshair';
       },
-      pointerUp() { activeHandle = -1; },
+      pointerUp() { activeHandle = -1; lineDrag = null; },
       deleteSelected() {
         selectedIndex = deleteSelectedDrawing(drawings, selectedIndex);
-        activeHandle = -1;
+        activeHandle = -1; lineDrag = null;
         onChange('drawing-delete');
         layers.renderScene();
         return selectedIndex;
       },
       clearSelection() {
         selectedIndex = -1;
-        activeHandle = -1;
+        activeHandle = -1; lineDrag = null;
         layers.renderScene();
       },
     };
@@ -459,7 +519,7 @@
 
   function drawHandle(ctx, x, y) {
     ctx.beginPath();
-    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
     ctx.fillStyle = COLORS.bg;
     ctx.fill();
     ctx.strokeStyle = COLORS.gold;
@@ -484,8 +544,7 @@
 
     drawTimeAxis(ctx, view, opts.interval);
 
-    const volH = (h - pad.t - pad.b) * (opts.showVolume ? .18 : 0);
-    const chartBottom = h - pad.b - volH - (opts.showVolume ? 6 : 0);
+    const volTop = h - pad.b + VOLUME_GAP_PX; // pad.b already reserves axis+gap+volume together
     const maxVol = Math.max(...bars.map(b => b.volume), 1);
     const barW = candleWidthPx(bars, view);
 
@@ -496,12 +555,12 @@
       ctx.strokeStyle = ctx.fillStyle = up ? COLORS.up : COLORS.down;
       if (opts.chartType !== 'line') {
         const yO=view.priceToY(b.open), yC=view.priceToY(b.close), yH=view.priceToY(b.high), yL=view.priceToY(b.low);
-        ctx.beginPath(); ctx.moveTo(x, Math.min(yH, chartBottom)); ctx.lineTo(x, Math.max(yL, 0)); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, yH); ctx.lineTo(x, yL); ctx.stroke();
         ctx.fillRect(x - barW/2, Math.min(yO,yC), barW, Math.max(1, Math.abs(yC-yO)));
       }
       if (opts.showVolume) {
-        const vh = (b.volume / maxVol) * volH;
-        ctx.globalAlpha=.55; ctx.fillRect(x-barW/2, h-pad.b-vh, barW, vh); ctx.globalAlpha=1;
+        const vh = (b.volume / maxVol) * VOLUME_ZONE_PX;
+        ctx.globalAlpha=.55; ctx.fillRect(x-barW/2, volTop+VOLUME_ZONE_PX-vh, barW, vh); ctx.globalAlpha=1;
       }
     }
 
@@ -514,9 +573,10 @@
     drawAccountOverlays(ctx, view, opts.accountOverlays || []);
 
     for (let i = 0; i < opts.drawings.length; i++) {
-      const d = opts.drawings[i], selected = i === opts.selectedIndex;
+      const d = opts.drawings[i], selected = i === opts.selectedIndex, hovered = !selected && i === opts.hoverIndex;
       ctx.strokeStyle = selected ? COLORS.gold : COLORS.blue;
-      ctx.lineWidth = selected ? 2.75 : 1.5;
+      ctx.lineWidth = selected ? 2.75 : (hovered ? 2 : 1.5);
+      ctx.globalAlpha = hovered ? 0.85 : 1;
       if (d.type === 'trend') {
         const [a,b]=d.points;
         ctx.beginPath(); ctx.moveTo(view.timeToX(a.time),view.priceToY(a.price)); ctx.lineTo(view.timeToX(b.time),view.priceToY(b.price)); ctx.stroke();
@@ -529,6 +589,7 @@
         ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(w-pad.r,y); ctx.stroke();
         if (selected) drawHandle(ctx, w-pad.r-16, y);
       }
+      ctx.globalAlpha = 1;
     }
     ctx.lineWidth=1;
   }
@@ -566,6 +627,7 @@
       #advChartOverlay{position:fixed;inset:0;z-index:9999;background:${COLORS.bg};display:none;flex-direction:column;font-family:Inter,system-ui,sans-serif;color:${COLORS.text}}
       #advChartOverlay.open{display:flex}.adv-toolbar{display:flex;align-items:center;gap:8px;padding:8px 12px;background:${COLORS.panel};border-bottom:1px solid ${COLORS.line};flex-wrap:wrap}
       .adv-toolbar button{background:#1a2029;color:${COLORS.text};border:1px solid ${COLORS.line};border-radius:6px;padding:6px 10px;font-size:11px;cursor:pointer;font-weight:700}.adv-toolbar button.active{background:${COLORS.gold};color:#1a1607;border-color:${COLORS.gold}}
+      .adv-toolbar button.icon-btn{padding:7px;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px}.adv-toolbar button:hover{border-color:${COLORS.muted}}.adv-toolbar button.active:hover{border-color:${COLORS.gold}}
       .adv-toolbar .sep{width:1px;height:20px;background:${COLORS.line};margin:0 4px}.adv-toolbar .grow{flex:1}.adv-close{background:transparent!important;border:0!important;font-size:16px!important;padding:4px 10px!important}
       .adv-chart-wrap{flex:1;position:relative;overflow:hidden}#advChartCanvas,#advChartOverlayCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}#advChartCanvas{pointer-events:none}#advChartOverlayCanvas{z-index:1;cursor:crosshair}.adv-status{position:absolute;z-index:2;bottom:8px;left:12px;font-size:10px;color:${COLORS.muted};pointer-events:none}
       .adv-price-scale-zone{position:absolute;z-index:5;top:0;right:0;bottom:24px;width:72px;cursor:ns-resize;background:transparent;touch-action:none;user-select:none}#advChartOverlayCanvas.grabbing{cursor:grabbing!important}
@@ -574,7 +636,7 @@
 
   function buildOverlay() {
     const overlay=document.createElement('div'); overlay.id='advChartOverlay';
-    overlay.innerHTML=`<div class="adv-toolbar">${TIMEFRAMES.map(tf=>`<button data-tf="${tf}">${tf}</button>`).join('')}<div class="sep"></div><button data-type="candles" class="active">Candles</button><button data-type="line">Line</button><div class="sep"></div><button data-tool="pointer" class="active">Pointer</button><button data-tool="trend">Trend Line</button><button data-tool="horizontal">Horizontal Line</button><button data-action="clear">Clear Drawings</button><div class="grow"></div><button class="adv-close" data-action="close">✕</button></div><div class="adv-chart-wrap"><canvas id="advChartCanvas"></canvas><canvas id="advChartOverlayCanvas"></canvas><div class="adv-price-scale-zone" title="Drag price scale to zoom"></div><div class="adv-status" id="advChartStatus">Loading…</div></div>`;
+    overlay.innerHTML=`<div class="adv-toolbar">${TIMEFRAMES.map(tf=>`<button data-tf="${tf}" title="${tf}">${tf}</button>`).join('')}<div class="sep"></div>${iconBtn('candles','Candles','data-type="candles"',true)}${iconBtn('line','Line','data-type="line"',false)}<div class="sep"></div>${iconBtn('pointer','Pointer','data-tool="pointer"',true)}${iconBtn('trend','Trend Line','data-tool="trend"',false)}${iconBtn('horizontal','Horizontal Line','data-tool="horizontal"',false)}${iconBtn('clear','Clear Drawings','data-action="clear"',false)}<div class="grow"></div><button class="adv-close" data-action="close" title="Close" aria-label="Close">✕</button></div><div class="adv-chart-wrap"><canvas id="advChartCanvas"></canvas><canvas id="advChartOverlayCanvas"></canvas><div class="adv-price-scale-zone" title="Drag price scale to zoom"></div><div class="adv-status" id="advChartStatus">Loading…</div></div>`;
     document.body.appendChild(overlay); return overlay;
   }
 
@@ -583,8 +645,8 @@
     const trigger=document.createElement('button'); trigger.id='advChartTrigger'; trigger.textContent='📈 ADVANCED CHART'; document.body.appendChild(trigger);
     const overlay=buildOverlay(), bgCanvas=overlay.querySelector('#advChartCanvas'), fgCanvas=overlay.querySelector('#advChartOverlayCanvas'), priceZone=overlay.querySelector('.adv-price-scale-zone'), statusEl=overlay.querySelector('#advChartStatus');
     const bgCtx=bgCanvas.getContext('2d'), fgCtx=fgCanvas.getContext('2d');
-    const pad={l:8,r:56,t:10,b:24}, view=makeView(0,0,pad);
-    let bars=[],symbol='AAPL',interval='5m',chartType=DEFAULT_CHART_TYPE,tool='pointer',pendingPoint=null,panStart=null,panDomainStart=null,priceDrag=null,mouseX=-1,mouseY=-1;
+    const pad={l:8,r:56,t:10,b:AXIS_LABEL_PX+VOLUME_GAP_PX+VOLUME_ZONE_PX}, view=makeView(0,0,pad);
+    let bars=[],symbol='AAPL',interval='5m',chartType=DEFAULT_CHART_TYPE,tool='pointer',pendingPoint=null,priceDrag=null,mouseX=-1,mouseY=-1,hoverIndex=-1;
     const drawings=[];
     let interactions;
     let restoredIndicatorIds=[];
@@ -620,8 +682,16 @@
     };
 
     const layers=makeLayerRenderer({
-      drawBackground(){ drawChart(bgCtx,view,bars,{chartType,showVolume:true,drawings,interval,selectedIndex:interactions?.selectedIndex ?? -1,accountOverlays:accountOverlayController?.overlays || []}); },
-      drawForeground(){ const {w,h}=view.state; fgCtx.clearRect(0,0,w,h); if(mouseX>=0) drawCrosshair(fgCtx,view,mouseX,mouseY,bars,interval); },
+      drawBackground(){ drawChart(bgCtx,view,bars,{chartType,showVolume:true,drawings,interval,selectedIndex:interactions?.selectedIndex ?? -1,hoverIndex,accountOverlays:accountOverlayController?.overlays || []}); },
+      drawForeground(){
+        const {w,h}=view.state; fgCtx.clearRect(0,0,w,h);
+        if(pendingPoint && mouseX>=0){
+          fgCtx.strokeStyle=COLORS.gold; fgCtx.lineWidth=1.5; fgCtx.setLineDash([4,4]);
+          fgCtx.beginPath(); fgCtx.moveTo(view.timeToX(pendingPoint.time),view.priceToY(pendingPoint.price)); fgCtx.lineTo(mouseX,mouseY); fgCtx.stroke();
+          fgCtx.setLineDash([]);
+        }
+        if(mouseX>=0) drawCrosshair(fgCtx,view,mouseX,mouseY,bars,interval);
+      },
     });
     interactions=makeDrawingInteractionController({drawings,view,layers,onChange:scheduleLayoutSave});
     accountOverlayController=makeAccountOverlayController({
@@ -652,10 +722,15 @@
       const btn=e.target.closest('button'); if(!btn)return;
       if(btn.dataset.tf){ layoutSaver.flush(); interval=btn.dataset.tf; loadData(); }
       else if(btn.dataset.type){ chartType=btn.dataset.type; overlay.querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('active',b===btn)); scheduleLayoutSave(); layers.renderScene(); }
-      else if(btn.dataset.tool){ tool=btn.dataset.tool; pendingPoint=null; if(tool!=='pointer') interactions.setSelectedIndex(-1); overlay.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b===btn)); layers.renderScene(); }
-      else if(btn.dataset.action==='clear'){ drawings.splice(0,drawings.length); interactions.setSelectedIndex(-1); scheduleLayoutSave(); layers.renderScene(); }
+      else if(btn.dataset.tool){ tool=btn.dataset.tool; pendingPoint=null; hoverIndex=-1; if(tool!=='pointer') interactions.setSelectedIndex(-1); overlay.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b===btn)); layers.renderScene(); }
+      else if(btn.dataset.action==='clear'){ drawings.splice(0,drawings.length); interactions.setSelectedIndex(-1); hoverIndex=-1; scheduleLayoutSave(); layers.renderScene(); }
       else if(btn.dataset.action==='close'){ layoutSaver.flush(); overlay.classList.remove('open'); }
     });
+
+    function returnToPointer(){
+      tool='pointer'; pendingPoint=null;
+      overlay.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool==='pointer'));
+    }
 
     fgCanvas.addEventListener('mousedown',e=>{
       const rect=fgCanvas.getBoundingClientRect(),x=e.clientX-rect.left,y=e.clientY-rect.top;
@@ -665,40 +740,56 @@
         return;
       }
       if(tool==='pointer'){
-        const action=interactions.pointerDown(x,y);
-        if(action.type==='selection' && action.selectedIndex < 0){
-          panStart={x,y}; panDomainStart={...view.state};
-          fgCanvas.classList.add('grabbing');
-        }
+        interactions.pointerDown(x,y);
         return;
       }
       const point={time:view.xToTime(x),price:view.yToPrice(y)};
-      if(tool==='horizontal'){ drawings.push({type:'horizontal',points:[point]}); interactions.setSelectedIndex(drawings.length-1); scheduleLayoutSave(); layers.renderScene(); return; }
+      if(tool==='horizontal'){
+        drawings.push({type:'horizontal',points:[point]});
+        interactions.setSelectedIndex(drawings.length-1);
+        scheduleLayoutSave(); returnToPointer(); layers.renderScene();
+        return;
+      }
       if(!pendingPoint){ pendingPoint=point; return; }
-      drawings.push({type:'trend',points:[pendingPoint,point]}); pendingPoint=null; interactions.setSelectedIndex(drawings.length-1); scheduleLayoutSave(); layers.renderScene();
+      drawings.push({type:'trend',points:[pendingPoint,point]});
+      interactions.setSelectedIndex(drawings.length-1);
+      scheduleLayoutSave(); returnToPointer(); layers.renderScene();
     });
 
     priceZone.addEventListener('mousedown',e=>{
       e.preventDefault(); e.stopPropagation();
       priceDrag={startY:e.clientY,domain:{minPrice:view.state.minPrice,maxPrice:view.state.maxPrice}};
     });
+    priceZone.addEventListener('wheel',e=>{
+      e.preventDefault(); e.stopPropagation();
+      const {minPrice,maxPrice}=view.state;
+      const factor=e.deltaY>0?1.1:.9;
+      const center=(minPrice+maxPrice)/2, span=Math.max(1e-9,(maxPrice-minPrice)*factor);
+      view.setDomain(view.state.minTime,view.state.maxTime,center-span/2,center+span/2);
+      layers.renderScene();
+    },{passive:false});
 
     window.addEventListener('mousemove',e=>{
       if(!overlay.classList.contains('open'))return;
       const rect=fgCanvas.getBoundingClientRect(); mouseX=e.clientX-rect.left; mouseY=e.clientY-rect.top;
       if(priceDrag){ const next=priceScaleDomainFromDrag(priceDrag.domain,priceDrag.startY,e.clientY,view.state.h-pad.t-pad.b); view.setDomain(view.state.minTime,view.state.maxTime,next.minPrice,next.maxPrice); layers.renderScene(); return; }
-      if(tool==='pointer' && interactions.activeHandle >= 0){ interactions.pointerMove(mouseX,mouseY); return; }
-      if(panStart){
-        const next=panDomainFromDrag(panDomainStart,panStart.x,panStart.y,mouseX,mouseY,view.state.w-pad.l-pad.r,view.state.h-pad.t-pad.b);
-        view.setDomain(next.minTime,next.maxTime,next.minPrice,next.maxPrice);
-        layers.renderScene();
+      if(tool==='pointer' && (interactions.activeHandle >= 0 || interactions.isLineDragging)){ interactions.pointerMove(mouseX,mouseY); return; }
+      if(tool==='pointer'){
+        const newHover=hitTestDrawing(drawings,view,mouseX,mouseY,DRAWING_HIT_PX);
+        if(newHover!==hoverIndex){
+          hoverIndex=newHover;
+          fgCanvas.style.cursor=hoverIndex>=0?'move':'crosshair';
+          layers.renderScene();
+        } else layers.renderCrosshair();
       } else layers.renderCrosshair();
     });
-    window.addEventListener('mouseup',()=>{ panStart=null; priceDrag=null; interactions.pointerUp(); fgCanvas.classList.remove('grabbing'); });
+    window.addEventListener('mouseup',()=>{ priceDrag=null; interactions.pointerUp(); });
 
     window.addEventListener('keydown',e=>{
-      if(!overlay.classList.contains('open') || tool!=='pointer') return;
-      if((e.key==='Delete'||e.key==='Backspace') && interactions.selectedIndex>=0){ e.preventDefault(); interactions.deleteSelected(); }
+      if(!overlay.classList.contains('open')) return;
+      if(e.key==='Escape' && tool!=='pointer'){ e.preventDefault(); returnToPointer(); layers.renderScene(); return; }
+      if(tool!=='pointer') return;
+      if((e.key==='Delete'||e.key==='Backspace') && interactions.selectedIndex>=0){ e.preventDefault(); hoverIndex=-1; interactions.deleteSelected(); }
     });
 
     fgCanvas.addEventListener('wheel',e=>{ e.preventDefault(); const factor=e.deltaY>0?1.1:.9,{minTime,maxTime}=view.state,center=view.xToTime(mouseX); view.setDomain(center-(center-minTime)*factor,center+(maxTime-center)*factor,view.state.minPrice,view.state.maxPrice); layers.renderScene(); },{passive:false});
