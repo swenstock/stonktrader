@@ -1,0 +1,46 @@
+name: Stage 4 Junior Collection UI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server/juniorBrokerStage4.js'
+      - 'server/juniorBrokerStage4.test.js'
+      - 'server/routes/account.js'
+      - 'public/v45-stage4-junior-ui.js'
+      - 'public/v45-stage4-junior-ui.css'
+      - 'server/index.js'
+      - '.github/workflows/stage4-junior-collection-ui.yml'
+  push:
+    branches: [stage4-junior-collection-ui]
+    paths:
+      - 'server/juniorBrokerStage4.js'
+      - 'server/juniorBrokerStage4.test.js'
+      - 'server/routes/account.js'
+      - 'public/v45-stage4-junior-ui.js'
+      - 'public/v45-stage4-junior-ui.css'
+      - 'server/index.js'
+      - '.github/workflows/stage4-junior-collection-ui.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: Syntax check Stage 4
+        run: |
+          node --check server/juniorBrokerStage4.js
+          node --check server/juniorBrokerStage4.test.js
+          node --check server/routes/account.js
+          node --check public/v45-stage4-junior-ui.js
+      - name: Re-run Stage 1
+        run: node server/prizeReserveLedgerStage1.test.js
+      - name: Re-run Stage 2
+        run: node server/juniorBrokerStage2.test.js
+      - name: Re-run Stage 3
+        run: node server/tierBurnEngineStage3.test.js
+      - name: Execute Stage 4 player collection behavior
+        run: node server/juniorBrokerStage4.test.js
