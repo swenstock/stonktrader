@@ -3,6 +3,7 @@
 
 const db = require('./db');
 const { ensureSchema: ensurePrizeReserveSchema } = require('./prizeReserveLedger');
+const { ensureSchema: ensureJuniorBrokerStage2Schema } = require('./juniorBrokerStage2');
 
 function columns(table) {
   return new Set(db.prepare(`PRAGMA table_info(${table})`).all().map(r => r.name));
@@ -104,9 +105,8 @@ function run() {
     END;
   `);
 
-  // Stage 1 prize ladder foundation: two isolated integer-only reserve accounts.
-  // No player-facing Junior issuance/redemption behavior is activated here.
   ensurePrizeReserveSchema(db);
+  ensureJuniorBrokerStage2Schema(db);
 }
 
 module.exports = { run };
