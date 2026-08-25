@@ -8,7 +8,7 @@ on:
       - 'server/juniorBrokerExperiment.test.js'
       - '.github/workflows/junior-broker-experiment.yml'
   push:
-    branches: [feature-junior-broker-experiment]
+    branches: [feature-junior-broker-experiment, fix-junior-from-current-shell]
     paths:
       - 'public/junior/**'
       - 'server/juniorBrokerExperiment.test.js'
@@ -24,7 +24,7 @@ jobs:
           node-version: '22.x'
       - name: Syntax check isolated build
         run: |
-          node --check public/junior/junior.js
+          node --check public/junior/junior-current.js
           node --check server/juniorBrokerExperiment.test.js
-      - name: Verify Junior Broker economics and V45 reuse contract
+      - name: Verify current-shell inheritance and Junior economics
         run: node server/juniorBrokerExperiment.test.js
