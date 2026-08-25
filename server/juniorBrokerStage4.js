@@ -31,7 +31,9 @@ function getPlayerJuniorSnapshot(db, accountId) {
   const countBig = getJuniorCount(db, accountId);
   const count = safeCount(countBig, 'Junior count');
   const redeemCount = safeCount(REDEEM_COUNT, 'redeem count');
-  const progress = count % redeemCount;
+  const remainder = count % redeemCount;
+  const redeemable = count >= redeemCount;
+  const progress = redeemable && remainder === 0 ? redeemCount : remainder;
 
   const rows = prepareBigInt(db, `
     SELECT event_type, event_id, source, quantity, stonk_subunits, status, created_at
@@ -70,8 +72,9 @@ function getPlayerJuniorSnapshot(db, accountId) {
     count,
     redeemCount,
     progress,
+    remainder,
     progressLabel: `${progress} / ${redeemCount}`,
-    redeemable: count >= redeemCount,
+    redeemable,
     fullRedemptionsAvailable: Math.floor(count / redeemCount),
     history: rows.map(row => ({
       type: row.event_type,
