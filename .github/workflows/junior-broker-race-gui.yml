@@ -1,0 +1,43 @@
+name: Junior Broker Race GUI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server/juniorBrokerRace.js'
+      - 'server/juniorBrokerRace.test.js'
+      - 'server/routes/leaderboardV45.js'
+      - 'public/v45-broker-race-ui.js'
+      - 'public/v45-broker-race-ui.css'
+      - 'public/v45-stage4-junior-ui.js'
+      - '.github/workflows/junior-broker-race-gui.yml'
+  push:
+    branches: [junior-broker-race-gui]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: Syntax check Broker Race GUI
+        run: |
+          node --check server/juniorBrokerRace.js
+          node --check server/juniorBrokerRace.test.js
+          node --check server/routes/leaderboardV45.js
+          node --check public/v45-broker-race-ui.js
+          node --check public/v45-stage4-junior-ui.js
+      - name: Re-run Stage 1
+        run: node server/prizeReserveLedgerStage1.test.js
+      - name: Re-run Stage 2
+        run: node server/juniorBrokerStage2.test.js
+      - name: Re-run Stage 3
+        run: node server/tierBurnEngineStage3.test.js
+      - name: Re-run Stage 4
+        run: node server/juniorBrokerStage4.test.js
+      - name: Re-run Prize Integration A
+        run: node server/contestJuniorFundingPool.test.js
+      - name: Execute Broker Race behavior
+        run: node server/juniorBrokerRace.test.js
