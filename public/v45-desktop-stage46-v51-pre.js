@@ -18,4 +18,5 @@ if(!document.querySelector('script[data-sbc-queued-activity-v1]')){const s=docum
 if(!document.querySelector('link[data-sbc-chart-workstation-v1]')){const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-chart-workstation-v1.css?v=1';l.dataset.sbcChartWorkstationV1='1';document.head.appendChild(l);}
 if(!document.querySelector('script[data-sbc-chart-workstation-v1]')){const s=document.createElement('script');s.src='/v45-chart-workstation-v1.js?v=1';s.dataset.sbcChartWorkstationV1='1';s.defer=true;document.head.appendChild(s);}
 if(!document.querySelector('script[data-sbc-advanced-chart-axis-lock-v1]')){const s=document.createElement('script');s.src='/v45-advanced-chart-axis-lock-v1.js?v=1';s.dataset.sbcAdvancedChartAxisLockV1='1';s.defer=true;document.head.appendChild(s);}
+if(!document.querySelector('script[data-sbc-advanced-chart-visual-pass-v1]')){const s=document.createElement('script');s.src='/v45-advanced-chart-visual-pass-v1.js?v=1';s.dataset.sbcAdvancedChartVisualPassV1='1';s.defer=true;document.head.appendChild(s);}
 })();
