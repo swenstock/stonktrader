@@ -49,8 +49,9 @@ for (let i = 14; i <= 19; i += 1) {
 
 snapshot = getPlayerJuniorSnapshot(db, 1);
 assert.strictEqual(snapshot.count, 20);
-assert.strictEqual(snapshot.progress, 0);
-assert.strictEqual(snapshot.progressLabel, '0 / 20');
+assert.strictEqual(snapshot.progress, 20);
+assert.strictEqual(snapshot.remainder, 0);
+assert.strictEqual(snapshot.progressLabel, '20 / 20');
 assert.strictEqual(snapshot.redeemable, true);
 assert.strictEqual(snapshot.fullRedemptionsAvailable, 1);
 
@@ -58,6 +59,7 @@ const redeemed = redeemPlayerJuniors(db, { accountId: 1, redemptionId: 'stage4-u
 assert.strictEqual(redeemed.status, 'funded_pending_delivery');
 assert.strictEqual(redeemed.brokerReserveDebitSubunits, '733332000000');
 assert.strictEqual(redeemed.snapshot.count, 0);
+assert.strictEqual(redeemed.snapshot.progress, 0);
 assert.strictEqual(redeemed.snapshot.redeemable, false);
 const redemptionHistory = redeemed.snapshot.history.find(x => x.type === 'redemption');
 assert.ok(redemptionHistory, 'transaction history must include the actual redemption');
@@ -82,8 +84,9 @@ assert.strictEqual(vm14.progressLabel, '14 / 20');
 assert.strictEqual(vm14.progressPercent, 70);
 assert.strictEqual(vm14.redeemable, false);
 
-const vm20 = ui.buildViewModel({ count: 20, redeemCount: 20, progress: 0, redeemable: true, fullRedemptionsAvailable: 1, history: [] });
-assert.strictEqual(vm20.progressPercent, 0);
+const vm20 = ui.buildViewModel({ count: 20, redeemCount: 20, progress: 20, redeemable: true, fullRedemptionsAvailable: 1, history: [] });
+assert.strictEqual(vm20.progressLabel, '20 / 20');
+assert.strictEqual(vm20.progressPercent, 100);
 assert.strictEqual(vm20.redeemable, true);
 assert.strictEqual(vm20.fullRedemptionsAvailable, 1);
 assert.strictEqual(ui.historyLabel({ type: 'issuance', source: 'won' }), 'WON 1 JUNIOR');
@@ -92,7 +95,7 @@ assert.strictEqual(ui.historyLabel({ type: 'redemption', status: 'funded_pending
 
 console.log('Stage 4 Junior collection UI/service: PASS');
 console.log('Progress:', '14 Juniors -> 14 / 20 -> 70% and redeem disabled');
-console.log('Threshold:', '20 Juniors -> redeem enabled; funded redemption leaves 0');
+console.log('Threshold:', '20 Juniors -> 20 / 20 -> 100% and redeem enabled; funded redemption leaves 0');
 console.log('History:', 'won, minted, and funded_pending_delivery redemption events returned from real ledger tables');
 console.log('UI behavior:', 'browser view-model code executed; progress and transaction labels verified');
 
