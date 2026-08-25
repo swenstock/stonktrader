@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { totalValueForPortfolios } = require('../portfolioValue');
+const { getBrokerRaceStats } = require('../juniorBrokerRace');
 
 function optionalAccountId(req) {
   const header = req.headers.authorization || '';
@@ -142,6 +143,17 @@ router.get('/sources', (req,res) => {
     contests,
     satellites:satellites.map(s=>({...s,type:'satellite'})),
   });
+});
+
+router.get('/broker-race', (req,res) => {
+  try {
+    const raw = Number(req.query.limit || 50);
+    const limit = Number.isSafeInteger(raw) ? Math.max(1, Math.min(100, raw)) : 50;
+    res.json(getBrokerRaceStats(db, { limit }));
+  } catch (err) {
+    console.error('Broker Race leaderboard failed', err);
+    res.status(500).json({error:'Unable to load Broker Race'});
+  }
 });
 
 module.exports=router;
