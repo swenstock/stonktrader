@@ -159,7 +159,7 @@ assert.strictEqual(MINTED_OVERFLOW, 11333400000n);
   );
   assert.strictEqual(getJuniorCount(db, 4), 20n, 'failed redemption must not burn Juniors');
   assert.deepStrictEqual(getBalances(db), before, 'failed solvency check must roll back reserve mutations');
-  assert.strictEqual(db.prepare(`SELECT COUNT(*) AS n FROM sbc_activated_broker_redemptions`).get().n, 0);
+  assert.strictEqual(db.prepare(`SELECT COUNT(*) AS n FROM sbc_activated_broker_redemptions`).get().n, 0n);
   db.close();
 }
 
