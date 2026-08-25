@@ -9,6 +9,11 @@ function assertBigInt(value, label) {
   if (value < 0n) throw new RangeError(`${label} must be non-negative`);
 }
 
+function assertPositiveBigInt(value, label) {
+  assertBigInt(value, label);
+  if (value === 0n) throw new RangeError(`${label} must be greater than zero`);
+}
+
 function assertNonEmptyId(value, label) {
   if (typeof value !== 'string' || !value.trim()) {
     throw new TypeError(`${label} must be a non-empty string`);
@@ -48,12 +53,32 @@ function ensureSchema(db) {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
+    CREATE TABLE IF NOT EXISTS sbc_prize_reserve_funding_credits (
+      funding_id TEXT PRIMARY KEY,
+      bucket TEXT NOT NULL CHECK(bucket IN ('broker_reserve','overflow_reserve')),
+      amount_subunits INTEGER NOT NULL CHECK(typeof(amount_subunits) = 'integer' AND amount_subunits > 0),
+      source_type TEXT NOT NULL,
+      source_id TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
     CREATE TABLE IF NOT EXISTS sbc_prize_reserve_debits (
       debit_id TEXT PRIMARY KEY,
       bucket TEXT NOT NULL CHECK(bucket IN ('broker_reserve','overflow_reserve')),
       amount_subunits INTEGER NOT NULL CHECK(typeof(amount_subunits) = 'integer' AND amount_subunits >= 0),
       reason TEXT NOT NULL,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS sbc_prize_reserve_transfers (
+      transfer_id TEXT PRIMARY KEY,
+      from_bucket TEXT NOT NULL CHECK(from_bucket IN ('broker_reserve','overflow_reserve')),
+      to_bucket TEXT NOT NULL CHECK(to_bucket IN ('broker_reserve','overflow_reserve')),
+      amount_subunits INTEGER NOT NULL CHECK(typeof(amount_subunits) = 'integer' AND amount_subunits > 0),
+      reason TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      CHECK(from_bucket <> to_bucket)
     );
   `);
 
@@ -148,6 +173,53 @@ function creditIssuance(db, params) {
   return getBalances(db);
 }
 
+function creditFundingInTransaction(db, {
+  fundingId,
+  bucket,
+  amountSubunits,
+  sourceType,
+  sourceId,
+  reason = 'prize_reserve_funding',
+}) {
+  assertNonEmptyId(fundingId, 'fundingId');
+  assertBucket(bucket);
+  assertPositiveBigInt(amountSubunits, 'amountSubunits');
+  assertNonEmptyId(sourceType, 'sourceType');
+  assertNonEmptyId(String(sourceId), 'sourceId');
+  assertNonEmptyId(reason, 'reason');
+
+  try {
+    prepareBigInt(db, `
+      INSERT INTO sbc_prize_reserve_funding_credits
+        (funding_id, bucket, amount_subunits, source_type, source_id, reason)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(fundingId, bucket, amountSubunits, sourceType, String(sourceId), reason);
+  } catch (err) {
+    throw translateDuplicate(err, 'DUPLICATE_FUNDING', `reserve funding already recorded: ${fundingId}`);
+  }
+
+  prepareBigInt(db, `
+    UPDATE sbc_prize_reserve_accounts
+    SET balance_subunits = balance_subunits + ?,
+        credited_lifetime_subunits = credited_lifetime_subunits + ?,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE bucket = ?
+  `).run(amountSubunits, amountSubunits, bucket);
+}
+
+function creditFunding(db, params) {
+  ensureSchema(db);
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    creditFundingInTransaction(db, params);
+    db.exec('COMMIT');
+  } catch (err) {
+    try { db.exec('ROLLBACK'); } catch (_) {}
+    throw err;
+  }
+  return getBalances(db);
+}
+
 function debitReserveInTransaction(db, {
   debitId,
   bucket,
@@ -197,6 +269,62 @@ function debitReserve(db, params) {
   return getBalances(db);
 }
 
+function transferReserveInTransaction(db, {
+  transferId,
+  fromBucket,
+  toBucket,
+  amountSubunits,
+  reason = 'prize_reserve_transfer',
+}) {
+  assertNonEmptyId(transferId, 'transferId');
+  assertBucket(fromBucket);
+  assertBucket(toBucket);
+  if (fromBucket === toBucket) throw new TypeError('reserve transfer buckets must differ');
+  assertPositiveBigInt(amountSubunits, 'amountSubunits');
+  assertNonEmptyId(reason, 'reason');
+
+  try {
+    prepareBigInt(db, `
+      INSERT INTO sbc_prize_reserve_transfers
+        (transfer_id, from_bucket, to_bucket, amount_subunits, reason)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(transferId, fromBucket, toBucket, amountSubunits, reason);
+  } catch (err) {
+    throw translateDuplicate(err, 'DUPLICATE_TRANSFER', `reserve transfer already recorded: ${transferId}`);
+  }
+
+  const debit = prepareBigInt(db, `
+    UPDATE sbc_prize_reserve_accounts
+    SET balance_subunits = balance_subunits - ?, updated_at = CURRENT_TIMESTAMP
+    WHERE bucket = ? AND balance_subunits >= ?
+  `).run(amountSubunits, fromBucket, amountSubunits);
+
+  if (!(debit.changes === 1 || debit.changes === 1n)) {
+    const err = new Error(`insufficient reserve balance in ${fromBucket}`);
+    err.code = 'INSUFFICIENT_RESERVE';
+    throw err;
+  }
+
+  prepareBigInt(db, `
+    UPDATE sbc_prize_reserve_accounts
+    SET balance_subunits = balance_subunits + ?, updated_at = CURRENT_TIMESTAMP
+    WHERE bucket = ?
+  `).run(amountSubunits, toBucket);
+}
+
+function transferReserve(db, params) {
+  ensureSchema(db);
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    transferReserveInTransaction(db, params);
+    db.exec('COMMIT');
+  } catch (err) {
+    try { db.exec('ROLLBACK'); } catch (_) {}
+    throw err;
+  }
+  return getBalances(db);
+}
+
 module.exports = {
   SUBUNITS_PER_STONK,
   BROKER_RESERVE_BUCKET,
@@ -205,6 +333,10 @@ module.exports = {
   getBalances,
   creditIssuance,
   creditIssuanceInTransaction,
+  creditFunding,
+  creditFundingInTransaction,
   debitReserve,
   debitReserveInTransaction,
+  transferReserve,
+  transferReserveInTransaction,
 };
