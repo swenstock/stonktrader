@@ -154,3 +154,5 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 new MutationObserver(()=>{if(!mounted&&view())run()}).observe(document.documentElement,{childList:true,subtree:true});
 document.addEventListener('click',e=>{const t=(e.target?.textContent||'').trim().toUpperCase();if(t==='MY CONTESTS')setTimeout(refresh,120)},true);
 })();
+
+(()=>{if(typeof document==='undefined'||document.getElementById('sbcBrokerRaceLoader'))return;const s=document.createElement('script');s.id='sbcBrokerRaceLoader';s.src='/v45-broker-race-ui.js?v=1';document.body.appendChild(s)})();
