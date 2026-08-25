@@ -1,0 +1,37 @@
+name: Stage 3 General Burn Engine
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server/tierBurnEngine.js'
+      - 'server/tierBurnEngineStage3.test.js'
+      - 'server/juniorBrokerStage2.js'
+      - '.github/workflows/stage3-general-burn-engine.yml'
+  push:
+    branches: [stage3-general-burn-engine]
+    paths:
+      - 'server/tierBurnEngine.js'
+      - 'server/tierBurnEngineStage3.test.js'
+      - 'server/juniorBrokerStage2.js'
+      - '.github/workflows/stage3-general-burn-engine.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: Syntax check Stage 3
+        run: |
+          node --check server/tierBurnEngine.js
+          node --check server/tierBurnEngineStage3.test.js
+          node --check server/juniorBrokerStage2.js
+      - name: Re-run Stage 1 reserve behavior
+        run: node server/prizeReserveLedgerStage1.test.js
+      - name: Re-run Stage 2 Junior behavior unchanged
+        run: node server/juniorBrokerStage2.test.js
+      - name: Execute Stage 3 general burn behavior
+        run: node server/tierBurnEngineStage3.test.js
