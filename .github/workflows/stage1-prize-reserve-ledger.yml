@@ -1,0 +1,33 @@
+name: Stage 1 Prize Reserve Ledger
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server/prizeReserveLedger.js'
+      - 'server/prizeReserveLedgerStage1.test.js'
+      - 'server/schemaV45.js'
+      - '.github/workflows/stage1-prize-reserve-ledger.yml'
+  push:
+    branches: [stage1-prize-reserve-ledger]
+    paths:
+      - 'server/prizeReserveLedger.js'
+      - 'server/prizeReserveLedgerStage1.test.js'
+      - 'server/schemaV45.js'
+      - '.github/workflows/stage1-prize-reserve-ledger.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: Syntax check Stage 1 ledger
+        run: |
+          node --check server/prizeReserveLedger.js
+          node --check server/prizeReserveLedgerStage1.test.js
+          node --check server/schemaV45.js
+      - name: Execute Stage 1 reserve behavior
+        run: node server/prizeReserveLedgerStage1.test.js
