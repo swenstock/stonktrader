@@ -6,8 +6,11 @@ const {
   ensureSchema: ensureReserveSchema,
   getBalances,
   creditIssuanceInTransaction,
-  debitReserveInTransaction,
 } = require('./prizeReserveLedger');
+const {
+  ensureSchema: ensureTierBurnSchema,
+  burnTierForNextUnitInTransaction,
+} = require('./tierBurnEngine');
 
 const ASSET_TYPE = 'junior_broker_share';
 const SOURCE_WON = 'won';
@@ -19,6 +22,15 @@ const WON_TOTAL = 40000n * SUBUNITS_PER_STONK;
 const WON_OVERFLOW = 3333400000n;
 const MINTED_TOTAL = 48000n * SUBUNITS_PER_STONK;
 const MINTED_OVERFLOW = 11333400000n;
+const ACTIVATED_BROKER_ASSET_TYPE = 'activated_stonk_broker';
+const JUNIOR_TO_BROKER_BURN_CONFIG = Object.freeze({
+  sourceAssetType: ASSET_TYPE,
+  targetAssetType: ACTIVATED_BROKER_ASSET_TYPE,
+  burnCount: REDEEM_COUNT,
+  reserveBucket: BROKER_RESERVE_BUCKET,
+  reserveDebitSubunits: ACTIVATED_BROKER_COST,
+  reason: 'activated_broker_redemption',
+});
 
 function assertAccountId(accountId) {
   if (!Number.isSafeInteger(accountId) || accountId <= 0) throw new TypeError('accountId must be a positive safe integer');
@@ -34,15 +46,8 @@ function prepareBigInt(db, sql) {
 
 function ensureSchema(db) {
   ensureReserveSchema(db);
+  ensureTierBurnSchema(db);
   db.exec(`
-    CREATE TABLE IF NOT EXISTS sbc_prize_holdings (
-      account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-      asset_type TEXT NOT NULL CHECK(asset_type = 'junior_broker_share'),
-      quantity INTEGER NOT NULL DEFAULT 0 CHECK(typeof(quantity) = 'integer' AND quantity >= 0),
-      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY(account_id, asset_type)
-    );
-
     CREATE TABLE IF NOT EXISTS sbc_junior_broker_issuances (
       issuance_id TEXT PRIMARY KEY,
       account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
@@ -124,26 +129,11 @@ function redeemJuniorsForActivatedBroker(db, { redemptionId, accountId }) {
 
   db.exec('BEGIN IMMEDIATE');
   try {
-    const holding = prepareBigInt(db, `SELECT quantity FROM sbc_prize_holdings WHERE account_id = ? AND asset_type = ?`).get(accountId, ASSET_TYPE);
-    const count = holding ? holding.quantity : 0n;
-    if (count < REDEEM_COUNT) {
-      const err = new Error('20 Junior Broker shares required');
-      err.code = 'INSUFFICIENT_JUNIORS';
-      throw err;
-    }
-
-    debitReserveInTransaction(db, {
-      debitId: `broker-redemption:${redemptionId}`,
-      bucket: BROKER_RESERVE_BUCKET,
-      amountSubunits: ACTIVATED_BROKER_COST,
-      reason: 'activated_broker_redemption',
+    burnTierForNextUnitInTransaction(db, {
+      burnId: `junior-to-broker:${redemptionId}`,
+      accountId,
+      config: JUNIOR_TO_BROKER_BURN_CONFIG,
     });
-
-    prepareBigInt(db, `
-      UPDATE sbc_prize_holdings
-      SET quantity = quantity - 20, updated_at = CURRENT_TIMESTAMP
-      WHERE account_id = ? AND asset_type = ? AND quantity >= 20
-    `).run(accountId, ASSET_TYPE);
 
     prepareBigInt(db, `
       INSERT INTO sbc_activated_broker_redemptions
@@ -154,6 +144,16 @@ function redeemJuniorsForActivatedBroker(db, { redemptionId, accountId }) {
     db.exec('COMMIT');
   } catch (err) {
     try { db.exec('ROLLBACK'); } catch (_) {}
+    if (err && err.code === 'INSUFFICIENT_TIER_UNITS') {
+      const translated = new Error('20 Junior Broker shares required');
+      translated.code = 'INSUFFICIENT_JUNIORS';
+      throw translated;
+    }
+    if (err && (err.code === 'DUPLICATE_TIER_BURN' || err.code === 'DUPLICATE_DEBIT')) {
+      const duplicate = new Error(`redemption already recorded: ${redemptionId}`);
+      duplicate.code = 'DUPLICATE_REDEMPTION';
+      throw duplicate;
+    }
     if (/UNIQUE constraint failed: sbc_activated_broker_redemptions.redemption_id/.test(String(err && err.message))) {
       const duplicate = new Error(`redemption already recorded: ${redemptionId}`);
       duplicate.code = 'DUPLICATE_REDEMPTION';
@@ -185,6 +185,8 @@ module.exports = {
   WON_OVERFLOW,
   MINTED_TOTAL,
   MINTED_OVERFLOW,
+  ACTIVATED_BROKER_ASSET_TYPE,
+  JUNIOR_TO_BROKER_BURN_CONFIG,
   ensureSchema,
   splitForSource,
   getJuniorCount,
