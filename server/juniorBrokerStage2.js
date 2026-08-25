@@ -84,6 +84,35 @@ function getJuniorCount(db, accountId) {
   return row ? row.quantity : 0n;
 }
 
+function recordJuniorIssuanceInTransaction(db, { issuanceId, accountId, source, split = splitForSource(source) }) {
+  assertId(issuanceId, 'issuanceId');
+  assertAccountId(accountId);
+  splitForSource(source);
+
+  try {
+    prepareBigInt(db, `
+      INSERT INTO sbc_junior_broker_issuances
+        (issuance_id, account_id, asset_type, source, gross_subunits, broker_subunits, overflow_subunits)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(issuanceId, accountId, ASSET_TYPE, source, split.grossSubunits, split.brokerSubunits, split.overflowSubunits);
+  } catch (err) {
+    if (/UNIQUE constraint failed|PRIMARY KEY/.test(String(err && err.message))) {
+      const duplicate = new Error(`issuance already recorded: ${issuanceId}`);
+      duplicate.code = 'DUPLICATE_ISSUANCE';
+      throw duplicate;
+    }
+    throw err;
+  }
+
+  prepareBigInt(db, `
+    INSERT INTO sbc_prize_holdings (account_id, asset_type, quantity)
+    VALUES (?, ?, 1)
+    ON CONFLICT(account_id, asset_type) DO UPDATE SET
+      quantity = quantity + 1,
+      updated_at = CURRENT_TIMESTAMP
+  `).run(accountId, ASSET_TYPE);
+}
+
 function issueFundedJuniorBrokerShare(db, { issuanceId, accountId, source }) {
   ensureSchema(db);
   assertId(issuanceId, 'issuanceId');
@@ -98,21 +127,7 @@ function issueFundedJuniorBrokerShare(db, { issuanceId, accountId, source }) {
       overflowSubunits: split.overflowSubunits,
       reason: `junior_broker_share_${source}`,
     });
-
-    prepareBigInt(db, `
-      INSERT INTO sbc_junior_broker_issuances
-        (issuance_id, account_id, asset_type, source, gross_subunits, broker_subunits, overflow_subunits)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(issuanceId, accountId, ASSET_TYPE, source, split.grossSubunits, split.brokerSubunits, split.overflowSubunits);
-
-    prepareBigInt(db, `
-      INSERT INTO sbc_prize_holdings (account_id, asset_type, quantity)
-      VALUES (?, ?, 1)
-      ON CONFLICT(account_id, asset_type) DO UPDATE SET
-        quantity = quantity + 1,
-        updated_at = CURRENT_TIMESTAMP
-    `).run(accountId, ASSET_TYPE);
-
+    recordJuniorIssuanceInTransaction(db, { issuanceId, accountId, source, split });
     db.exec('COMMIT');
   } catch (err) {
     try { db.exec('ROLLBACK'); } catch (_) {}
@@ -190,6 +205,7 @@ module.exports = {
   ensureSchema,
   splitForSource,
   getJuniorCount,
+  recordJuniorIssuanceInTransaction,
   issueFundedJuniorBrokerShare,
   redeemJuniorsForActivatedBroker,
 };

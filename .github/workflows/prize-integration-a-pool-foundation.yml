@@ -1,0 +1,47 @@
+name: Prize Integration A Pool Foundation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server/prizeReserveLedger.js'
+      - 'server/juniorBrokerStage2.js'
+      - 'server/contestJuniorFundingPool.js'
+      - 'server/contestJuniorFundingPool.test.js'
+      - 'server/schemaV45.js'
+      - '.github/workflows/prize-integration-a-pool-foundation.yml'
+  push:
+    branches: [prize-integration-a-pool-foundation]
+    paths:
+      - 'server/prizeReserveLedger.js'
+      - 'server/juniorBrokerStage2.js'
+      - 'server/contestJuniorFundingPool.js'
+      - 'server/contestJuniorFundingPool.test.js'
+      - 'server/schemaV45.js'
+      - '.github/workflows/prize-integration-a-pool-foundation.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: Syntax check integration foundation
+        run: |
+          node --check server/prizeReserveLedger.js
+          node --check server/juniorBrokerStage2.js
+          node --check server/contestJuniorFundingPool.js
+          node --check server/contestJuniorFundingPool.test.js
+          node --check server/schemaV45.js
+      - name: Re-run Stage 1
+        run: node server/prizeReserveLedgerStage1.test.js
+      - name: Re-run Stage 2
+        run: node server/juniorBrokerStage2.test.js
+      - name: Re-run Stage 3
+        run: node server/tierBurnEngineStage3.test.js
+      - name: Re-run Stage 4
+        run: node server/juniorBrokerStage4.test.js
+      - name: Execute pooled funding behavior
+        run: node server/contestJuniorFundingPool.test.js

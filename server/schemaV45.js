@@ -4,6 +4,7 @@
 const db = require('./db');
 const { ensureSchema: ensurePrizeReserveSchema } = require('./prizeReserveLedger');
 const { ensureSchema: ensureJuniorBrokerStage2Schema } = require('./juniorBrokerStage2');
+const { ensureSchema: ensureContestJuniorFundingPoolSchema } = require('./contestJuniorFundingPool');
 
 function columns(table) {
   return new Set(db.prepare(`PRAGMA table_info(${table})`).all().map(r => r.name));
@@ -107,6 +108,7 @@ function run() {
 
   ensurePrizeReserveSchema(db);
   ensureJuniorBrokerStage2Schema(db);
+  ensureContestJuniorFundingPoolSchema(db);
 }
 
 module.exports = { run };
