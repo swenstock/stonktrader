@@ -1,7 +1,7 @@
 {
   "name": "stonk-paper-trading",
   "version": "1.0.0",
-  "description": "Multi-user paper trading contest platform — real accounts, simulated/live-ready quotes, positions, leaderboard, and contest lifecycle.",
+  "description": "Multi-user paper trading contest platform \u2014 real accounts, simulated/live-ready quotes, positions, leaderboard, and contest lifecycle.",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
