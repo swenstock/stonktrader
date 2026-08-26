@@ -3,9 +3,13 @@ const custodian = require("./custodian");
 const { getQuote } = require("./dataProvider");
 const { createPortfolio } = require("./portfolioValue");
 const { TIERS, FREEROLL_PRIZE_CONFIG } = require("./tierConfig");
+const { consumeTicket } = require('./ticketServiceV45');
+const { creditEntryContributionInTransaction } = require('./freerollFundingV45');
 
 const MAX_ALLOCATION_PCT = 10; // matches the 10% max-initial-position trading rule, expressed 0-100
-const MAIN_EVENT_MAX_ENTRIES = 10; // must match CONFIG.maxEntriesPerAccount in contestScheduler.js — duplicated
+const MAIN_EVENT_MAX_ENTRIES = 10;
+const V45_ENABLED = process.env.PAYOUT_ENGINE_V45 === 'true';
+const PRICE_LEVEL_TO_TICKET = { runner:'runner', low:'clerk', mid:'trader', high:'junior' }; // must match CONFIG.maxEntriesPerAccount in contestScheduler.js — duplicated
 // here (not imported) specifically to avoid a circular require: contestScheduler.js already imports this file.
 
 function validateAllocations(allocations, isDegenHours = false) {
@@ -94,10 +98,12 @@ function applyPendingSatelliteAllocations(satellite) {
     // anyway — a real bug, not by design.
     const isWonPrize = pa.source === "freeroll_prize" || pa.source === "freeroll_bonus";
     const totalFee = isWonPrize ? 0 : tier ? tier.entryFee : satellite.entry_fee;
-    const poolContribution = isWonPrize ? 0 : satellite.entry_fee; // satellite.entry_fee = poolFee already, for a real paying entrant
-    if (!isWonPrize && (!account || account.stonk_balance < totalFee)) {
+    const poolContribution = isWonPrize ? 0 : satellite.entry_fee;
+    const ticketType = !isWonPrize ? PRICE_LEVEL_TO_TICKET[satellite.price_level] : null;
+    const entryTicket = ticketType ? db.prepare(`SELECT * FROM tickets WHERE account_id=? AND ticket_type=? AND status='unredeemed' ORDER BY created_at ASC,id ASC LIMIT 1`).get(pa.account_id,ticketType) : null;
+    if (!isWonPrize && !entryTicket && (!account || account.stonk_balance < totalFee)) {
       db.prepare("UPDATE pending_allocations SET status='failed', fail_reason=? WHERE id=?").run(
-        "Not enough STONK at open",
+        "Not enough STONK or matching ticket at open",
         pa.id
       );
       continue;
@@ -106,22 +112,26 @@ function applyPendingSatelliteAllocations(satellite) {
     const label = `${satellite.name} · ${new Date().toLocaleDateString()} (Entry ${existingCount + 1})`;
     const portfolioId = createPortfolio(pa.account_id, label);
     db.exec("BEGIN");
-    if (!isWonPrize && totalFee > 0) {
+    if (!isWonPrize && entryTicket) {
+      consumeTicket({ ticketId:entryTicket.id, accountId:pa.account_id, appliedToSatelliteId:satellite.id });
+    } else if (!isWonPrize && totalFee > 0) {
       custodian.debit(pa.account_id, totalFee, "satellite_entry", { referenceType: "satellite", referenceId: satellite.id });
     }
-    db.prepare(
+    const entryInfo = db.prepare(
       "INSERT INTO satellite_entries (satellite_id, account_id, portfolio_id, entry_fee_paid) VALUES (?, ?, ?, ?)"
     ).run(satellite.id, pa.account_id, portfolioId, poolContribution);
 
-    if (tier && tier.surcharge > 0) {
-      db.prepare("UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk + ? WHERE category_id = ?").run(tier.surcharge, tier.categoryId);
-      const fund = db.prepare("SELECT * FROM freeroll_fund WHERE category_id = ?").get(tier.categoryId);
-      const threshold = FREEROLL_PRIZE_CONFIG[tier.categoryId].threshold;
-      if (fund.accumulated_stonk >= threshold) {
-        db.prepare(
-          `UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk - ?, prizes_available = prizes_available + 1,
-           total_prizes_funded_lifetime = total_prizes_funded_lifetime + 1 WHERE category_id = ?`
-        ).run(threshold, tier.categoryId);
+    if (!isWonPrize && tier && tier.surcharge > 0) {
+      if (V45_ENABLED) {
+        creditEntryContributionInTransaction({ entryId:Number(entryInfo.lastInsertRowid), categoryId:tier.categoryId, amountStonk:tier.surcharge });
+      } else {
+        db.prepare("UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk + ? WHERE category_id = ?").run(tier.surcharge, tier.categoryId);
+        const fund = db.prepare("SELECT * FROM freeroll_fund WHERE category_id = ?").get(tier.categoryId);
+        const threshold = FREEROLL_PRIZE_CONFIG[tier.categoryId].threshold;
+        if (fund.accumulated_stonk >= threshold) {
+          db.prepare(`UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk - ?, prizes_available = prizes_available + 1,
+           total_prizes_funded_lifetime = total_prizes_funded_lifetime + 1 WHERE category_id = ?`).run(threshold, tier.categoryId);
+        }
       }
     }
 

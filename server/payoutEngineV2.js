@@ -1,62 +1,65 @@
-// SBC V45 payout engine
-// Pure deterministic math. No DB writes, no wallet/custody side effects.
+// SBC V45 corporate-ladder prize planner.
+// Pure deterministic math. No DB writes or custody side effects.
 //
-// Locked working economics:
-//   Runner          100 STONK total, no freeroll contribution
-//   Clerk           200 total = 150 contest portion + 50 freeroll reserve
-//   Trader          400 total = 350 contest portion + 50 freeroll reserve
-//   Jr Stonkbroker 1050 total = 1000 contest portion + 50 freeroll reserve
-//
-// Rake applies ONLY to the contest portion. The 50 STONK freeroll contribution
-// is never raked and is routed to the Freeroll Prize Reserve.
-//
-// Paid contest payout order:
-//   1) Top 10% are prize-paying positions.
-//   2) Reserve baseline ticket awards for every paid position.
-//   3) Starting at rank 1, upgrade finishers to a 3,000-STONK Main Event ticket
-//      whenever the remaining prize economics can support the incremental cost.
-//      The ME ticket REPLACES the baseline pair.
-//   4) Remaining top-10% finishers receive their baseline pair.
-//   5) Any true residual is distributed as published deterministic STONK bonuses.
-//
-// Freerolls are funded from the separate Freeroll Prize Reserve and use the
-// same top-10% principle. This module calculates their required liability but
-// never silently spends platform revenue to cover a shortfall.
-
-const { computeLadder } = require("./prizeLadder");
+// Product model:
+//   * No Main Event upgrade destination.
+//   * Paid contests target the top 10% (rounded up).
+//   * Fully funded Jr. Broker Badges are awarded from the top down whenever
+//     existing global carry plus the current contest can cover the 40,000
+//     STONK funding unit without breaking the remaining fallback promise.
+//   * Runner fallback is STONK. Clerk -> 2 Runner tickets. Trader -> 2 Clerk
+//     tickets. Jr. StonkBroker -> 2 Trader tickets.
+//   * Any true residual in fixed-ticket tiers becomes global Badge-pool carry.
+//   * Free Roll is planned separately; it has no guaranteed top-10% liability.
 
 const RAKE_RATE = 0.15;
-const MAIN_EVENT_TICKET_BACKING = 3000;
+const BADGE_FUNDING_UNIT = 40000;
 
 const TIER_RULES = Object.freeze({
   runner: {
-    name: "Runner",
+    name: 'Runner',
     playerPrice: 100,
     contestPortion: 100,
     freerollContribution: 0,
-    baseline: { ticketTier: "runner", quantity: 2, unitBacking: 100 },
+    fallback: { kind: 'stonk' },
   },
   clerk: {
-    name: "Clerk",
+    name: 'Clerk',
     playerPrice: 200,
     contestPortion: 150,
     freerollContribution: 50,
-    baseline: { ticketTier: "runner", quantity: 2, unitBacking: 100 },
+    fallback: { kind: 'tickets', ticketTier: 'runner', quantity: 2, unitBacking: 100 },
   },
   trader: {
-    name: "Trader",
+    name: 'Trader',
     playerPrice: 400,
     contestPortion: 350,
     freerollContribution: 50,
-    baseline: { ticketTier: "clerk", quantity: 2, unitBacking: 200 },
+    fallback: { kind: 'tickets', ticketTier: 'clerk', quantity: 2, unitBacking: 200 },
   },
   junior: {
-    name: "Jr. Stonkbroker",
+    name: 'Jr. StonkBroker',
     playerPrice: 1050,
     contestPortion: 1000,
     freerollContribution: 50,
-    baseline: { ticketTier: "trader", quantity: 2, unitBacking: 400 },
+    fallback: { kind: 'tickets', ticketTier: 'trader', quantity: 2, unitBacking: 400 },
   },
+});
+
+const FALLBACK_LEVELS = Object.freeze({
+  junior: [
+    { ticketTier: 'trader', quantity: 2, unitBacking: 400 },
+    { ticketTier: 'clerk', quantity: 2, unitBacking: 200 },
+    { ticketTier: 'runner', quantity: 2, unitBacking: 100 },
+  ],
+  trader: [
+    { ticketTier: 'clerk', quantity: 2, unitBacking: 200 },
+    { ticketTier: 'runner', quantity: 2, unitBacking: 100 },
+  ],
+  clerk: [
+    { ticketTier: 'runner', quantity: 2, unitBacking: 100 },
+  ],
+  runner: [],
 });
 
 function money(n) {
@@ -64,12 +67,8 @@ function money(n) {
 }
 
 function paidPlacesFor(fieldSize) {
-  if (!Number.isInteger(fieldSize) || fieldSize < 1) throw new Error("fieldSize must be a positive integer");
+  if (!Number.isInteger(fieldSize) || fieldSize < 1) throw new Error('fieldSize must be a positive integer');
   return Math.max(1, Math.ceil(fieldSize * 0.10));
-}
-
-function baselineCost(rule) {
-  return rule.baseline.quantity * rule.baseline.unitBacking;
 }
 
 function economicsForEntry(tierKey) {
@@ -77,88 +76,188 @@ function economicsForEntry(tierKey) {
   if (!rule) throw new Error(`Unknown tier: ${tierKey}`);
   const rake = money(rule.contestPortion * RAKE_RATE);
   const contestPrize = money(rule.contestPortion - rake);
-  return {
-    ...rule,
-    rake,
-    contestPrize,
-    totalPrizeDirected: money(contestPrize + rule.freerollContribution),
-  };
+  return { ...rule, rake, contestPrize, totalPrizeDirected: money(contestPrize + rule.freerollContribution) };
 }
 
 function splitResidualTopDown(totalResidual, paidPlaces) {
   totalResidual = money(totalResidual);
-  if (totalResidual <= 0 || paidPlaces <= 0) return Array(paidPlaces).fill(0);
+  if (totalResidual <= 0 || paidPlaces <= 0) return Array(Math.max(0, paidPlaces)).fill(0);
   const weights = Array.from({ length: paidPlaces }, (_, i) => paidPlaces - i);
   const totalWeight = weights.reduce((a, b) => a + b, 0);
   let remaining = totalResidual;
-  const bonuses = weights.map((w, i) => {
+  return weights.map((w, i) => {
     if (i === paidPlaces - 1) return money(Math.max(0, remaining));
     const roundedShare = money((totalResidual * w) / totalWeight);
     const share = money(Math.min(Math.max(0, remaining), Math.max(0, roundedShare)));
     remaining = money(Math.max(0, remaining - share));
     return share;
   });
-  return bonuses;
 }
 
-function computePaidContest({ tierKey, fieldSize }) {
+function fallbackCost(f) {
+  return f && f.kind === 'tickets' ? money(f.quantity * f.unitBacking) : 0;
+}
+
+function badgeAward(rank, fundingContribution) {
+  return {
+    rank,
+    award: 'jr_broker_badge',
+    badgeQuantity: 1,
+    ticketTier: null,
+    quantity: 0,
+    liabilityBacking: 0,
+    stonkBonus: 0,
+    badgeFundingContribution: money(fundingContribution),
+    isCashPrize: false,
+  };
+}
+
+function ticketAward(rank, level) {
+  return {
+    rank,
+    award: 'fallback_tickets',
+    badgeQuantity: 0,
+    ticketTier: level.ticketTier,
+    quantity: level.quantity,
+    liabilityBacking: money(level.quantity * level.unitBacking),
+    stonkBonus: 0,
+    badgeFundingContribution: 0,
+    isCashPrize: false,
+  };
+}
+
+function cashAward(rank, amount) {
+  return {
+    rank,
+    award: 'stonk_fallback',
+    badgeQuantity: 0,
+    ticketTier: null,
+    quantity: 0,
+    liabilityBacking: 0,
+    stonkBonus: money(amount),
+    badgeFundingContribution: 0,
+    isCashPrize: true,
+  };
+}
+
+function allocateFallbacks(tierKey, startRank, paidPlaces, availableStonk) {
+  let rank = startRank;
+  let pool = money(availableStonk);
+  const payouts = [];
+  const levels = FALLBACK_LEVELS[tierKey] || [];
+
+  // Preserve the existing graceful-degradation idea: fund as many full pairs
+  // as possible at the intended fallback, then step down the ticket ladder.
+  for (const level of levels) {
+    if (rank > paidPlaces) break;
+    const cost = money(level.quantity * level.unitBacking);
+    const placesLeft = paidPlaces - rank + 1;
+    const funded = Math.min(placesLeft, Math.floor((pool + 1e-9) / cost));
+    for (let i = 0; i < funded; i++) payouts.push(ticketAward(rank + i, level));
+    rank += funded;
+    pool = money(pool - funded * cost);
+  }
+
+  // If even the Runner pair floor cannot cover everyone, the remaining
+  // protected finishers get the remaining STONK instead of an unfunded promise.
+  if (rank <= paidPlaces) {
+    const remainingPlaces = paidPlaces - rank + 1;
+    const shares = splitResidualTopDown(pool, remainingPlaces);
+    for (let i = 0; i < remainingPlaces; i++) payouts.push(cashAward(rank + i, shares[i]));
+    pool = 0;
+  }
+
+  return { payouts, carryContribution: money(pool) };
+}
+
+function computePaidContest({ tierKey, fieldSize, poolUnallocatedStonk = 0 }) {
   const econ = economicsForEntry(tierKey);
   const paidPlaces = paidPlacesFor(fieldSize);
-
   const grossCharged = money(econ.playerPrice * fieldSize);
   const contestHandle = money(econ.contestPortion * fieldSize);
   const freerollReserveContribution = money(econ.freerollContribution * fieldSize);
   const rake = money(econ.rake * fieldSize);
   const contestPrizePool = money(econ.contestPrize * fieldSize);
 
-  const baseEach = baselineCost(econ);
-  const baselineLiability = money(baseEach * paidPlaces);
+  let currentCarry = Math.max(0, money(poolUnallocatedStonk));
+  let remainingContest = contestPrizePool;
+  const payouts = [];
+  let rank = 1;
+  let badgeContributions = 0;
 
-  if (baselineLiability > contestPrizePool) {
-    return {
-      status: "UNDERFUNDED_BASELINE",
-      tierKey,
-      fieldSize,
-      paidPlaces,
-      grossCharged,
-      contestHandle,
-      freerollReserveContribution,
-      rake,
-      contestPrizePool,
-      baselineLiability,
-      shortfall: money(baselineLiability - contestPrizePool),
-      payouts: [],
-      reconciliation: money(rake + contestPrizePool + freerollReserveContribution) === grossCharged,
-    };
+  if (tierKey === 'runner') {
+    // Runner has no fixed ticket liability. A Badge may use old carry plus only
+    // the amount actually needed from this contest. Once the next Badge cannot
+    // be funded, every remaining protected place splits the contest remainder.
+    for (; rank <= paidPlaces; rank++) {
+      const needed = money(Math.max(0, BADGE_FUNDING_UNIT - currentCarry));
+      if (needed <= remainingContest + 1e-9) {
+        payouts.push(badgeAward(rank, needed));
+        remainingContest = money(remainingContest - needed);
+        badgeContributions = money(badgeContributions + needed);
+        currentCarry = 0; // the 40K unit is consumed by issuance
+      } else {
+        break;
+      }
+    }
+    if (rank <= paidPlaces) {
+      const shares = splitResidualTopDown(remainingContest, paidPlaces - rank + 1);
+      shares.forEach((amount, i) => payouts.push(cashAward(rank + i, amount)));
+      remainingContest = 0;
+    }
+  } else {
+    const baseEach = fallbackCost(econ.fallback);
+    for (; rank <= paidPlaces; rank++) {
+      const remainingRanks = paidPlaces - rank + 1;
+      const fallbackNeededForOthers = money(baseEach * Math.max(0, remainingRanks - 1));
+      const maxContributionForThisRank = money(Math.max(0, remainingContest - fallbackNeededForOthers));
+      const needed = money(Math.max(0, BADGE_FUNDING_UNIT - currentCarry));
+      if (needed <= maxContributionForThisRank + 1e-9) {
+        payouts.push(badgeAward(rank, needed));
+        remainingContest = money(remainingContest - needed);
+        badgeContributions = money(badgeContributions + needed);
+        currentCarry = 0;
+      } else {
+        break;
+      }
+    }
+
+    if (rank <= paidPlaces) {
+      const fallback = allocateFallbacks(tierKey, rank, paidPlaces, remainingContest);
+      payouts.push(...fallback.payouts);
+      const spent = fallback.payouts.reduce((n, p) => n + p.liabilityBacking + p.stonkBonus, 0);
+      remainingContest = money(remainingContest - spent);
+    }
   }
 
-  let availableForUpgrades = money(contestPrizePool - baselineLiability);
-  const upgradeIncrement = money(MAIN_EVENT_TICKET_BACKING - baseEach);
-  const maxUpgradesByPlaces = paidPlaces;
-  const mainEventTickets = upgradeIncrement <= 0
-    ? maxUpgradesByPlaces
-    : Math.min(maxUpgradesByPlaces, Math.floor(availableForUpgrades / upgradeIncrement));
-
-  availableForUpgrades = money(availableForUpgrades - mainEventTickets * Math.max(0, upgradeIncrement));
-
-  const bonuses = splitResidualTopDown(availableForUpgrades, paidPlaces);
-  const payouts = Array.from({ length: paidPlaces }, (_, i) => {
-    const rank = i + 1;
-    if (rank <= mainEventTickets) {
-      return { rank, award: "main_event_ticket", ticketTier: "main_event", quantity: 1, liabilityBacking: MAIN_EVENT_TICKET_BACKING, stonkBonus: bonuses[i] };
-    }
-    return { rank, award: "baseline_tickets", ticketTier: econ.baseline.ticketTier, quantity: econ.baseline.quantity, liabilityBacking: baseEach, stonkBonus: bonuses[i] };
-  });
-
-  const mainEventReserve = money(mainEventTickets * MAIN_EVENT_TICKET_BACKING);
-  const lowerTierTicketLiability = money((paidPlaces - mainEventTickets) * baseEach);
-  const residualBonuses = money(bonuses.reduce((a, b) => a + b, 0));
-  const totalPrizeAllocated = money(mainEventReserve + lowerTierTicketLiability + residualBonuses);
+  // For fixed-ticket tiers, or when Runner managed to Badge every protected
+  // finisher, any true remainder is not a bonus. It becomes global Badge carry.
+  const carryContribution = money(Math.max(0, remainingContest));
+  const ticketLiability = money(payouts.reduce((n, p) => n + p.liabilityBacking, 0));
+  const stonkFallback = money(payouts.reduce((n, p) => n + p.stonkBonus, 0));
+  const badgeFundingContribution = money(payouts.reduce((n, p) => n + p.badgeFundingContribution, 0));
+  const totalPrizeAllocated = money(ticketLiability + stonkFallback + badgeFundingContribution + carryContribution);
 
   return {
-    status: "OK", tierKey, tierName: econ.name, fieldSize, paidPlaces, grossCharged, contestHandle,
-    freerollReserveContribution, rake, contestPrizePool, baselineLiability, mainEventTickets,
-    mainEventReserve, lowerTierTicketLiability, residualBonuses, totalPrizeAllocated, payouts,
+    status: 'OK',
+    tierKey,
+    tierName: econ.name,
+    fieldSize,
+    paidPlaces,
+    grossCharged,
+    contestHandle,
+    freerollReserveContribution,
+    rake,
+    contestPrizePool,
+    badgeFundingUnit: BADGE_FUNDING_UNIT,
+    poolUnallocatedAtStart: money(poolUnallocatedStonk),
+    badgesAwarded: payouts.filter(p => p.award === 'jr_broker_badge').length,
+    badgeFundingContribution,
+    carryContribution,
+    lowerTierTicketLiability: ticketLiability,
+    stonkFallback,
+    totalPrizeAllocated,
+    payouts,
     reconciliation: {
       entry: money(rake + contestPrizePool + freerollReserveContribution) === grossCharged,
       prize: totalPrizeAllocated === contestPrizePool,
@@ -166,105 +265,52 @@ function computePaidContest({ tierKey, fieldSize }) {
   };
 }
 
-function computeFreerollRequirement({ fieldSize, runnerTicketBacking = 100 }) {
-  const paidPlaces = paidPlacesFor(fieldSize);
-  const ticketsRequired = paidPlaces * 2;
-  const liabilityRequired = money(ticketsRequired * runnerTicketBacking);
-  return { fieldSize, paidPlaces, ticketTier: "runner", ticketsPerWinner: 2, ticketsRequired, liabilityRequired };
+function computeCascadingContest(args) {
+  return computePaidContest(args);
 }
 
-// Graceful degradation for a paid room whose net prize pool cannot cover its
-// normal baseline ticket promise. Healthy rooms pass through unchanged.
-// Thin rooms cascade down the existing ticket ladder, funding only full,
-// honestly-backed ticket pairs. If even the Runner floor cannot be funded,
-// the remaining prize economics are paid as STONK cash prizes to the paid
-// places using the same deterministic top-down residual weighting.
-function computeCascadingContest({ tierKey, fieldSize }) {
-  const direct = computePaidContest({ tierKey, fieldSize });
-  if (direct.status !== "UNDERFUNDED_BASELINE") return direct;
-
-  const econ = economicsForEntry(tierKey);
-  const paidPlaces = direct.paidPlaces;
-  const contestPrizePool = direct.contestPrizePool;
+function computeFreerollPlan({ fieldSize, reserveBalance, badgeFundingUnit = BADGE_FUNDING_UNIT }) {
+  if (!Number.isInteger(fieldSize) || fieldSize < 1) throw new Error('fieldSize must be a positive integer');
+  let reserve = Math.max(0, money(reserveBalance));
+  const badgesAwarded = Math.min(fieldSize, Math.floor((reserve + 1e-9) / badgeFundingUnit));
   const payouts = [];
-  let pool = contestPrizePool;
-  let rank = 1;
-  let cascadeTierKey = tierKey;
+  for (let i = 0; i < badgesAwarded; i++) payouts.push(badgeAward(i + 1, badgeFundingUnit));
+  reserve = money(reserve - badgesAwarded * badgeFundingUnit);
 
-  while (rank <= paidPlaces) {
-    const level = TIER_RULES[cascadeTierKey].baseline;
-    const unitCost = level.quantity * level.unitBacking;
-    const placesLeft = paidPlaces - rank + 1;
-    const { unitsFunded } = computeLadder(pool, unitCost);
-    const funded = Math.min(unitsFunded, placesLeft);
-
-    for (let i = 0; i < funded; i++) {
-      payouts.push({
-        rank: rank + i,
-        award: "tier_ticket",
-        ticketTier: level.ticketTier,
-        quantity: level.quantity,
-        liabilityBacking: unitCost,
-        stonkBonus: 0,
-      });
-    }
-    pool = money(pool - funded * unitCost);
-    rank += funded;
-
-    if (level.ticketTier === "runner") break;
-    cascadeTierKey = level.ticketTier;
+  // No top-10% funding promise: whatever local reserve remains is simply
+  // distributed over a top-10%-sized prize band. Zero reserve means zero prize.
+  const cashPlaces = reserve > 0 ? Math.min(fieldSize, paidPlacesFor(fieldSize)) : 0;
+  if (cashPlaces > 0) {
+    const shares = splitResidualTopDown(reserve, cashPlaces);
+    shares.forEach((amount, i) => {
+      const rank = badgesAwarded + i + 1;
+      if (rank <= fieldSize && amount > 0) payouts.push(cashAward(rank, amount));
+    });
   }
 
-  for (; rank <= paidPlaces; rank++) {
-    payouts.push({ rank, award: "cash_prize", ticketTier: null, quantity: 0, liabilityBacking: 0, stonkBonus: 0 });
-  }
-
-  const totalTicketLiability = money(payouts.reduce((a, p) => a + p.liabilityBacking, 0));
-  const finalLeftover = money(contestPrizePool - totalTicketLiability);
-  const shares = splitResidualTopDown(finalLeftover, paidPlaces);
-  payouts.forEach((p, i) => {
-    p.stonkBonus = shares[i];
-    p.isCashPrize = p.quantity === 0;
-  });
-
-  const totalStonkBonus = money(payouts.reduce((a, p) => a + p.stonkBonus, 0));
-
+  const cashDistributed = money(payouts.reduce((n, p) => n + p.stonkBonus, 0));
+  const badgeSpend = money(badgesAwarded * badgeFundingUnit);
   return {
-    status: "OK",
-    degraded: true,
-    tierKey,
-    tierName: econ.name,
+    status: 'OK',
     fieldSize,
-    paidPlaces,
-    grossCharged: direct.grossCharged,
-    contestHandle: direct.contestHandle,
-    freerollReserveContribution: direct.freerollReserveContribution,
-    rake: direct.rake,
-    contestPrizePool,
-    baselineLiability: direct.baselineLiability,
-    mainEventTickets: 0,
-    mainEventReserve: 0,
-    lowerTierTicketLiability: totalTicketLiability,
-    residualBonuses: totalStonkBonus,
-    totalPrizeAllocated: money(totalTicketLiability + totalStonkBonus),
-    ticketsFunded: payouts.filter((p) => p.quantity > 0).length,
-    cashPrizePlaces: payouts.filter((p) => p.isCashPrize).length,
+    badgesAwarded,
+    badgeSpend,
+    cashDistributed,
+    reserveSpend: money(badgeSpend + cashDistributed),
+    reserveRemainder: money(Math.max(0, reserve - cashDistributed)),
     payouts,
-    reconciliation: {
-      entry: money(direct.rake + contestPrizePool + direct.freerollReserveContribution) === direct.grossCharged,
-      prize: money(totalTicketLiability + totalStonkBonus) === contestPrizePool,
-    },
   };
 }
 
 module.exports = {
   RAKE_RATE,
-  MAIN_EVENT_TICKET_BACKING,
+  BADGE_FUNDING_UNIT,
   TIER_RULES,
+  FALLBACK_LEVELS,
   paidPlacesFor,
   economicsForEntry,
   computePaidContest,
   computeCascadingContest,
-  computeFreerollRequirement,
+  computeFreerollPlan,
   splitResidualTopDown,
 };

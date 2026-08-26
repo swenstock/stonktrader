@@ -9,6 +9,7 @@ const { applyPendingSatelliteAllocations } = require('./allocationEngine');
 const { CATEGORIES, PRICE_LEVEL_NAMES, TIERS } = require('./tierConfig');
 const { executeSatelliteSettlement } = require('./satelliteSettlementExecutorV45');
 const { planPaidSatellite, planFreeroll } = require('./satelliteSettlementPlanV45');
+const { getContestFundingPoolStatus } = require('./contestJuniorFundingPool');
 const freerollReserve = require('./freerollReserveV45');
 const testClock = require('./testClock');
 
@@ -113,14 +114,14 @@ function resolveSatellite(satellite) {
   }
 
   // Preflight without side effects so an unfunded promise can never partially settle.
+  let poolUnallocatedStonk = 0;
+  try { poolUnallocatedStonk = Number(getContestFundingPoolStatus(db).unallocatedSubunits) / 1e6; } catch (_) {}
   const preflight = satellite.price_level === 'free'
     ? planFreeroll({ ranked, reserveBalance:Number(freerollReserve.get(satellite.tier_id)?.balance_stonk || 0) })
-    : planPaidSatellite({ priceLevel:satellite.price_level, ranked });
+    : planPaidSatellite({ priceLevel:satellite.price_level, ranked, poolUnallocatedStonk });
 
   if (preflight.status !== 'OK') {
-    return blockSettlement(satellite, preflight.status, preflight.status === 'FREEROLL_RESERVE_UNDERFUNDED'
-      ? `reserve ${preflight.reserveBalance}, required ${preflight.required}`
-      : `field ${preflight.fieldSize}, minimum funded field ${preflight.minimumFundedField}`);
+    return blockSettlement(satellite, preflight.status, `field ${preflight.fieldSize}`);
   }
 
   return executeSatelliteSettlement({

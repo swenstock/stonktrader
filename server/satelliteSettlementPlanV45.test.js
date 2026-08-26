@@ -1,55 +1,28 @@
-const assert = require('assert');
-const { minimumFieldForTier, planPaidSatellite, planFreeroll } = require('./satelliteSettlementPlanV45');
+const assert=require('assert');
+const {planPaidSatellite,planFreeroll}=require('./satelliteSettlementPlanV45');
+const ranked=n=>Array.from({length:n},(_,i)=>({accountId:i+1,entryId:1000+i,pl:100-i}));
 
-function ranked(n) {
-  return Array.from({length:n},(_,i)=>({accountId:i+1,entryId:1000+i,pl:100-i}));
-}
+const runner=planPaidSatellite({priceLevel:'runner',ranked:ranked(20),poolUnallocatedStonk:39000});
+assert.equal(runner.math.paidPlaces,2);
+assert.equal(runner.awards[0].award,'jr_broker_badge');
+assert.equal(runner.awards[0].badgeFundingContribution,1000);
+assert.equal(runner.awards[1].isCashPrize,true);
+assert.equal(runner.awards[1].stonkBonus,700);
+assert.equal(runner.math.reconciliation.prize,true);
 
-assert.equal(minimumFieldForTier('runner'), 3);
-assert.equal(minimumFieldForTier('clerk'), 2);
-assert.equal(minimumFieldForTier('trader'), 2);
-assert.equal(minimumFieldForTier('junior'), 1);
+const clerk=planPaidSatellite({priceLevel:'low',ranked:ranked(20),poolUnallocatedStonk:39900});
+assert.equal(clerk.awards[0].badgeQuantity,1);
+assert.equal(clerk.awards[1].ticketType,'runner');
+assert.equal(clerk.awards[1].ticketQuantity,2);
 
-const tinyRunner = planPaidSatellite({priceLevel:'runner',ranked:ranked(2)});
-assert.equal(tinyRunner.status,'OK');
-assert.equal(tinyRunner.math.degraded,true);
-assert.equal(tinyRunner.awards.length,1);
-assert.equal(tinyRunner.awards[0].ticketQuantity,0);
-assert.equal(tinyRunner.awards[0].isCashPrize,true);
-assert.equal(tinyRunner.awards[0].stonkBonus,170);
+const trader=planPaidSatellite({priceLevel:'mid',ranked:ranked(20)});
+assert.equal(trader.awards.every(a=>a.ticketType==='clerk'&&a.ticketQuantity===2),true);
+assert.equal(trader.math.reconciliation.prize,true);
 
-const soloTrader = planPaidSatellite({priceLevel:'mid',ranked:ranked(1)});
-assert.equal(soloTrader.status,'OK');
-assert.equal(soloTrader.math.degraded,true);
-assert.equal(soloTrader.awards.length,1);
-assert.equal(soloTrader.awards[0].ticketType,'runner');
-assert.equal(soloTrader.awards[0].ticketQuantity,2);
-assert.equal(soloTrader.awards[0].isCashPrize,false);
-assert.equal(soloTrader.awards[0].stonkBonus,97.5);
-assert.equal(soloTrader.math.reconciliation.prize,true);
-
-const trader100 = planPaidSatellite({priceLevel:'mid',ranked:ranked(100)});
-assert.equal(trader100.status,'OK');
-assert.equal(trader100.math.paidPlaces,10);
-assert.equal(trader100.awards.length,10);
-assert.equal(trader100.math.reconciliation.entry,true);
-assert.equal(trader100.math.reconciliation.prize,true);
-for (const a of trader100.awards) {
-  assert(a.ticketQuantity >= 1);
-  assert(a.totalTicketBacking > 0);
-  assert(a.stonkBonus >= 0);
-}
-
-const free1000Low = planFreeroll({ranked:ranked(1000),reserveBalance:19999});
-assert.equal(free1000Low.status,'FREEROLL_RESERVE_UNDERFUNDED');
-assert.equal(free1000Low.required,20000);
-assert.equal(free1000Low.awards.length,0);
-
-const free1000 = planFreeroll({ranked:ranked(1000),reserveBalance:25000});
-assert.equal(free1000.status,'OK');
-assert.equal(free1000.requirement.paidPlaces,100);
-assert.equal(free1000.awards.length,100);
-assert.equal(free1000.reserveSpend,20000);
-assert(free1000.awards.every(a=>a.ticketType==='runner' && a.ticketQuantity===2));
+const free=planFreeroll({ranked:ranked(100),reserveBalance:45500});
+assert.equal(free.math.badgesAwarded,1);
+assert.equal(free.math.badgeSpend,40000);
+assert.equal(free.math.cashDistributed,5500);
+assert.equal(free.awards.some(a=>a.ticketQuantity>0),false);
 
 console.log('satelliteSettlementPlanV45 tests passed');

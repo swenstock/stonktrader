@@ -3,11 +3,11 @@
 if(window.__sbcTicketNativeHooksV41)return;window.__sbcTicketNativeHooksV41=true;
 const ORDER_STORE='sbcTicketMarketOrdersV36';
 const SETTLE_STORE='sbcTicketSettlementV38';
-const NAME_TO_TYPE={'MAIN EVENT':'main_event','JR. STONKBROKER':'junior','JUNIOR':'junior','TRADER':'trader','CLERK':'clerk','RUNNER':'runner'};
+const NAME_TO_TYPE={'JR. STONKBROKER':'junior','JUNIOR':'junior','TRADER':'trader','CLERK':'clerk','RUNNER':'runner'};
 let lastAction='',lastActionAt=0;
-function typeFromName(name){const u=String(name||'').toUpperCase();for(const [n,t] of Object.entries(NAME_TO_TYPE))if(u.includes(n))return t;return'main_event';}
+function typeFromName(name){const u=String(name||'').toUpperCase();for(const [n,t] of Object.entries(NAME_TO_TYPE))if(u.includes(n))return t;return'runner';}
 function market(){try{return typeof ticketMarket==='function'?ticketMarket():null}catch(_){return null}}
-function currentName(){try{return String(activeTicketMarket||'Main Event')}catch(_){const t=document.getElementById('marketTicketTitle')?.textContent||'Main Event';return t.replace(/\s+TICKET MARKET.*$/i,'').trim();}}
+function currentName(){try{return String(activeTicketMarket||'Runner')}catch(_){const t=document.getElementById('marketTicketTitle')?.textContent||'Runner';return t.replace(/\s+TICKET MARKET.*$/i,'').trim();}}
 function dedupe(key,ms=900){const now=Date.now();if(key===lastAction&&now-lastActionAt<ms)return false;lastAction=key;lastActionAt=now;return true;}
 function orderRows(){try{const x=JSON.parse(localStorage.getItem(ORDER_STORE)||'[]');return Array.isArray(x)?x:[]}catch(_){return[]}}
 function saveOrders(x){try{localStorage.setItem(ORDER_STORE,JSON.stringify(x))}catch(_){}}

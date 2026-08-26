@@ -3,12 +3,12 @@
 if(window.__sbcTicketSettlementV38)return;window.__sbcTicketSettlementV38=true;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const STORE='sbcTicketSettlementV38';
-const LABELS={main_event:'MAIN EVENT',junior:'JR. STONKBROKER',trader:'TRADER',clerk:'CLERK',runner:'RUNNER'};
-const NAMES={'MAIN EVENT':'main_event','JR. STONKBROKER':'junior','JUNIOR':'junior','TRADER':'trader','CLERK':'clerk','RUNNER':'runner'};
+const LABELS={junior:'JR. STONKBROKER',trader:'TRADER',clerk:'CLERK',runner:'RUNNER'};
+const NAMES={'JR. STONKBROKER':'junior','JUNIOR':'junior','TRADER':'trader','CLERK':'clerk','RUNNER':'runner'};
 let timer=null,lastFillKey='',lastFillAt=0,lastRecentFingerprint=null,confirmTimer=null;
 function load(){try{const x=JSON.parse(localStorage.getItem(STORE)||'{}');return{x:{...(x.x||{})},trades:Array.isArray(x.trades)?x.trades:[]}}catch(_){return{x:{},trades:[]}}}
 function save(s){try{localStorage.setItem(STORE,JSON.stringify(s))}catch(_){}}
-function typeFromText(t){const u=String(t||'').toUpperCase();for(const [n,k] of Object.entries(NAMES))if(u.includes(n))return k;return'main_event'}
+function typeFromText(t){const u=String(t||'').toUpperCase();for(const [n,k] of Object.entries(NAMES))if(u.includes(n))return k;return'runner'}
 function currentType(){return typeFromText($('#marketTicketTitle')?.textContent||$('#ticketTypeSelector .active')?.textContent||'MAIN EVENT')}
 function priceFrom(root,b){const samples=[b?.textContent,root?.textContent];for(const s of samples){const m=String(s||'').match(/([\d,]+)\s*STONK/i);if(m){const n=Number(m[1].replace(/,/g,''));if(n>0)return Math.round(n)}}return 0}
 function metric(label,value){const v=$('#view-exchange');if(!v)return;const el=$$('*',v).find(x=>x.children.length===0&&(x.textContent||'').trim().toUpperCase()===label);const box=el?.parentElement;if(!box)return;const target=$$('b,strong,span,div',box).find(x=>x!==el&&x.children.length===0&&/^[\d,.]+$/.test((x.textContent||'').trim()));if(target)target.textContent=value}

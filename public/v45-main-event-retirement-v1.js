@@ -1,0 +1,5 @@
+(()=>{
+'use strict';if(window.__sbcMainEventRetirementV1)return;window.__sbcMainEventRetirementV1=true;
+const walk=()=>{document.querySelectorAll('button,[role="button"],a').forEach(el=>{if(/MAIN EVENT/i.test(el.textContent||'')){if(el.closest('#view-exchange'))el.style.display='none';}});document.querySelectorAll('h1,h2,h3,p,span,b,small,div').forEach(el=>{if(el.children.length)return;const t=(el.textContent||'').trim();if(t==='Main Event is the destination.')el.textContent='Collect Jr. Broker Badges. Get promoted.';if(t==='Earn or buy your way into the Main Event.')el.textContent='Play, trade, or upgrade tickets. Win Badges. Collect 20.';if(t==='MAIN EVENT TICKET — LIVE MARKET')el.textContent='TICKET EXCHANGE — LIVE MARKETS';});};
+const start=()=>{walk();new MutationObserver(walk).observe(document.documentElement,{childList:true,subtree:true});};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();

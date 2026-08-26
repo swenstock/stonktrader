@@ -6,7 +6,10 @@ const { getNow } = require("../testClock");
 const requireAuth = require("../middleware/requireAuth");
 const { createPortfolio } = require("../portfolioValue");
 const { TIERS, CATEGORIES, FREEROLL_PRIZE_CONFIG } = require("../tierConfig");
-const { computeCascadingContest, computeFreerollRequirement } = require("../payoutEngineV2");
+const { consumeTicket } = require('../ticketServiceV45');
+const { creditEntryContributionInTransaction } = require('../freerollFundingV45');
+const { computeCascadingContest, computeFreerollPlan } = require("../payoutEngineV2");
+const { getContestFundingPoolStatus } = require('../contestJuniorFundingPool');
 const freerollReserve = require("../freerollReserveV45");
 const { currentStonkUsdPriceMicros } = require("../contestScheduler");
 const { isWeekday, etCalendarDate, etDateTime, easternParts, currentWeekWindow } = require("../timeHelpers");
@@ -64,39 +67,33 @@ function nextOccurrence(tier, now) {
 function v45Projection(priceLevel, entrantCount, categoryId) {
   if (!V45_ENABLED || entrantCount < 1) return null;
   if (priceLevel === "free") {
-    const req = computeFreerollRequirement({ fieldSize: entrantCount });
     const reserveBalance = Number(freerollReserve.get(categoryId)?.balance_stonk || 0);
+    const plan = computeFreerollPlan({ fieldSize: entrantCount, reserveBalance });
     return {
-      engine: "v45",
-      status: reserveBalance >= req.liabilityRequired ? "FUNDED" : "RESERVE_SHORTFALL",
-      paidPlaces: req.paidPlaces,
-      baselineTicketType: "runner",
-      baselineTicketsEach: 2,
-      totalTicketsRequired: req.ticketsRequired,
-      reserveRequired: req.liabilityRequired,
+      engine: 'v45',
+      status: 'FUNDED_BY_LOCAL_RESERVE',
+      badgesAwarded: plan.badgesAwarded,
+      cashDistributed: plan.cashDistributed,
       reserveAvailable: reserveBalance,
-      reserveShortfall: Math.max(0, req.liabilityRequired - reserveBalance),
-      mainEventTickets: 0,
-      cashPrizePlaces: 0,
+      noTopTenGuarantee: true,
     };
   }
   const tierKey = PRICE_LEVEL_TO_TIER[priceLevel];
   if (!tierKey) return null;
-  const math = computeCascadingContest({ tierKey, fieldSize: entrantCount });
-  const baselinePlaces = math.payouts.filter(p => p.quantity > 0 && p.ticketTier !== "main_event").length;
+  let poolUnallocatedStonk = 0;
+  try {
+    poolUnallocatedStonk = Number(getContestFundingPoolStatus(db).unallocatedSubunits) / 1e6;
+  } catch (_) {}
+  const math = computeCascadingContest({ tierKey, fieldSize: entrantCount, poolUnallocatedStonk });
   return {
-    engine: "v45",
-    status: math.status,
-    degraded: !!math.degraded,
-    paidPlaces: math.paidPlaces,
-    mainEventTickets: math.mainEventTickets || 0,
-    lowerTierPaidPlaces: baselinePlaces,
-    lowerTierTickets: math.payouts.filter(p => p.quantity > 0 && p.ticketTier !== "main_event").reduce((n,p)=>n+p.quantity,0),
-    cashPrizePlaces: math.cashPrizePlaces || math.payouts.filter(p => p.quantity === 0 && p.stonkBonus > 0).length,
-    lowerTierTicketLiability: math.lowerTierTicketLiability || 0,
+    engine: 'v45', status: math.status, paidPlaces: math.paidPlaces,
+    badgesAwarded: math.badgesAwarded,
+    fallbackTicketPlaces: math.payouts.filter(p=>p.quantity>0).length,
+    fallbackTickets: math.payouts.filter(p=>p.quantity>0).reduce((n,p)=>n+p.quantity,0),
+    cashPrizePlaces: math.payouts.filter(p=>p.isCashPrize && p.stonkBonus>0).length,
     contestPrizePool: math.contestPrizePool,
-    residualBonuses: math.residualBonuses || 0,
-    shortfall: 0,
+    stonkFallback: math.stonkFallback || 0,
+    poolCarryContribution: math.carryContribution || 0,
   };
 }
 
@@ -246,33 +243,37 @@ router.post("/:id/enter", requireAuth, (req, res) => {
   }
 
   const account = db.prepare("SELECT * FROM accounts WHERE id = ?").get(req.account.id);
-  if (account.stonk_balance < tier.entryFee) return res.status(400).json({ error: "Not enough STONK to enter" });
+  const ticketType = PRICE_LEVEL_TO_TIER[satellite.price_level] || null;
+  const entryTicket = ticketType ? db.prepare(`SELECT * FROM tickets WHERE account_id=? AND ticket_type=? AND status='unredeemed' ORDER BY created_at ASC,id ASC LIMIT 1`).get(account.id,ticketType) : null;
+  if (!entryTicket && account.stonk_balance < tier.entryFee) return res.status(400).json({ error: "Not enough STONK or matching ticket to enter" });
   const label = `${satellite.name} (Entry ${existingCount + 1})`;
   const portfolioId = createPortfolio(account.id, label);
 
   db.exec("BEGIN");
   try {
-    if (tier.entryFee > 0) {
+    if (entryTicket) {
+      consumeTicket({ ticketId: entryTicket.id, accountId: account.id, appliedToSatelliteId: satellite.id });
+    } else if (tier.entryFee > 0) {
       custodian.debit(account.id, tier.entryFee, "satellite_entry", { referenceType: "satellite", referenceId: satellite.id });
     }
-    db.prepare("INSERT INTO satellite_entries (satellite_id, account_id, portfolio_id, entry_fee_paid) VALUES (?, ?, ?, ?)")
+    const entryInfo = db.prepare("INSERT INTO satellite_entries (satellite_id, account_id, portfolio_id, entry_fee_paid) VALUES (?, ?, ?, ?)")
       .run(satellite.id, account.id, portfolioId, tier.poolFee);
 
     if (tier.surcharge > 0) {
-      db.prepare("UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk + ? WHERE category_id = ?")
-        .run(tier.surcharge, tier.categoryId);
-      if (!V45_ENABLED) {
+      if (V45_ENABLED) {
+        creditEntryContributionInTransaction({ entryId:Number(entryInfo.lastInsertRowid), categoryId:tier.categoryId, amountStonk:tier.surcharge });
+      } else {
+        db.prepare("UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk + ? WHERE category_id = ?").run(tier.surcharge, tier.categoryId);
         const fund = db.prepare("SELECT * FROM freeroll_fund WHERE category_id = ?").get(tier.categoryId);
         const threshold = FREEROLL_PRIZE_CONFIG[tier.categoryId].threshold;
         if (fund.accumulated_stonk >= threshold) {
           db.prepare(`UPDATE freeroll_fund SET accumulated_stonk = accumulated_stonk - ?, prizes_available = prizes_available + 1,
-            total_prizes_funded_lifetime = total_prizes_funded_lifetime + 1 WHERE category_id = ?`)
-            .run(threshold, tier.categoryId);
+            total_prizes_funded_lifetime = total_prizes_funded_lifetime + 1 WHERE category_id = ?`).run(threshold, tier.categoryId);
         }
       }
     }
     db.exec("COMMIT");
-    res.json({ ok: true, satelliteId: satellite.id, portfolioId, entryFeePaid: tier.entryFee });
+    res.json({ ok: true, satelliteId: satellite.id, portfolioId, entryFeePaid: entryTicket ? 0 : tier.entryFee, paidWithTicketId: entryTicket?.id || null });
   } catch (err) {
     try { db.exec("ROLLBACK"); } catch (_) {}
     throw err;
