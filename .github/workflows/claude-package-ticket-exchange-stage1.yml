@@ -1,0 +1,54 @@
+name: claude-package-ticket-exchange-stage1
+on:
+  push:
+    branches:
+      - claude-package-ticket-exchange-stage1-4a1b4ac
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build exact merged source package
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET=4a1b4acc48bf03bb580522969d75be1c2dd5de7d
+          ZIP=TICKET_EXCHANGE_STAGE1_FINAL_4a1b4ac.zip
+          git cat-file -e "$TARGET^{commit}"
+          git archive --format=zip --output="$ZIP" "$TARGET"
+          sha256sum "$ZIP" > TICKET_EXCHANGE_STAGE1_FINAL_SHA256.txt
+          : > TICKET_EXCHANGE_STAGE1_CHANGED_FILES_SHA256.txt
+          for f in package.json public/v45-ticket-market-v36.js scripts/validate-stage24-ticket-market.js server/index.js server/ticketExchangeStage1.test.js; do
+            git show "$TARGET:$f" | sha256sum | awk -v f="$f" '{print $1"  "f}' >> TICKET_EXCHANGE_STAGE1_CHANGED_FILES_SHA256.txt
+          done
+          cat > CLAUDE_TICKET_EXCHANGE_STAGE1_HANDOFF.txt <<'EOF'
+          Ticket Exchange Stage 1 — Claude Review Handoff
+          Exact merged commit: 4a1b4acc48bf03bb580522969d75be1c2dd5de7d
+
+          Scope:
+          - Ticket Exchange Stage 1 only.
+          - Real backend order book replaces static TICKET_MARKETS as primary source; static data remains failure fallback only.
+          - Real POST /api/ticket-market/offers and /bids replace localStorage fake order creation.
+          - Exact owned ticket ID is preserved into POST /offers; modal-title parsing removed from the creation path.
+          - No optimistic local echo; backend confirmation precedes UI success.
+          - Genuine two-account acceptance test: Account A creates a listing, distinct Account B token sees it in GET /book/runner with isMine:false.
+          - Stage 2 accept-bid/sell-into-bid is intentionally untouched.
+          - No CSS, HTML, or exact V45 shell source changed. server/index.js only cache-busts v45-ticket-market-v36.js from ?v=36 to ?v=37.
+
+          CI note:
+          - npm test is green, including Stage 1 cross-account, Corporate Ladder, ticket burn/real-entry, Free Roll idempotency, and chart regressions.
+          - Repository V45 Rebuild CI still ends red at the pre-existing legacy smoke assertion GET /dev/payout-preview?tier=free&field=1000. Corporate Ladder PR #119 had the same smoke-step failure before Stage 1; Stage 1 does not touch payout-preview.
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ticket-exchange-stage1-4a1b4ac
+          path: |
+            TICKET_EXCHANGE_STAGE1_FINAL_4a1b4ac.zip
+            TICKET_EXCHANGE_STAGE1_FINAL_SHA256.txt
+            TICKET_EXCHANGE_STAGE1_CHANGED_FILES_SHA256.txt
+            CLAUDE_TICKET_EXCHANGE_STAGE1_HANDOFF.txt
+          if-no-files-found: error
