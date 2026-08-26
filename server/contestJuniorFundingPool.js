@@ -7,6 +7,7 @@ const {
   ensureSchema: ensureReserveSchema,
   getBalances,
   creditFunding,
+  creditFundingInTransaction,
   transferReserveInTransaction,
 } = require('./prizeReserveLedger');
 const {
@@ -117,19 +118,12 @@ function getContestFundingPoolStatus(db) {
   return poolStatusInTransaction(db);
 }
 
-function recordPostRakeContestFunding(db, {
-  fundingId,
-  sourceType,
-  sourceId,
-  netPrizeSubunits,
-}) {
-  ensureSchema(db);
+function recordContestFundingInTransaction(db, { fundingId, sourceType, sourceId, netPrizeSubunits }) {
   assertId(fundingId, 'fundingId');
   assertId(sourceType, 'sourceType');
   assertId(String(sourceId), 'sourceId');
   assertPositiveBigInt(netPrizeSubunits, 'netPrizeSubunits');
-
-  creditFunding(db, {
+  creditFundingInTransaction(db, {
     fundingId,
     bucket: BROKER_RESERVE_BUCKET,
     amountSubunits: netPrizeSubunits,
@@ -137,74 +131,74 @@ function recordPostRakeContestFunding(db, {
     sourceId: String(sourceId),
     reason: 'post_rake_contest_prize_funding',
   });
-  return getContestFundingPoolStatus(db);
+  return poolStatusInTransaction(db);
 }
 
-function issueWonJuniorFromContestPool(db, { issuanceId, accountId }) {
+function recordPostRakeContestFunding(db, params) {
   ensureSchema(db);
-  assertId(issuanceId, 'issuanceId');
-  assertAccountId(accountId);
-
   db.exec('BEGIN IMMEDIATE');
   try {
-    const before = poolStatusInTransaction(db);
-    if (before.unallocatedSubunits < WON_TOTAL) {
-      const err = new Error('pooled contest funding cannot yet cover one won Junior');
-      err.code = 'INSUFFICIENT_CONTEST_FUNDING';
-      throw err;
-    }
-
-    try {
-      prepareBigInt(db, `
-        INSERT INTO sbc_prize_pool_allocations
-          (issuance_id, account_id, asset_type, funding_unit_subunits, broker_backing_subunits, overflow_subunits)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `).run(issuanceId, accountId, ASSET_TYPE, WON_TOTAL, BROKER_SHARE, WON_OVERFLOW);
-    } catch (err) {
-      if (/UNIQUE constraint failed|PRIMARY KEY/.test(String(err && err.message))) {
-        const duplicate = new Error(`contest pool allocation already recorded: ${issuanceId}`);
-        duplicate.code = 'DUPLICATE_ISSUANCE';
-        throw duplicate;
-      }
-      throw err;
-    }
-
-    transferReserveInTransaction(db, {
-      transferId: `won-junior-overflow:${issuanceId}`,
-      fromBucket: BROKER_RESERVE_BUCKET,
-      toBucket: OVERFLOW_RESERVE_BUCKET,
-      amountSubunits: WON_OVERFLOW,
-      reason: 'won_junior_overflow_allocation',
-    });
-
-    recordJuniorIssuanceInTransaction(db, {
-      issuanceId,
-      accountId,
-      source: SOURCE_WON,
-      split: {
-        grossSubunits: WON_TOTAL,
-        brokerSubunits: BROKER_SHARE,
-        overflowSubunits: WON_OVERFLOW,
-      },
-    });
-
+    recordContestFundingInTransaction(db, params);
     db.exec('COMMIT');
   } catch (err) {
     try { db.exec('ROLLBACK'); } catch (_) {}
     throw err;
   }
+  return getContestFundingPoolStatus(db);
+}
 
+function issueWonJuniorFromContestPoolInTransaction(db, { issuanceId, accountId }) {
+  assertId(issuanceId, 'issuanceId');
+  assertAccountId(accountId);
+  const before = poolStatusInTransaction(db);
+  if (before.unallocatedSubunits < WON_TOTAL) {
+    const err = new Error('pooled contest funding cannot yet cover one won Junior');
+    err.code = 'INSUFFICIENT_CONTEST_FUNDING';
+    throw err;
+  }
+  try {
+    prepareBigInt(db, `
+      INSERT INTO sbc_prize_pool_allocations
+        (issuance_id, account_id, asset_type, funding_unit_subunits, broker_backing_subunits, overflow_subunits)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(issuanceId, accountId, ASSET_TYPE, WON_TOTAL, BROKER_SHARE, WON_OVERFLOW);
+  } catch (err) {
+    if (/UNIQUE constraint failed|PRIMARY KEY/.test(String(err && err.message))) {
+      const duplicate = new Error(`contest pool allocation already recorded: ${issuanceId}`);
+      duplicate.code = 'DUPLICATE_ISSUANCE';
+      throw duplicate;
+    }
+    throw err;
+  }
+  transferReserveInTransaction(db, {
+    transferId: `won-junior-overflow:${issuanceId}`,
+    fromBucket: BROKER_RESERVE_BUCKET,
+    toBucket: OVERFLOW_RESERVE_BUCKET,
+    amountSubunits: WON_OVERFLOW,
+    reason: 'won_junior_overflow_allocation',
+  });
+  recordJuniorIssuanceInTransaction(db, {
+    issuanceId, accountId, source: SOURCE_WON,
+    split: { grossSubunits: WON_TOTAL, brokerSubunits: BROKER_SHARE, overflowSubunits: WON_OVERFLOW },
+  });
+  return poolStatusInTransaction(db);
+}
+
+function issueWonJuniorFromContestPool(db, params) {
+  ensureSchema(db);
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    issueWonJuniorFromContestPoolInTransaction(db, params);
+    db.exec('COMMIT');
+  } catch (err) {
+    try { db.exec('ROLLBACK'); } catch (_) {}
+    throw err;
+  }
+  const { issuanceId, accountId } = params;
   return {
-    issuanceId,
-    accountId,
-    assetType: ASSET_TYPE,
-    source: SOURCE_WON,
-    count: getJuniorCount(db, accountId),
-    fundingUnitSubunits: WON_TOTAL,
-    brokerBackingSubunits: BROKER_SHARE,
-    overflowSubunits: WON_OVERFLOW,
-    pool: getContestFundingPoolStatus(db),
-    balances: getBalances(db),
+    issuanceId, accountId, assetType: ASSET_TYPE, source: SOURCE_WON, count: getJuniorCount(db, accountId),
+    fundingUnitSubunits: WON_TOTAL, brokerBackingSubunits: BROKER_SHARE, overflowSubunits: WON_OVERFLOW,
+    pool: getContestFundingPoolStatus(db), balances: getBalances(db),
   };
 }
 
@@ -215,6 +209,9 @@ module.exports = {
   computePostRakeNetSubunits,
   ensureSchema,
   getContestFundingPoolStatus,
+  poolStatusInTransaction,
+  recordContestFundingInTransaction,
   recordPostRakeContestFunding,
+  issueWonJuniorFromContestPoolInTransaction,
   issueWonJuniorFromContestPool,
 };

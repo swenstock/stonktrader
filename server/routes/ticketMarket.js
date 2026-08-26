@@ -4,7 +4,7 @@ const db = require('../db');
 const custodian = require('../custodian');
 const requireAuth = require('../middleware/requireAuth');
 
-const TICKET_TYPES = new Set(['runner','clerk','trader','junior','main_event']);
+const TICKET_TYPES = new Set(['runner','clerk','trader','junior']);
 const EXCHANGE_FEE_PCT = Math.max(0, Math.min(1, Number(process.env.TICKET_MARKET_FEE_PCT || 0)));
 
 function optionalAccountId(req) {

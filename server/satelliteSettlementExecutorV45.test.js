@@ -1,79 +1,46 @@
-const fs = require('fs');
-const path = '/tmp/sbc-settlement-executor-v45.db';
-try { fs.unlinkSync(path); } catch (_) {}
-process.env.DB_PATH = path;
+const fs=require('fs');const path='/tmp/sbc-settlement-executor-v45.db';try{fs.unlinkSync(path)}catch(_){ }
+process.env.DB_PATH=path;
+const db=require('./db');require('./schemaV45').run();
+const freerollReserve=require('./freerollReserveV45');
+const {creditFunding}=require('./prizeReserveLedger');
+const {BROKER_RESERVE_BUCKET}=require('./prizeReserveLedger');
+const {getContestFundingPoolStatus}=require('./contestJuniorFundingPool');
+const {executePaid,executeFreeroll}=require('./satelliteSettlementExecutorV45');
+const {getJuniorCount}=require('./juniorBrokerStage2');
 
-const db = require('./db');
-require('./schemaV45').run();
-const reserveLedger = require('./reserveLedger');
-const freerollReserve = require('./freerollReserveV45');
-const { executePaid, executeFreeroll } = require('./satelliteSettlementExecutorV45');
+function account(i){const u=db.prepare('INSERT INTO users(email,password_hash,display_name,referral_code) VALUES(?,?,?,?)').run(`u${i}@t.local`,'x:y',`U${i}`,`R${1000+i}`).lastInsertRowid;return Number(db.prepare('INSERT INTO accounts(user_id) VALUES(?)').run(u).lastInsertRowid)}
+const accounts=Array.from({length:120},(_,i)=>account(i));
+function sat(price,tier='morning',fee=100){return db.prepare(`INSERT INTO satellites(tier_id,price_level,name,entry_fee,ticket_cost,opens_at,locks_at,status) VALUES(?,?,?,?,0,?,?,'open') RETURNING *`).get(tier,price,`${tier}-${price}`,fee,new Date().toISOString(),new Date(Date.now()+1000).toISOString())}
+function entries(s,n,fee){const es=[],ranked=[];for(let i=0;i<n;i++){const aid=accounts[i];const p=Number(db.prepare('INSERT INTO portfolios(account_id,label) VALUES(?,?)').run(aid,`P${s.id}-${i}`).lastInsertRowid);const e=Number(db.prepare('INSERT INTO satellite_entries(satellite_id,account_id,portfolio_id,entry_fee_paid) VALUES(?,?,?,?)').run(s.id,aid,p,fee).lastInsertRowid);es.push({id:e,account_id:aid,entry_fee_paid:fee,portfolio_id:p});ranked.push({accountId:aid,entryId:e,portfolioId:p,pl:n-i})}return{entries:es,ranked}}
 
-const userId = db.prepare("INSERT INTO users (email,password_hash,display_name,referral_code) VALUES ('settle@test.local','x:y','Settle','SET001')").run().lastInsertRowid;
-const accountId = db.prepare('INSERT INTO accounts (user_id) VALUES (?)').run(userId).lastInsertRowid;
+// Seed 39K global carry, then prove the connected Runner walk end to end.
+creditFunding(db,{fundingId:'seed:39000',bucket:BROKER_RESERVE_BUCKET,amountSubunits:39000000000n,sourceType:'test',sourceId:'seed',reason:'test_seed'});
+const rSat=sat('runner','morning',100);const rd=entries(rSat,20,100);
+const out=executePaid({satellite:rSat,entries:rd.entries,ranked:rd.ranked});
+if(out.math.badgesAwarded!==1||out.math.badgeFundingContribution!==1000||out.math.stonkFallback!==700) throw new Error('Runner carry math mismatch');
+if(getJuniorCount(db,accounts[0])!==1n) throw new Error('rank 1 Badge missing');
+const r2=db.prepare('SELECT * FROM satellite_results WHERE satellite_id=? AND rank=2').get(rSat.id);
+if(r2.prize_type!=='stonk_cash_prize'||Number(r2.stonk_bonus)!==700) throw new Error('rank 2 Runner STONK fallback mismatch');
+if(db.prepare("SELECT COUNT(*) n FROM tickets WHERE source_satellite_id=? AND ticket_type='main_event'").get(rSat.id).n!==0) throw new Error('Main Event ticket must never be created');
+if(getContestFundingPoolStatus(db).unallocatedSubunits!==0n) throw new Error('39K+1K should be fully consumed by Badge');
 
-function satellite(priceLevel, tierId='morning', entryFee=350) {
-  return db.prepare(`INSERT INTO satellites
-    (tier_id,price_level,name,entry_fee,ticket_cost,opens_at,locks_at,status)
-    VALUES (?,?,?,?,3000,?,?, 'open') RETURNING *`)
-    .get(tierId,priceLevel,`${tierId}-${priceLevel}`,entryFee,new Date().toISOString(),new Date(Date.now()+1000).toISOString());
-}
-function buildEntries(sat, n, fee) {
-  const entries=[]; const ranked=[];
-  for(let i=0;i<n;i++){
-    const p=db.prepare('INSERT INTO portfolios (account_id,label) VALUES (?,?)').run(accountId,`P-${sat.id}-${i}`).lastInsertRowid;
-    const e=db.prepare('INSERT INTO satellite_entries (satellite_id,account_id,portfolio_id,entry_fee_paid) VALUES (?,?,?,?)').run(sat.id,accountId,p,fee).lastInsertRowid;
-    entries.push({id:e,account_id:accountId,entry_fee_paid:fee,portfolio_id:p});
-    ranked.push({accountId,entryId:e,pl:n-i});
-  }
-  return {entries,ranked};
-}
+// Fixed fallback: Clerk with no carry should issue two Runner tickets to each protected finisher and carry the surplus.
+const cSat=sat('low','full_day',150);const cd=entries(cSat,20,150);
+const cOut=executePaid({satellite:cSat,entries:cd.entries,ranked:cd.ranked});
+if(cOut.math.badgesAwarded!==0) throw new Error('Clerk should not self-fund a 40K Badge here');
+if(db.prepare("SELECT COUNT(*) n FROM tickets WHERE source_satellite_id=? AND ticket_type='runner'").get(cSat.id).n!==4) throw new Error('Clerk top 2 should each get 2 Runner tickets');
 
-const paidSat=satellite('mid','morning',350);
-const paid=buildEntries(paidSat,100,350);
-const paidOut=executePaid({satellite:paidSat,entries:paid.entries,ranked:paid.ranked,stonkUsdPriceMicros:24000});
-if(paidOut.math.paidPlaces!==10) throw new Error('Expected 10 paid places');
-if(paidOut.math.mainEventTickets!==9) throw new Error(`Expected 9 ME upgrades, got ${paidOut.math.mainEventTickets}`);
-if(paidOut.rake.totalRake!==5250) throw new Error(`Expected exact 5250 rake, got ${paidOut.rake.totalRake}`);
-const paidRow=db.prepare('SELECT * FROM satellites WHERE id=?').get(paidSat.id);
-if(paidRow.status!=='resolved'||paidRow.settlement_version!=='v45') throw new Error('Paid satellite not marked V45 resolved');
-if(db.prepare('SELECT COUNT(*) n FROM satellite_results WHERE satellite_id=?').get(paidSat.id).n!==100) throw new Error('Missing paid result rows');
-if(db.prepare("SELECT COUNT(*) n FROM tickets WHERE source_satellite_id=? AND ticket_type='main_event'").get(paidSat.id).n!==9) throw new Error('ME ticket count mismatch');
-if(db.prepare("SELECT COUNT(*) n FROM tickets WHERE source_satellite_id=? AND ticket_type='clerk'").get(paidSat.id).n!==2) throw new Error('Clerk baseline ticket count mismatch');
-if(reserveLedger.balance('main_event_reserve')!==27000) throw new Error('Main Event reserve mismatch');
-if(reserveLedger.balance('ticket_liability')!==27400) throw new Error(`Ticket liability mismatch ${reserveLedger.balance('ticket_liability')}`);
-if(reserveLedger.balance('platform_revenue')!==5250) throw new Error('Platform revenue mismatch');
-const creditedBonus=db.prepare("SELECT COALESCE(SUM(amount),0) n FROM ledger_entries WHERE reason='satellite_prize_stonk_v45'").get().n;
-if(Number(creditedBonus)!==2350) throw new Error(`Residual bonuses mismatch ${creditedBonus}`);
-
-// Two Runner entrants cannot fund the 200-STONK baseline pair. The room must
-// still resolve: 15% rake remains intact and rank 1 receives the 170-STONK
-// net prize pool as an explicitly labeled cash prize.
-const tiny=satellite('runner','full_day',100);
-const tinyData=buildEntries(tiny,2,100);
-const balanceBefore=Number(db.prepare('SELECT stonk_balance FROM accounts WHERE id=?').get(accountId).stonk_balance);
-const tinyOut=executePaid({satellite:tiny,entries:tinyData.entries,ranked:tinyData.ranked,stonkUsdPriceMicros:24000});
-if(tinyOut.math.degraded!==true) throw new Error('Expected degraded thin-room path');
-if(db.prepare('SELECT status FROM satellites WHERE id=?').get(tiny.id).status!=='resolved') throw new Error('Thin room did not resolve');
-if(db.prepare('SELECT COUNT(*) n FROM satellite_results WHERE satellite_id=?').get(tiny.id).n!==2) throw new Error('Expected one result row per entrant');
-if(db.prepare("SELECT COUNT(*) n FROM tickets WHERE source_satellite_id=?").get(tiny.id).n!==0) throw new Error('Cash-prize room should not issue tickets');
-const result1=db.prepare('SELECT * FROM satellite_results WHERE satellite_id=? AND rank=1').get(tiny.id);
-if(result1.prize_type!=='stonk_cash_prize'||Number(result1.stonk_bonus)!==170) throw new Error(`Unexpected thin-room result ${JSON.stringify(result1)}`);
-const balanceAfter=Number(db.prepare('SELECT stonk_balance FROM accounts WHERE id=?').get(accountId).stonk_balance);
-if(balanceAfter-balanceBefore!==170) throw new Error(`Expected 170 STONK cash prize, actual delta ${balanceAfter-balanceBefore}`);
-const totalPrizeCredits=Number(db.prepare("SELECT COALESCE(SUM(amount),0) n FROM ledger_entries WHERE reason='satellite_prize_stonk_v45'").get().n);
-if(totalPrizeCredits!==2520) throw new Error(`Expected cumulative prize credits 2520 after thin room, got ${totalPrizeCredits}`);
-
-const freeSat=satellite('free','afternoon',0);
-const freeData=buildEntries(freeSat,100,0);
-freerollReserve.deposit('afternoon',2000,{referenceType:'test',referenceId:freeSat.id});
-const beforeLiability=reserveLedger.balance('ticket_liability');
-const freeOut=executeFreeroll({satellite:freeSat,ranked:freeData.ranked,stonkUsdPriceMicros:24000});
-if(freeOut.awards.length!==10||freeOut.reserveSpend!==2000) throw new Error('Freeroll payout plan mismatch');
-if(Number(freerollReserve.get('afternoon').balance_stonk)!==0) throw new Error('Freeroll reserve did not spend to zero');
-const freeTickets=db.prepare("SELECT COUNT(*) n FROM tickets WHERE source_satellite_id=? AND ticket_type='runner'").get(freeSat.id).n;
-if(freeTickets!==20) throw new Error(`Expected 20 Runner tickets, got ${freeTickets}`);
-if(reserveLedger.balance('ticket_liability')-beforeLiability!==2000) throw new Error('Freeroll ticket liability did not rise by reserve spend');
-if(db.prepare('SELECT COUNT(*) n FROM satellite_results WHERE satellite_id=?').get(freeSat.id).n!==100) throw new Error('Missing freeroll result rows');
+// Free Roll: local 45.5K -> one fully-backed Badge + 5.5K cash; zero tickets.
+const fSat=sat('free','afternoon',0);const fd=entries(fSat,100,0);
+freerollReserve.deposit('afternoon',45500,{referenceType:'test',referenceId:fSat.id});
+const fOut=executeFreeroll({satellite:fSat,ranked:fd.ranked});
+if(fOut.math.badgesAwarded!==1||fOut.math.cashDistributed!==5500) throw new Error('Free Roll plan mismatch');
+if(getJuniorCount(db,accounts[0])!==2n) throw new Error('Free Roll Badge missing for rank 1');
+if(db.prepare('SELECT COUNT(*) n FROM tickets WHERE source_satellite_id=?').get(fSat.id).n!==0) throw new Error('Free Roll must issue zero tickets');
+if(Number(freerollReserve.get('afternoon').balance_stonk)!==0) throw new Error('Free Roll local reserve should be spent exactly');
+const cash=Number(db.prepare("SELECT COALESCE(SUM(stonk_bonus),0) n FROM satellite_results WHERE satellite_id=?").get(fSat.id).n);if(cash!==5500) throw new Error(`Free Roll cash mismatch ${cash}`);
 
 console.log('satelliteSettlementExecutorV45 tests passed');
+console.log('Runner 39K carry -> 1K contribution -> Badge + 700 STONK');
+console.log('Clerk -> 2 Runner tickets each for protected finishers');
+console.log('Free Roll 45.5K -> Badge + 5.5K STONK, zero tickets');

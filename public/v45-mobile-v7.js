@@ -57,11 +57,11 @@ const HOW_DETAILS=[
   [
     ['FINISH IN THE MONEY','Place high enough and you earn the ticket attached to that contest tier.'],
     ['YOUR TICKET, YOUR CALL','Use it to enter the next contest, hold it for later, or sell it on the Ticket Exchange.'],
-    ['THE LADDER','Runner → Clerk → Trader → Jr. StonkBroker → Main Event. Keep climbing by performance.']
+    ['THE LADDER','Runner → Clerk → Trader → Jr. StonkBroker. Tickets get you in; Badges get you promoted.']
   ],
   [
     ['REACH THE MAIN EVENT','Win a qualifying ticket or buy one from another player on the exchange.'],
-    ['FINAL OBJECTIVE','Trade the Main Event from the same $100,000 virtual starting account and finish #1.'],
+    ['FINAL OBJECTIVE','Collect 20 Jr. Broker Badges and get promoted to an Activated StonkBroker.'],
     ['THE PRIZE','When the StonkBroker prize is locked, the winner takes the activated StonkBroker.']
   ]
 ];

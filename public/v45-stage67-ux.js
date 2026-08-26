@@ -62,19 +62,20 @@ const tierLabel=l=>l.priceLevel==='free'?'FREE ROLL':l.priceLevel==='runner'?'RU
 function projectionText(level){
   const p=level.payoutProjection,n=Number(level.entrantCount||0);
   if(!p)return n?`${n} entries • projection unavailable`:`0 entries • waiting for entries`;
-  if(level.priceLevel==='free')return `${n} entries • top ${p.paidPlaces} • 2 Runner tickets each • ${p.status==='FUNDED'?'FUNDED':'reserve shortfall'}`;
-  const parts=[`${n} entries`,`top ${p.paidPlaces}`,`${p.mainEventTickets||0} Main Event ticket${p.mainEventTickets===1?'':'s'}`];
-  if(p.lowerTierTickets)parts.push(`${p.lowerTierTickets} lower-tier tickets`);
-  if(p.cashPrizePlaces)parts.push(`${p.cashPrizePlaces} cash-prize place${p.cashPrizePlaces===1?'':'s'}`);
-  if(p.residualBonuses)parts.push(`${Number(p.residualBonuses).toLocaleString()} STONK bonus pool`);
+  if(level.priceLevel==='free'){const parts=[`${n} entries`,`${p.badgesAwarded||0} Jr. Broker Badge${p.badgesAwarded===1?'':'s'}`];if(p.cashDistributed)parts.push(`${Number(p.cashDistributed).toLocaleString()} STONK local prize pool`);parts.push('no top-10% guarantee');return parts.join(' • ');}
+  const parts=[`${n} entries`,`top ${p.paidPlaces}`,`${p.badgesAwarded||0} Jr. Broker Badge${p.badgesAwarded===1?'':'s'}`];
+  if(p.fallbackTickets)parts.push(`${p.fallbackTickets} fallback ticket${p.fallbackTickets===1?'':'s'}`);
+  if(p.cashPrizePlaces)parts.push(`${p.cashPrizePlaces} STONK fallback place${p.cashPrizePlaces===1?'':'s'}`);
+  if(p.poolCarryContribution)parts.push(`${Number(p.poolCarryContribution).toLocaleString()} STONK Badge carry`);
   return parts.join(' • ');
 }
+
 function renderProjection(card,category){
   let box=$('.stage67-payout-projection',card);if(!box){box=document.createElement('details');box.className='stage67-payout-projection';box.open=false;card.appendChild(box);}
   const wasOpen=box.open;
   const levels=(category?.levels||[]).filter(l=>['free','runner','low','mid','high'].includes(l.priceLevel));
   const entrants=levels.reduce((n,l)=>n+Number(l.entrantCount||0),0);
-  box.innerHTML=`<summary><span>PROJECTED PAYOUTS</span><b>IF FIELD CLOSED NOW • ${entrants.toLocaleString()} ENTRIES</b></summary><div class="stage67-payout-grid">${levels.map(l=>`<div class="stage67-payout-row"><strong>${tierLabel(l)}</strong><span>${projectionText(l)}</span></div>`).join('')}</div><small>Projection uses the same V45 settlement engine as final payouts and updates with the live field.</small>`;
+  box.innerHTML=`<summary><span>PROJECTED PAYOUTS</span><b>IF FIELD CLOSED NOW • ${entrants.toLocaleString()} ENTRIES</b></summary><div class="stage67-payout-grid">${levels.map(l=>`<div class="stage67-payout-row"><strong>${tierLabel(l)}</strong><span>${projectionText(l)}</span></div>`).join('')}</div><small>Projection uses the corporate-ladder settlement engine and updates with the live field.</small>`;
   box.open=wasOpen;box.onclick=e=>e.stopPropagation();
 }
 async function projectedPayouts(){

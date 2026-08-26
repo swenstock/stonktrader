@@ -1,0 +1,30 @@
+'use strict';
+const fs=require('fs');const path='/tmp/sbc-ticket-entry-v45.db';try{fs.unlinkSync(path)}catch(_){ }
+process.env.DB_PATH=path;process.env.PAYOUT_ENGINE_V45='true';
+const db=require('./db');require('./schemaV45').run();
+const {issueTicket}=require('./ticketServiceV45');
+const {burnTicketsForUpgrade}=require('./ticketBurnV45');
+const {applyPendingSatelliteAllocations}=require('./allocationEngine');
+const freerollReserve=require('./freerollReserveV45');
+
+const uid=db.prepare("INSERT INTO users(email,password_hash,display_name,referral_code) VALUES('entry@test','x:y','Entry','ENTRY1')").run().lastInsertRowid;
+const aid=Number(db.prepare('INSERT INTO accounts(user_id,stonk_balance) VALUES(?,0)').run(uid).lastInsertRowid);
+for(let i=0;i<10;i++) issueTicket({accountId:aid,ticketType:'runner',backingStonk:100});
+const burn=burnTicketsForUpgrade({burnId:'entry-burn-1',accountId:aid,sourceType:'runner'});
+const clerkId=burn.targetTicket.id;
+const pending=db.prepare(`INSERT INTO pending_allocations(account_id,target_type,target_tier_id,target_price_level,allocations_json,source) VALUES(?,'satellite','morning','low','[]','self')`).run(aid).lastInsertRowid;
+const sat=db.prepare(`INSERT INTO satellites(tier_id,price_level,name,entry_fee,ticket_cost,opens_at,locks_at,status,settlement_version) VALUES('morning','low','Morning — Clerk',150,0,?,?,'open','v45') RETURNING *`).get(new Date().toISOString(),new Date(Date.now()+60000).toISOString());
+applyPendingSatelliteAllocations(sat);
+const entry=db.prepare('SELECT * FROM satellite_entries WHERE satellite_id=? AND account_id=?').get(sat.id,aid);
+if(!entry) throw new Error('ticket-funded Clerk entry not created');
+if(Number(entry.entry_fee_paid)!==150) throw new Error(`Clerk contest portion must be 150, got ${entry.entry_fee_paid}`);
+const ticket=db.prepare('SELECT * FROM tickets WHERE id=?').get(clerkId);
+if(ticket.status!=='applied'||Number(ticket.applied_to_satellite_id)!==Number(sat.id)) throw new Error('Clerk ticket not consumed into real Clerk contest');
+const acct=db.prepare('SELECT stonk_balance FROM accounts WHERE id=?').get(aid);if(Number(acct.stonk_balance)!==0) throw new Error('ticket-funded entry must not charge STONK');
+const contrib=db.prepare('SELECT * FROM freeroll_entry_contributions_v45 WHERE entry_id=?').get(entry.id);if(!contrib||Number(contrib.amount_stonk)!==50) throw new Error('ticket-funded Clerk entry must contribute exactly 50 to Free Roll');
+if(Number(freerollReserve.get('morning').balance_stonk)!==50) throw new Error('Free Roll V45 reserve must receive the 50 contribution');
+applyPendingSatelliteAllocations(sat);
+if(db.prepare('SELECT COUNT(*) n FROM satellite_entries WHERE satellite_id=? AND account_id=?').get(sat.id,aid).n!==1) throw new Error('applied pending allocation must not duplicate entry');
+if(Number(freerollReserve.get('morning').balance_stonk)!==50) throw new Error('entry retry must not duplicate Free Roll funding');
+console.log('Ticket -> real paid-tier entry: PASS');
+console.log('10 Runner -> 1 Clerk -> Clerk contest with 0 STONK charged + 50 Free Roll funding');

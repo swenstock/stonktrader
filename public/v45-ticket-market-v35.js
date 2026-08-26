@@ -2,8 +2,8 @@
 'use strict';
 if(window.__sbcTicketMarketV35)return;window.__sbcTicketMarketV35=true;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
-const TYPE_LABELS={main_event:'MAIN EVENT',junior:'JR. STONKBROKER',trader:'TRADER',clerk:'CLERK',runner:'RUNNER'};
-let currentType='main_event',lastBook=null,capturedAuth='',panel=null,activeMarketModal=null,refreshTimer=null;
+const TYPE_LABELS={junior:'JR. STONKBROKER',trader:'TRADER',clerk:'CLERK',runner:'RUNNER'};
+let currentType='runner',lastBook=null,capturedAuth='',panel=null,activeMarketModal=null,refreshTimer=null;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function view(){return $('#view-exchange')||$$('main,section,div').find(el=>/THE TICKET EXCHANGE/i.test(el.textContent||'')&&el.offsetParent!==null)||null;}
 function tokenFromStorage(){try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i),raw=localStorage.getItem(k);if(!raw)continue;const vals=[raw];try{const j=JSON.parse(raw);if(j&&typeof j==='object')vals.push(j.token,j.accessToken,j.access_token,j.jwt,j.authToken);}catch(_){}for(const v of vals){if(typeof v==='string'&&v.split('.').length===3&&v.length>40)return `Bearer ${v.replace(/^Bearer\s+/i,'')}`;}}}catch(_){}return'';}

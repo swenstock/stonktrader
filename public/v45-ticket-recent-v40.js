@@ -2,7 +2,7 @@
 'use strict';
 if(window.__sbcTicketRecentV40)return;window.__sbcTicketRecentV40=true;
 const STORE='sbcTicketSettlementV38';
-const LABELS={main_event:'MAIN EVENT',junior:'JR. STONKBROKER',trader:'TRADER',clerk:'CLERK',runner:'RUNNER'};
+const LABELS={junior:'JR. STONKBROKER',trader:'TRADER',clerk:'CLERK',runner:'RUNNER'};
 const $=(s,r=document)=>r.querySelector(s);
 function loadTrades(){try{const x=JSON.parse(localStorage.getItem(STORE)||'{}');return Array.isArray(x.trades)?x.trades:[]}catch(_){return[]}}
 function ensureBox(){
