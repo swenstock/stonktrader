@@ -39,7 +39,7 @@ function renderBookFromBackend(book){
   const askBook=document.getElementById('askBook');
   if(askBook)askBook.innerHTML=offers.map(o=>`<div class="book-row"><div class="book-ticket-meta">${visual()}<div><strong>1 ${name} Ticket Offered</strong><small>Seller #${String(o.id).slice(-4)} • Offer listed for sale</small></div></div><div class="book-price ask">${priceOf(o).toLocaleString()} STONK</div><button class="hit-ask" onclick="buyAtAsk(${priceOf(o)})">BUY OFFER</button></div>`).join('');
   const bidBook=document.getElementById('bidBook');
-  if(bidBook)bidBook.innerHTML=bids.map(o=>`<div class="book-row"><div class="book-ticket-meta">${visual()}<div><strong>1 ${name} Ticket Bid</strong><small>Bidder #${String(o.id).slice(-4)} • Buyer posted this bid</small></div></div><div class="book-price bid">${priceOf(o).toLocaleString()} STONK</div><button class="hit-bid" onclick="sellIntoBid(${priceOf(o)})">SELL TO BID</button></div>`).join('');
+  if(bidBook)bidBook.innerHTML=bids.map(o=>`<div class="book-row"><div class="book-ticket-meta">${visual()}<div><strong>1 ${name} Ticket Bid</strong><small>Bidder #${String(o.id).slice(-4)} • Buyer posted this bid</small></div></div><div class="book-price bid">${priceOf(o).toLocaleString()} STONK</div><button class="hit-bid" data-sbc-bid-id="${o.id}" data-sbc-bid-price="${priceOf(o)}" onclick="sellIntoBid(${priceOf(o)},${o.id})">SELL TO BID</button></div>`).join('');
   const recent=document.getElementById('recentTicketSales'),fbBids=Array.isArray(fallback.bids)?fallback.bids:[],fbAsks=Array.isArray(fallback.asks)?fallback.asks:[];
   if(recent&&Number(fallback.last)>0){const sales=[fallback.last,Math.round((fallback.last+(fbBids[0]||fallback.last))/2),Math.round((fallback.last+(fbAsks[0]||fallback.last))/2)];recent.innerHTML=sales.map((p,i)=>`<div class="market-row"><div class="ticket-name">${typeof exchangeVisualHTML==='function'?exchangeVisualHTML(name,'ticket-badge'):''}<div><b>${name}</b><small style="display:block;color:#9dacb8">1 ticket transferred</small></div></div><div>${p.toLocaleString()} STONK</div><div>${[3,17,42][i]}m ago</div><div></div><div></div></div>`).join('')}
   return mappedMarket(book,fallback);
@@ -54,6 +54,25 @@ function currentOfferTicketId(){try{if(typeof ticketOrder!=='undefined'&&ticketO
 async function submitOffer(ticketId,askPrice){const price=Math.round(Number(askPrice));if(!(price>0))throw new Error('Enter a positive STONK price.');return api('/api/ticket-market/offers',{method:'POST',body:JSON.stringify({ticketId,askPrice:price})})}
 async function submitCurrentOffer(askPrice){return submitOffer(currentOfferTicketId(),askPrice)}
 async function submitBid(type,bidPrice){const price=Math.round(Number(bidPrice));if(!(price>0))throw new Error('Enter a positive STONK price.');return api('/api/ticket-market/bids',{method:'POST',body:JSON.stringify({ticketType:type,bidPrice:price})})}
+let pendingBidAccept=null;
+function realOwnedTicketId(){try{const raw=ownedTicketContext?.ticketId,n=Number(raw);return Number.isInteger(n)&&n>0?n:null}catch(_){return null}}
+function cachedBidById(type,bidId){const book=realBookCache.get(type),id=Number(bidId);if(!book||!Number.isInteger(id))return null;return (book.bids||[]).find(b=>Number(b.id)===id&&!b.isMine)||null}
+function cachedBestBid(type=currentType()){const book=realBookCache.get(type);if(!book)return null;return (book.bids||[]).find(b=>!b.isMine)||null}
+async function acceptBid(bid,ticketId){if(!bid||bid.id===undefined||bid.id===null)throw new Error('That bid is no longer available. Refresh the ticket market and try again.');const id=Number(ticketId);if(!Number.isInteger(id)||id<=0)throw new Error('Choose the exact ticket you want to sell from My Tickets first.');return api(`/api/ticket-market/bids/${bid.id}/sell`,{method:'POST',body:JSON.stringify({ticketId:id})})}
+function sellSummary(){return document.getElementById('sellChoiceSummary')}
+function appendBidSuccess(result,bid){const el=sellSummary();if(!el)return;const price=Number(result?.soldFor??priceOf(bid));el.innerHTML += `<div style="margin-top:8px;padding:9px;border:1px solid #355a38;border-radius:7px;color:#73e76d;font-size:9px">✓ You accepted the buyer's ${price.toLocaleString()} STONK Bid. One ticket changes hands.</div>`}
+async function settleBid(bid,ticketId){const result=await acceptBid(bid,ticketId);appendBidSuccess(result,bid);pendingBidAccept=null;schedule();await window.renderTicketMarket?.();return result}
+function prepareSpecificBid(price,bidId){const type=currentType(),bid=cachedBidById(type,bidId),ticketId=realOwnedTicketId();if(!bid){alert('That real bid is not available in the current ticket book. Refresh and try again.');return null}if(!ticketId){alert('Choose the exact ticket you want to sell from My Tickets first.');return null}pendingBidAccept={bid,ticketId,type};try{ownedTicketContext={name:activeTicketMarket,ticketId}}catch(_){}
+  const title=document.getElementById('sellChoiceTitle'),intro=document.getElementById('sellChoiceIntro'),summary=sellSummary(),button=document.getElementById('hitBidBtn'),modal=document.getElementById('sellChoiceModal'),p=priceOf(bid);
+  if(title)title.textContent=`SELL ${String(activeTicketMarket||TYPE_LABELS[type]||type).toUpperCase()} TICKET`;
+  if(intro)intro.textContent=`Accept this buyer's ${p.toLocaleString()} STONK Bid using one ${activeTicketMarket} ticket you own.`;
+  if(summary)summary.innerHTML=`<div class="order-preview-row"><span>BUYER BID</span><b style="color:#69e660">${p.toLocaleString()} STONK</b></div><div class="order-preview-row"><span>TICKET REQUIRED</span><b>1 ${activeTicketMarket} Ticket</b></div><div class="order-preview-row"><span>RESULT</span><b>Your ticket → buyer • STONK → you</b></div>`;
+  if(button)button.textContent=`ACCEPT ${p.toLocaleString()} STONK BID`;
+  modal?.classList.add('open');return pendingBidAccept}
+function realSellIntoBid(price,bidId){return prepareSpecificBid(price,bidId)}
+async function realHitBestBid(){const type=currentType(),bid=pendingBidAccept?.bid||cachedBestBid(type),ticketId=pendingBidAccept?.ticketId||realOwnedTicketId();if(!bid)throw new Error('No real active bid is available. Refresh the ticket market and try again.');if(!ticketId)throw new Error('Choose the exact ticket you want to sell from My Tickets first.');return settleBid(bid,ticketId)}
+window.sellIntoBid=realSellIntoBid;
+window.hitBestBid=function(){return realHitBestBid().catch(err=>alert(err.message))};
 function ensurePanel(){const v=view();if(!v)return null;if(panel&&!panel.isConnected)panel=null;if(panel)return panel;panel=$('#tm36Mine');if(panel)return panel;panel=document.createElement('section');panel.id='tm36Mine';panel.className='tm35-mine';const market=$$('section,article,div',v).find(el=>/BIDS\s*[—-]/i.test(el.textContent||'')&&/OFFERS\s*[—-]/i.test(el.textContent||''));if(market?.parentNode)market.parentNode.insertBefore(panel,market);else v.appendChild(panel);return panel}
 function orderRow(o){const isBid=o.side==='bid',p=priceOf(o),source='backend';return`<div class="tm35-order"><div class="tm35-side ${isBid?'bid':'ask'}">${isBid?'BID':'LISTING'}</div><div class="tm35-order-main"><b>${esc(TYPE_LABELS[o.ticketType]||o.ticketType)} TICKET</b><span>${isBid?'You are bidding':'You are asking'} <strong>${p.toLocaleString()} STONK</strong></span></div><div class="tm35-actions"><button data-tm36-edit="${source}:${isBid?'bid':'offer'}:${o.id}:${p}">ADJUST</button><button class="danger" data-tm36-cancel="${source}:${isBid?'bid':'offer'}:${o.id}">CANCEL</button></div></div>`}
 async function editOrder(spec){const [source,side,id,oldRaw]=spec.split(':'),old=Number(oldRaw),raw=prompt(`New ${side==='bid'?'bid':'ask'} price in STONK:`,String(old));if(raw===null)return;const price=Math.round(Number(String(raw).replace(/,/g,'')));if(!Number.isFinite(price)||price<=0)return alert('Enter a positive STONK price.');if(price===old)return;try{if(side==='bid')await api(`/api/ticket-market/bids/${id}`,{method:'PATCH',body:JSON.stringify({bidPrice:price})});else await api(`/api/ticket-market/offers/${id}`,{method:'PATCH',body:JSON.stringify({askPrice:price})});schedule();window.renderTicketMarket?.()}catch(e){alert(e.message)}}
@@ -67,21 +86,23 @@ function closeModal(root){if(!root)return;root.classList.remove('open');root.set
 function ensureModalControls(){['ticketOrderModal','bidOrderModal','sellChoiceModal'].forEach(id=>{const root=document.getElementById(id);if(!root)return;root.classList.add('tm35-market-modal');if(!$('.tm35-x',root)){const card=root.firstElementChild||root;card.style.position='relative';const x=document.createElement('button');x.type='button';x.className='tm35-x';x.setAttribute('aria-label','Close');x.textContent='×';x.onclick=e=>{e.preventDefault();e.stopPropagation();closeModal(root)};card.appendChild(x)}$$('button',root).forEach(b=>{if(/^CANCEL$/i.test((b.textContent||'').trim()))b.textContent='CLOSE'});if(!root.dataset.tm36Backdrop){root.dataset.tm36Backdrop='1';root.addEventListener('click',e=>{if(e.target===root)closeModal(root)})}})}
 function captureNativeOrder(e){
   const b=e.target.closest('button');if(!b)return;
+  if(b.classList.contains('hit-bid')&&b.dataset.sbcBidId){e.preventDefault();e.stopPropagation();if(typeof e.stopImmediatePropagation==='function')e.stopImmediatePropagation();prepareSpecificBid(b.dataset.sbcBidPrice,b.dataset.sbcBidId);return}
   const root=b.closest('#ticketOrderModal,#bidOrderModal,#sellChoiceModal');if(!root)return;
   const text=(b.textContent||'').trim().toUpperCase();
   if(!text||/^(CLOSE|CANCEL|×)$/.test(text)||b.classList.contains('tm35-x'))return;
-  const type=currentType();
-  let action=null;
+  const type=currentType(); let action=null,closeAfter=true;
   if(root.id==='bidOrderModal'&&/(BID|PLACE|POST)/.test(text)){const price=$('#bidOrderPrice',root)?.value;action=()=>submitBid(type,price)}
   if(root.id==='ticketOrderModal'){let side='';try{side=String(ticketOrder?.side||'').toUpperCase()}catch(_){}if(side==='SELL'&&/(LIST|POST|ASK|CONFIRM)/.test(text)){const price=$('#ticketOrderPrice',root)?.value;action=()=>submitCurrentOffer(price)}}
+  if(root.id==='sellChoiceModal'&&b.id==='hitBidBtn'){action=()=>realHitBestBid();closeAfter=false}
   if(!action)return;
   e.preventDefault();e.stopPropagation();if(typeof e.stopImmediatePropagation==='function')e.stopImmediatePropagation();
-  Promise.resolve().then(action).then(()=>{closeModal(root);schedule();return window.renderTicketMarket?.()}).catch(err=>alert(err.message));
+  Promise.resolve().then(action).then(()=>{if(closeAfter)closeModal(root);schedule();if(closeAfter)return window.renderTicketMarket?.()}).catch(err=>alert(err.message));
 }
 function schedule(){clearTimeout(timer);timer=setTimeout(()=>{ensureModalControls();renderMine().catch(()=>{})},90)}
 document.addEventListener('click',captureNativeOrder,true);
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;const root=['ticketOrderModal','bidOrderModal','sellChoiceModal'].map(id=>document.getElementById(id)).find(x=>x?.classList.contains('open'));if(root){e.preventDefault();closeModal(root)}});
 window.__SBC_TICKET_EXCHANGE_STAGE1_TEST={fetchRealBook,renderBookFromBackend,submitOffer,submitCurrentOffer,submitBid,currentOfferTicketId,captureNativeOrder,getCachedBook:type=>realBookCache.get(type),getOwnedTicketId:()=>{try{return ownedTicketContext?.ticketId}catch(_){return undefined}}};
+window.__SBC_TICKET_EXCHANGE_STAGE2_TEST={acceptBid,realHitBestBid,realSellIntoBid,prepareSpecificBid,cachedBidById,cachedBestBid,realOwnedTicketId,captureNativeOrder,getPendingBid:()=>pendingBidAccept};
 function run(){$$('button,[role=button]',view()||document).forEach(b=>{if(/MAIN EVENT/i.test(b.textContent||''))b.style.display='none'});ensureModalControls();schedule()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();new MutationObserver(()=>schedule()).observe(document.documentElement,{childList:true,subtree:true});setTimeout(run,400);setTimeout(run,1200);
 })();
