@@ -31,7 +31,7 @@
     "test:ticket-exchange-stage1": "node server/ticketExchangeStage1.test.js",
     "test:ticket-exchange-stage2": "node server/ticketExchangeStage2.test.js",
     "test:badge-quantity-lock": "node server/badgeQuantityLockV45.test.js",
-    "test:ticket-exchange-stage4": "node server/ticketExchangeStage4AcceptanceV2.test.js && node server/ticketExchangeStage4Ui.test.js"
+    "test:ticket-exchange-stage4": "node server/ticketExchangeStage4AcceptanceV3.test.js && node server/ticketExchangeStage4Ui.test.js"
   },
   "engines": {
     "node": ">=22.5.0"
