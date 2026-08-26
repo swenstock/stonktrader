@@ -1,0 +1,36 @@
+name: claude-package-ticket-exchange-stage3
+on:
+  push:
+    branches:
+      - claude-package-ticket-exchange-stage3-a7887ae
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build exact merged source package
+        run: |
+          set -euo pipefail
+          MERGE=a7887ae5df5b8f2d7369c422575481ae50cb9b8c
+          BASE=9d29b61d5b273ba50ffa6635652afab5fbf6d6bf
+          git archive --format=zip --output=TICKET_EXCHANGE_STAGE3_FINAL_a7887ae.zip "$MERGE"
+          sha256sum TICKET_EXCHANGE_STAGE3_FINAL_a7887ae.zip > TICKET_EXCHANGE_STAGE3_FINAL_SHA256.txt
+          {
+            echo "merge_commit=$MERGE"
+            echo "base_commit=$BASE"
+            echo
+            for f in $(git diff --name-only "$BASE" "$MERGE"); do
+              sha256sum "$f"
+            done
+          } > TICKET_EXCHANGE_STAGE3_CHANGED_FILES_SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ticket-exchange-stage3-a7887ae
+          path: |
+            TICKET_EXCHANGE_STAGE3_FINAL_a7887ae.zip
+            TICKET_EXCHANGE_STAGE3_FINAL_SHA256.txt
+            TICKET_EXCHANGE_STAGE3_CHANGED_FILES_SHA256.txt
