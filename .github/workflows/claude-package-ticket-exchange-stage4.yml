@@ -1,0 +1,108 @@
+name: claude-package-ticket-exchange-stage4
+on:
+  push:
+    branches:
+      - claude-package-ticket-exchange-stage4-8abcfd4
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build exact merged source package
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET=8abcfd4f602dd31313d3cee6f5b31ed7e34da74a
+          OUT=TICKET_EXCHANGE_STAGE4_FINAL_8abcfd4.zip
+          git archive --format=zip --output="$OUT" "$TARGET"
+          {
+            echo "Ticket Exchange Stage 4 exact merged commit: $TARGET"
+            echo "Tree: 6e2148c8a821a715879f4bd75c6f6b0973095d6a"
+            echo
+            echo "Git blob SHAs:"
+            echo "aabf5d42fd2f12f8b098e3f700b47bd1a40a27cd  package.json"
+            echo "ac7c1ffde68f3071dd5d748d23b2165130f75ac9  public/v45-badge-market-stage4.js"
+            echo "66ccc4874904b658099b3a187d6255065446e40c  server/badgeMarketV45.js"
+            echo "5e1c4c917b35c1d409b0ca0808ca591b009b3702  server/index.js"
+            echo "848365ba4d87f278e2401eadc6817e8b0a487e57  server/routes/badgeMarketV45.js"
+            echo "25a66570bc94d77f151024939360ff454604e7fe  server/schemaV45.js"
+            echo "835cecd0766603a670051974c161f2f8366dbcd2  server/ticketExchangeStage4AcceptanceV3.test.js"
+            echo "30c0799b2852a30c8a9a2aa79976ac39cb4ccecf  server/ticketExchangeStage4Ui.test.js"
+            echo
+            echo "SHA-256 content hashes:"
+            for f in package.json public/v45-badge-market-stage4.js server/badgeMarketV45.js server/index.js server/routes/badgeMarketV45.js server/schemaV45.js server/ticketExchangeStage4AcceptanceV3.test.js server/ticketExchangeStage4Ui.test.js; do
+              git show "$TARGET:$f" | sha256sum | sed "s#  -#  $f#"
+            done
+            echo
+            sha256sum "$OUT"
+          } > TICKET_EXCHANGE_STAGE4_CHANGED_FILES_SHA256.txt
+          cat > CLAUDE_TICKET_EXCHANGE_STAGE4_HANDOFF.txt <<'EOF'
+          TICKET EXCHANGE STAGE 4 — CLAUDE REVIEW HANDOFF
+
+          Authoritative merged commit:
+          8abcfd4f602dd31313d3cee6f5b31ed7e34da74a
+
+          Tree:
+          6e2148c8a821a715879f4bd75c6f6b0973095d6a
+
+          Scope shipped:
+          - Real Jr. Broker Badge market in the retired Main Event exchange slot.
+          - Separate badge_listings, badge_bids, badge_trades tables; ticket exchange tables/routes remain separate.
+          - One Badge per order.
+          - Seller listing creation composes Stage 3 reserveListedQuantityInTransaction; cancellation composes releaseListedQuantityInTransaction.
+          - Buyer bids hold STONK; no duplicate Badge reservation implementation.
+          - P2P Badge fills transfer holding ownership and STONK; Broker Reserve and Overflow are unchanged by the trade itself.
+          - Badge P2P fee reuses TICKET_MARKET_FEE_PCT and platform_revenue.
+          - Mint purchase is 48,000 STONK and composes the existing minted issuance primitives: 36,666.6 Broker + 11,333.4 Overflow.
+          - Soft symmetric mispricing warning: lowest active ask, fallback last completed sale; warns only when >25% away AND outside 36,666.6–48,000; no reference means no warning; no hard price limits.
+          - Own active Badge asks/bids are visible and cancellable, releasing reserved Badge quantity / held STONK through the real endpoints.
+
+          Real CI acceptance output:
+          Ticket Exchange Stage 4 Badge Trading: PASS
+          P2P: A listed 1 Badge, B bid 40,000; A received 38,000, 2,000 fee; B owns Badge; Broker/Overflow unchanged
+          Stage 3 integration: quantity_listed 0 -> 1 on listing; collision sale -> 0; cancel releases directly
+          Capacity: 14/14 listings succeed; 15th rejected unchanged
+          Mint: 48,000 -> 36,666.6 Broker + 11,333.4 Overflow; buyer balance debited exactly 48,000
+          Warning: symmetric >25% + outside band only; in-band thin-market, just-inside threshold, and first-ever listing do not warn
+          Ticket Exchange Stage 4 mispricing UI: PASS
+          Actual browser script: symmetric warning, >25% + outside-band gate, last-sale fallback, and first-ever no-reference behavior verified
+
+          Regression output also passed unchanged:
+          Badge Quantity Lock V45: PASS
+          Ticket Exchange Stage 2 frontend: PASS
+          Ticket Exchange Stage 2 backend: PASS
+          Ticket Exchange Stage 1 frontend: PASS
+          Ticket Exchange Stage 1 cross-account: PASS
+          Corporate Ladder Prize Consolidation math: PASS
+          Corporate ladder + promotion GUI: PASS
+          Ticket Burn V45: PASS
+          Ticket -> real paid-tier entry: PASS
+          Free Roll route funding + trigger idempotency: PASS
+          Remaining npm test suites passed.
+
+          CI caveat:
+          V45 Rebuild CI remains red only at the pre-existing post-unit smoke check:
+          GET /dev/payout-preview?tier=free&field=1000 -> 500
+          Unit tests completed successfully before this known stale smoke check.
+
+          Changed files only:
+          package.json
+          public/v45-badge-market-stage4.js
+          server/badgeMarketV45.js
+          server/index.js
+          server/routes/badgeMarketV45.js
+          server/schemaV45.js
+          server/ticketExchangeStage4AcceptanceV3.test.js
+          server/ticketExchangeStage4Ui.test.js
+
+          No Stage 1/2 ticket-market behavior/route file was changed. Stage 3 badgeQuantityLockV45.js itself was not changed.
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ticket-exchange-stage4-8abcfd4
+          path: |
+            TICKET_EXCHANGE_STAGE4_FINAL_8abcfd4.zip
+            TICKET_EXCHANGE_STAGE4_CHANGED_FILES_SHA256.txt
+            CLAUDE_TICKET_EXCHANGE_STAGE4_HANDOFF.txt
