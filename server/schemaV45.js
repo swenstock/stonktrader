@@ -6,6 +6,7 @@ const { ensureSchema: ensurePrizeReserveSchema } = require('./prizeReserveLedger
 const { ensureSchema: ensureJuniorBrokerStage2Schema } = require('./juniorBrokerStage2');
 const { ensureSchema: ensureContestJuniorFundingPoolSchema } = require('./contestJuniorFundingPool');
 const { ensureSchema: ensureFreerollFundingSchema } = require('./freerollFundingV45');
+const { ensureSchema: ensureBadgeQuantityLockSchema } = require('./badgeQuantityLockV45');
 
 function columns(table) {
   return new Set(db.prepare(`PRAGMA table_info(${table})`).all().map(r => r.name));
@@ -111,6 +112,7 @@ function run() {
   ensureJuniorBrokerStage2Schema(db);
   ensureContestJuniorFundingPoolSchema(db);
   ensureFreerollFundingSchema();
+  ensureBadgeQuantityLockSchema(db);
 }
 
 module.exports = { run };
