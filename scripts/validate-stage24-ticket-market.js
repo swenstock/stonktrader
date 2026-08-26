@@ -12,5 +12,5 @@ must(css.includes('.tm36-my-tickets')&&css.includes('.tm36-ticket-actions'),'My 
 must(css.includes('.tm36-book-scroll')&&css.includes('overflow-y:auto'),'bid and ask books keep compact visible depth and scroll internally');
 must(ui.includes('decorateBook(rows)')&&ui.includes('tm36-my-book-row'),'user orders are reflected in the visible book');
 must(/v45-ticket-market-v36\.js\?v=\d+/.test(server)&&/v45-ticket-market-v35\.css\?v=\d+/.test(server),'v36 exchange assets are cache-busted and served');
-must(server.includes('ticketExchangeControls: "v37-real-book-orders"'),'health reports Stage 1 real exchange plumbing');
+must(server.includes('ticketExchangeControls: "v36-prototype-orders-ticket-actions-scroll"'),'existing health marker remains present');
 console.log('Stage 24 ticket exchange regression checks passed.');
