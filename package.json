@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "npm run test:badge-quantity-lock && npm run test:ticket-exchange-stage2 && npm run test:ticket-exchange-stage1 && npm run test:payout && npm run test:settlement && npm run test:settlement-db && npm run test:corporate-ladder && npm run test:ticket-burn && npm run test:freeroll-route-funding && npm run test:scheduler-v45 && npm run test:freeroll-reserve && npm run test:rake && npm run test:quotes && npm run test:clock && npm run test:orders-blotter && npm run test:chart-shell-real-bars && npm run test:chart-stage2 && npm run test:chart-stage3 && npm run test:chart-stage4 && npm run test:chart-stage4-drawings && npm run test:chart-stage5 && npm run test:chart-stage6 && npm run test:chart-stage6-overlays && npm run test:chart-stage103-axis-lock",
+    "test": "npm run test:ticket-exchange-stage4 && npm run test:badge-quantity-lock && npm run test:ticket-exchange-stage2 && npm run test:ticket-exchange-stage1 && npm run test:payout && npm run test:settlement && npm run test:settlement-db && npm run test:corporate-ladder && npm run test:ticket-burn && npm run test:freeroll-route-funding && npm run test:scheduler-v45 && npm run test:freeroll-reserve && npm run test:rake && npm run test:quotes && npm run test:clock && npm run test:orders-blotter && npm run test:chart-shell-real-bars && npm run test:chart-stage2 && npm run test:chart-stage3 && npm run test:chart-stage4 && npm run test:chart-stage4-drawings && npm run test:chart-stage5 && npm run test:chart-stage6 && npm run test:chart-stage6-overlays && npm run test:chart-stage103-axis-lock",
     "test:payout": "node server/payoutEngineV2.test.js",
     "test:settlement": "node server/satelliteSettlementPlanV45.test.js",
     "test:settlement-db": "node server/satelliteSettlementExecutorV45.test.js",
@@ -30,7 +30,8 @@
     "test:freeroll-route-funding": "node server/freerollRouteFundingV45.test.js",
     "test:ticket-exchange-stage1": "node server/ticketExchangeStage1.test.js",
     "test:ticket-exchange-stage2": "node server/ticketExchangeStage2.test.js",
-    "test:badge-quantity-lock": "node server/badgeQuantityLockV45.test.js"
+    "test:badge-quantity-lock": "node server/badgeQuantityLockV45.test.js",
+    "test:ticket-exchange-stage4": "node server/ticketExchangeStage4AcceptanceV3.test.js && node server/ticketExchangeStage4Ui.test.js"
   },
   "engines": {
     "node": ">=22.5.0"

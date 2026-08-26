@@ -7,6 +7,7 @@ const { ensureSchema: ensureJuniorBrokerStage2Schema } = require('./juniorBroker
 const { ensureSchema: ensureContestJuniorFundingPoolSchema } = require('./contestJuniorFundingPool');
 const { ensureSchema: ensureFreerollFundingSchema } = require('./freerollFundingV45');
 const { ensureSchema: ensureBadgeQuantityLockSchema } = require('./badgeQuantityLockV45');
+const { ensureSchema: ensureBadgeMarketSchema } = require('./badgeMarketV45');
 
 function columns(table) {
   return new Set(db.prepare(`PRAGMA table_info(${table})`).all().map(r => r.name));
@@ -113,6 +114,7 @@ function run() {
   ensureContestJuniorFundingPoolSchema(db);
   ensureFreerollFundingSchema();
   ensureBadgeQuantityLockSchema(db);
+  ensureBadgeMarketSchema(db);
 }
 
 module.exports = { run };
