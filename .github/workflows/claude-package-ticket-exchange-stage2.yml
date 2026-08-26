@@ -1,0 +1,23 @@
+name: claude-package-ticket-exchange-stage2
+on:
+  push:
+    branches: [claude-package-ticket-exchange-stage2-9d29b61]
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 9d29b61d5b273ba50ffa6635652afab5fbf6d6bf
+          fetch-depth: 0
+      - name: Build exact merged source package
+        run: |
+          git archive --format=zip --output=TICKET_EXCHANGE_STAGE2_FINAL_9d29b61.zip 9d29b61d5b273ba50ffa6635652afab5fbf6d6bf
+          sha256sum TICKET_EXCHANGE_STAGE2_FINAL_9d29b61.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ticket-exchange-stage2-9d29b61
+          path: TICKET_EXCHANGE_STAGE2_FINAL_9d29b61.zip
+          retention-days: 90
