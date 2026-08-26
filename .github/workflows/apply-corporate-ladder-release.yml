@@ -22,6 +22,7 @@ jobs:
           cache: npm
       - name: Apply release bundle
         run: |
+          # all 11 payload parts are present on the branch before this run
           cat .release/cl6.part* | base64 -d > /tmp/corporate.tar.xz
           tar -xJf /tmp/corporate.tar.xz -C .
           rm -rf .release
