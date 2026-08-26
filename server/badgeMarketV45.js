@@ -128,6 +128,12 @@ function currentReferencePrice(db) {
   if (sale) return { price: Number(sale.price_stonk), source: 'last_sale' };
   return null;
 }
+function currentReferencePriceExcluding(db, listingId) {
+  const ask = db.prepare(`SELECT ask_price FROM badge_listings WHERE status='active' AND id<>? ORDER BY ask_price ASC, id ASC LIMIT 1`).get(listingId);
+  if (ask) return { price: Number(ask.ask_price), source: 'lowest_ask' };
+  const sale = db.prepare(`SELECT price_stonk FROM badge_trades ORDER BY id DESC LIMIT 1`).get();
+  return sale ? { price: Number(sale.price_stonk), source: 'last_sale' } : null;
+}
 function mispricingWarning(price, reference) {
   const p = assertPrice(price);
   const ref = reference && Number(reference.price ?? reference);
@@ -160,11 +166,11 @@ function book(db, myAccountId = null) {
   const holding = myAccountId ? getHolding(db, myAccountId) : { quantity: 0n, quantity_listed: 0n };
   return {
     assetType: BADGE_ASSET_TYPE,
-    lowestAsk: listings[0]?.ask_price ?? null,
-    highestBid: bids[0]?.bid_price ?? null,
-    listings: listings.map(x => ({ id:x.id, askPrice:x.ask_price, sellerDisplayName:x.seller_display_name, isMine:x.is_mine===1, createdAt:x.created_at })),
-    bids: bids.map(x => ({ id:x.id, bidPrice:x.bid_price, buyerDisplayName:x.buyer_display_name, isMine:x.is_mine===1, createdAt:x.created_at })),
-    recentTrades: recent.map(x => ({ id:x.id, price:x.price_stonk, fee:x.platform_fee_stonk, createdAt:x.created_at })),
+    lowestAsk: listings[0] ? Number(listings[0].ask_price) : null,
+    highestBid: bids[0] ? Number(bids[0].bid_price) : null,
+    listings: listings.map(x => ({ id:Number(x.id), askPrice:Number(x.ask_price), sellerDisplayName:x.seller_display_name, isMine:x.is_mine===1 || x.is_mine===1n, createdAt:x.created_at })),
+    bids: bids.map(x => ({ id:Number(x.id), bidPrice:Number(x.bid_price), buyerDisplayName:x.buyer_display_name, isMine:x.is_mine===1 || x.is_mine===1n, createdAt:x.created_at })),
+    recentTrades: recent.map(x => ({ id:Number(x.id), price:Number(x.price_stonk), fee:Number(x.platform_fee_stonk), createdAt:x.created_at })),
     owned: Number(holding.quantity),
     listed: Number(holding.quantity_listed),
     available: Number(holding.quantity - holding.quantity_listed),
@@ -181,21 +187,16 @@ function createListing(db, { accountId, askPrice }) {
     reserveListedQuantityInTransaction(db, { accountId, assetType: BADGE_ASSET_TYPE, quantity: 1n });
     const info = db.prepare(`INSERT INTO badge_listings(seller_account_id, ask_price) VALUES (?,?)`).run(accountId, price);
     db.exec('COMMIT');
-    return { id:Number(info.lastInsertRowid), askPrice:price, reservation:getHolding(db, accountId), warning:mispricingWarning(price, currentReferencePriceExcluding(db, Number(info.lastInsertRowid))) };
+    const id = Number(info.lastInsertRowid);
+    return { id, askPrice:price, reservation:getHolding(db, accountId), warning:mispricingWarning(price, currentReferencePriceExcluding(db, id)) };
   } catch (err) { try { db.exec('ROLLBACK'); } catch (_) {} throw err; }
-}
-function currentReferencePriceExcluding(db, listingId) {
-  const ask = db.prepare(`SELECT ask_price FROM badge_listings WHERE status='active' AND id<>? ORDER BY ask_price ASC, id ASC LIMIT 1`).get(listingId);
-  if (ask) return { price:Number(ask.ask_price), source:'lowest_ask' };
-  const sale = db.prepare(`SELECT price_stonk FROM badge_trades ORDER BY id DESC LIMIT 1`).get();
-  return sale ? { price:Number(sale.price_stonk), source:'last_sale' } : null;
 }
 function cancelListing(db, { accountId, listingId }) {
   ensureSchema(db); assertAccountId(accountId);
   db.exec('BEGIN IMMEDIATE');
   try {
     const listing = db.prepare(`SELECT * FROM badge_listings WHERE id=?`).get(listingId);
-    if (!listing || listing.seller_account_id !== accountId) throw Object.assign(new Error('Badge listing not found'), { code:'NOT_FOUND' });
+    if (!listing || Number(listing.seller_account_id) !== accountId) throw Object.assign(new Error('Badge listing not found'), { code:'NOT_FOUND' });
     if (listing.status !== 'active') throw new Error('Only active Badge listings can be cancelled');
     releaseListedQuantityInTransaction(db, { accountId, assetType: BADGE_ASSET_TYPE, quantity:1n });
     db.prepare(`UPDATE badge_listings SET status='cancelled', cancelled_at=? WHERE id=?`).run(new Date().toISOString(), listing.id);
@@ -209,9 +210,10 @@ function createBid(db, custodian, { accountId, bidPrice }) {
   db.exec('BEGIN IMMEDIATE');
   try {
     const info = db.prepare(`INSERT INTO badge_bids(buyer_account_id,bid_price) VALUES (?,?)`).run(accountId, price);
-    custodian.debit(accountId, price, 'badge_bid_hold', { referenceType:'badge_bid', referenceId:Number(info.lastInsertRowid) });
+    const id = Number(info.lastInsertRowid);
+    custodian.debit(accountId, price, 'badge_bid_hold', { referenceType:'badge_bid', referenceId:id });
     db.exec('COMMIT');
-    return { id:Number(info.lastInsertRowid), bidPrice:price, warning:mispricingWarning(price, currentReferencePrice(db)) };
+    return { id, bidPrice:price, warning:mispricingWarning(price, currentReferencePrice(db)) };
   } catch (err) { try { db.exec('ROLLBACK'); } catch (_) {} throw err; }
 }
 function cancelBid(db, custodian, { accountId, bidId }) {
@@ -219,12 +221,13 @@ function cancelBid(db, custodian, { accountId, bidId }) {
   db.exec('BEGIN IMMEDIATE');
   try {
     const bid = db.prepare(`SELECT * FROM badge_bids WHERE id=?`).get(bidId);
-    if (!bid || bid.buyer_account_id !== accountId) throw Object.assign(new Error('Badge bid not found'), { code:'NOT_FOUND' });
+    if (!bid || Number(bid.buyer_account_id) !== accountId) throw Object.assign(new Error('Badge bid not found'), { code:'NOT_FOUND' });
     if (bid.status !== 'active') throw new Error('Only active Badge bids can be cancelled');
+    const bidPrice = assertPrice(bid.bid_price, 'bidPrice');
     db.prepare(`UPDATE badge_bids SET status='cancelled', cancelled_at=? WHERE id=?`).run(new Date().toISOString(), bid.id);
-    custodian.credit(accountId, bid.bid_price, 'badge_bid_release', { referenceType:'badge_bid', referenceId:bid.id });
+    custodian.credit(accountId, bidPrice, 'badge_bid_release', { referenceType:'badge_bid', referenceId:Number(bid.id) });
     db.exec('COMMIT');
-    return { ok:true, released:bid.bid_price };
+    return { ok:true, released:bidPrice };
   } catch (err) { try { db.exec('ROLLBACK'); } catch (_) {} throw err; }
 }
 function buyListing(db, custodian, { accountId, listingId }) {
@@ -233,20 +236,22 @@ function buyListing(db, custodian, { accountId, listingId }) {
   try {
     const listing = db.prepare(`SELECT * FROM badge_listings WHERE id=?`).get(listingId);
     if (!listing || listing.status !== 'active') throw Object.assign(new Error('Badge listing not available'), { code:'NOT_FOUND' });
-    if (listing.seller_account_id === accountId) throw new Error("You can't buy your own Badge listing");
-    if (custodian.getBalance(accountId) < listing.ask_price) throw new Error('Not enough STONK');
-    const fee = feeFor(listing.ask_price), sellerProceeds = listing.ask_price - fee;
-    custodian.debit(accountId, listing.ask_price, 'badge_purchase', { referenceType:'badge_listing', referenceId:listing.id });
-    custodian.credit(listing.seller_account_id, sellerProceeds, 'badge_sale', { referenceType:'badge_listing', referenceId:listing.id });
-    recordPlatformFee(db, fee, 'badge_listing', listing.id);
-    consumeReservedBadgeInTransaction(db, listing.seller_account_id);
+    const sellerAccountId = Number(listing.seller_account_id);
+    const askPrice = assertPrice(listing.ask_price, 'askPrice');
+    if (sellerAccountId === accountId) throw new Error("You can't buy your own Badge listing");
+    if (custodian.getBalance(accountId) < askPrice) throw new Error('Not enough STONK');
+    const fee = feeFor(askPrice), sellerProceeds = askPrice - fee;
+    custodian.debit(accountId, askPrice, 'badge_purchase', { referenceType:'badge_listing', referenceId:Number(listing.id) });
+    custodian.credit(sellerAccountId, sellerProceeds, 'badge_sale', { referenceType:'badge_listing', referenceId:Number(listing.id) });
+    recordPlatformFee(db, fee, 'badge_listing', Number(listing.id));
+    consumeReservedBadgeInTransaction(db, sellerAccountId);
     addBadgeInTransaction(db, accountId);
     db.prepare(`UPDATE badge_listings SET status='sold', buyer_account_id=?, platform_fee_stonk=?, sold_at=? WHERE id=?`)
       .run(accountId, fee, new Date().toISOString(), listing.id);
     const trade = db.prepare(`INSERT INTO badge_trades(listing_id,buyer_account_id,seller_account_id,price_stonk,platform_fee_stonk) VALUES (?,?,?,?,?)`)
-      .run(listing.id, accountId, listing.seller_account_id, listing.ask_price, fee);
+      .run(listing.id, accountId, sellerAccountId, askPrice, fee);
     db.exec('COMMIT');
-    return { ok:true, tradeId:Number(trade.lastInsertRowid), paid:listing.ask_price, sellerReceived:sellerProceeds, platformFee:fee };
+    return { ok:true, tradeId:Number(trade.lastInsertRowid), paid:askPrice, sellerReceived:sellerProceeds, platformFee:fee };
   } catch (err) { try { db.exec('ROLLBACK'); } catch (_) {} throw err; }
 }
 function sellToBid(db, custodian, { accountId, bidId }) {
@@ -255,7 +260,9 @@ function sellToBid(db, custodian, { accountId, bidId }) {
   try {
     const bid = db.prepare(`SELECT * FROM badge_bids WHERE id=?`).get(bidId);
     if (!bid || bid.status !== 'active') throw Object.assign(new Error('Badge bid not available'), { code:'NOT_FOUND' });
-    if (bid.buyer_account_id === accountId) throw new Error("You can't sell a Badge to your own bid");
+    const buyerAccountId = Number(bid.buyer_account_id);
+    const bidPrice = assertPrice(bid.bid_price, 'bidPrice');
+    if (buyerAccountId === accountId) throw new Error("You can't sell a Badge to your own bid");
     const holding = getHolding(db, accountId);
     if (holding.quantity - holding.quantity_listed >= 1n) {
       consumeUnlistedBadgeInTransaction(db, accountId);
@@ -267,16 +274,16 @@ function sellToBid(db, custodian, { accountId, bidId }) {
     } else {
       throw Object.assign(new Error('You do not have a Badge available to sell'), { code:'INSUFFICIENT_UNLISTED_QUANTITY' });
     }
-    const fee = feeFor(bid.bid_price), sellerProceeds = bid.bid_price - fee;
-    custodian.credit(accountId, sellerProceeds, 'badge_sale_to_bid', { referenceType:'badge_bid', referenceId:bid.id });
-    recordPlatformFee(db, fee, 'badge_bid', bid.id);
-    addBadgeInTransaction(db, bid.buyer_account_id);
+    const fee = feeFor(bidPrice), sellerProceeds = bidPrice - fee;
+    custodian.credit(accountId, sellerProceeds, 'badge_sale_to_bid', { referenceType:'badge_bid', referenceId:Number(bid.id) });
+    recordPlatformFee(db, fee, 'badge_bid', Number(bid.id));
+    addBadgeInTransaction(db, buyerAccountId);
     db.prepare(`UPDATE badge_bids SET status='filled', seller_account_id=?, platform_fee_stonk=?, filled_at=? WHERE id=?`)
       .run(accountId, fee, new Date().toISOString(), bid.id);
     const trade = db.prepare(`INSERT INTO badge_trades(bid_id,buyer_account_id,seller_account_id,price_stonk,platform_fee_stonk) VALUES (?,?,?,?,?)`)
-      .run(bid.id, bid.buyer_account_id, accountId, bid.bid_price, fee);
+      .run(bid.id, buyerAccountId, accountId, bidPrice, fee);
     db.exec('COMMIT');
-    return { ok:true, tradeId:Number(trade.lastInsertRowid), soldFor:bid.bid_price, sellerReceived:sellerProceeds, platformFee:fee };
+    return { ok:true, tradeId:Number(trade.lastInsertRowid), soldFor:bidPrice, sellerReceived:sellerProceeds, platformFee:fee };
   } catch (err) { try { db.exec('ROLLBACK'); } catch (_) {} throw err; }
 }
 function mintBadge(db, custodian, { accountId, issuanceId = `player-mint:${accountId}:${crypto.randomUUID()}` }) {
