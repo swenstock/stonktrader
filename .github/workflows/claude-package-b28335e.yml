@@ -1,0 +1,45 @@
+name: claude-package-b28335e
+on:
+  push:
+    branches:
+      - claude-package-b28335e
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact merged commit
+        uses: actions/checkout@v4
+        with:
+          ref: b28335e84147b9e95591db6931e656f4a022f407
+          fetch-depth: 0
+
+      - name: Build authoritative source ZIP and manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+          MERGE=b28335e84147b9e95591db6931e656f4a022f407
+          BASE=0691c15d2b8ce4f45b4c3c733493835188e4caad
+          OUT=STONKTRADER_CORPORATE_LADDER_FINAL_b28335e.zip
+          git archive --format=zip --output="$OUT" "$MERGE"
+          sha256sum "$OUT" > STONKTRADER_CORPORATE_LADDER_FINAL_SHA256.txt
+          {
+            echo "merge_commit=$MERGE"
+            echo "base_commit=$BASE"
+            echo
+            echo "changed_file_sha256:"
+            while IFS= read -r f; do
+              if [ -f "$f" ]; then sha256sum "$f"; else echo "DELETED  $f"; fi
+            done < <(git diff --name-only "$BASE" "$MERGE" | sort)
+          } > CORPORATE_LADDER_FINAL_CHANGED_FILES_SHA256.txt
+
+      - name: Upload Claude package
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-package-b28335e
+          path: |
+            STONKTRADER_CORPORATE_LADDER_FINAL_b28335e.zip
+            STONKTRADER_CORPORATE_LADDER_FINAL_SHA256.txt
+            CORPORATE_LADDER_FINAL_CHANGED_FILES_SHA256.txt
+          if-no-files-found: error
+          retention-days: 7
