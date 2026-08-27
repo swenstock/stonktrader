@@ -11,6 +11,11 @@ assert(js.includes("method==='POST'"),'cleanup must scope activity refresh to PO
 assert(!js.includes('basketOrder:true'),'cleanup must not mutate basket/trade bodies');
 assert(!js.includes('JSON.stringify(body'),'cleanup must not rewrite trade request bodies');
 assert(js.includes("desktop-orders-empty-v45"),'legacy desktop empty state must be retired inside modern blotter');
+assert(js.includes('No activity yet'),'acceptance cleanup must suppress stale generic activity empty state');
+assert(js.includes('Your trade decisions will appear here'),'acceptance cleanup must suppress stale shell helper empty state');
+assert(js.includes(".bb19-overlay:not([hidden])"),'basket duplicate-confirm suppression must be scoped to an open basket');
+assert(js.includes("#ta42Confirm"),'basket duplicate-confirm suppression must target only compact trade confirmation');
+assert(js.includes('TRADE COMPLETE'),'basket duplicate-confirm suppression must preserve non-trade notices');
 assert(css.includes('font-size:11px!important'),'readability override must raise blotter body/tabs to readable size');
 assert(css.includes('font-size:9px!important'),'readability override must raise smallest blotter labels above legacy 6.5px');
 assert(css.includes('.ta42-confirm>section'),'buy/sell confirmation must receive normalized sizing');
@@ -18,4 +23,4 @@ assert(server.includes('stageCUiCleanup: "v1-activity-refresh-readable-confirm"'
 assert(server.includes('/v45-stage-c-ui-cleanup-v1.css?v=1'),'cleanup CSS must be served');
 assert(server.includes('/v45-stage-c-ui-cleanup-v1.js?v=1'),'cleanup JS must be served');
 assert(server.includes(".replace('function maybeShowContextTutorial(view){', 'function maybeShowContextTutorial(view){ return; /* QA HARD PAUSE */')"),'tutorial hard-pause signature must remain unchanged');
-console.log('Stage C UI cleanup v1: PASS');
+console.log('Stage C UI cleanup v1 acceptance guard: PASS');
