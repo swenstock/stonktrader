@@ -1,0 +1,25 @@
+name: Claude Source Package
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/claude-source-package.yml'
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Record source commit
+        run: git rev-parse HEAD > SOURCE_COMMIT.txt
+      - name: Remove temporary packaging workflow from artifact
+        run: rm -f .github/workflows/claude-source-package.yml
+      - name: Upload exact source tree
+        uses: actions/upload-artifact@v4
+        with:
+          name: stonktrader-de50379-source
+          path: |
+            .
+            !.git/**
+          include-hidden-files: true
+          if-no-files-found: error
