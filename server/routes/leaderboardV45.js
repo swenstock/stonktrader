@@ -9,7 +9,9 @@ function optionalAccountId(req) {
   if (!header.startsWith('Bearer ')) return null;
   const { verify } = require('../auth');
   const payload = verify(header.slice(7));
-  if (!payload) return null;
+  if (!payload || !payload.userId || !payload.email) return null;
+  const user = db.prepare('SELECT id, email FROM users WHERE id=?').get(payload.userId);
+  if (!user || String(user.email || '').toLowerCase() !== String(payload.email || '').toLowerCase()) return null;
   return db.prepare('SELECT id FROM accounts WHERE user_id=?').get(payload.userId)?.id || null;
 }
 
@@ -157,3 +159,5 @@ router.get('/broker-race', (req,res) => {
 });
 
 module.exports=router;
+module.exports.optionalAccountId=optionalAccountId;
+module.exports.summarize=summarize;
