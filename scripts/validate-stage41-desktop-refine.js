@@ -4,14 +4,15 @@ const ui=fs.readFileSync(path.join(root,'public','v45-desktop-trading-v45.js'),'
 const css=fs.readFileSync(path.join(root,'public','v45-desktop-refine-v46.css'),'utf8');
 const basket=fs.readFileSync(path.join(root,'public','v45-basket-builder-v19.js'),'utf8');
 const advanced=fs.readFileSync(path.join(root,'public','v45-advanced-orders-v15.js'),'utf8');
+const workspace=fs.readFileSync(path.join(root,'public','v45-workspace-portfolio-v1.js'),'utf8');
 const server=fs.readFileSync(path.join(root,'server','index.js'),'utf8');
 function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
 must(ui.includes("head.after(headerMetrics)")&&ui.includes('contest-metrics-strip-v46'),'rank/prize/time strip sits directly below Weekly Portfolio header');
 must(ui.includes('positions-kpis-v45')&&ui.includes('[value,cash,pnl]'),'portfolio value/cash/P&L remain directly associated with Current Positions');
 must(ui.includes('positions-helper-retired-v46')&&css.includes('.positions-helper-retired-v46{display:none!important}'),'redundant Current Positions helper copy is retired');
 must(ui.includes("b.textContent='SELL ALL'")&&ui.includes('SELL ALL POSITIONS?')&&ui.includes('CONFIRM SELL ALL'),'Current Positions exposes Sell All with explicit confirmation');
-must(ui.includes('realSellAllSnapshot')&&ui.includes('sellAllPositions(snapshot)')&&ui.includes('submitSellAllOrdersV46'),'Sell All derives work from the authenticated real portfolio snapshot');
-must(ui.includes("orderType:'market'")&&ui.includes("side:'sell'")&&ui.includes('portfolioId:Number(snapshot.id)')&&advanced.includes("api('/advanced-orders-v15'"),'Sell All submits one real backend market sell per actual held position');
+must(ui.includes('activeRealPortfolioId')&&ui.includes('portfolioSnapshotById')&&ui.includes('sellAllPositions(snapshot)')&&ui.includes('submitSellAllOrdersV46'),'Sell All derives work from the exact active real portfolio snapshot');
+must(ui.includes("side:'sell'")&&ui.includes('submitTradeById(Number(snapshot.id),body)')&&workspace.includes("api(`/portfolios/${id}/trades`"),'Sell All submits one real backend market sell per actual held position on the exact active portfolio');
 must(!ui.includes("p.cash=Number(p.cash||0)+(shares*price)")&&!ui.includes('delete p.holdings[symbol]')&&!ui.includes("p.queued.push({side:'SELL'"),'Sell All no longer mutates fake seeded portfolio cash, holdings, or local queue state');
 must(ui.includes('SELL ALL PARTIAL')&&ui.includes('NO SUCCESS WAS ASSUMED'),'Sell All reports partial/backend failures without optimistic local success');
 must(basket.includes('cashPct:100')&&basket.includes('[25,33,50,75,100]')&&basket.includes('bb19CashPct'),'basket supports preset and custom percent-of-available-cash execution sizing');
