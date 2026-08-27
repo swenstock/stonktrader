@@ -1,0 +1,12 @@
+const assert=require('assert');
+const fs=require('fs');
+const vm=require('vm');
+const src=fs.readFileSync('public/v45-basket-builder-v19.js','utf8');
+const m=src.match(/async function submit\(\)\{.*?\}\nfunction close\(\)/s);
+assert(m,'real basket submit function not found');
+const calls=[];let opened=null;
+const body={disabled:false,textContent:''};
+const sandbox={window:{activePortfolioId:77,SBCBackendAuthorityV1:{api:async(path,opts)=>{calls.push({path,body:JSON.parse(opts.body)});return {ok:true};},openPortfolio:async id=>{opened=id;return {id,positions:[{symbol:'BA',quantity:56.64},{symbol:'COIN',quantity:35.12},{symbol:'CSCO',quantity:169.12}]};}}},state:{review:{rows:[{symbol:'BA',spend:10000,quantity:56.64},{symbol:'COIN',spend:10000,quantity:35.12},{symbol:'CSCO',spend:10000,quantity:169.12}]},selected:new Map()},nativeCtx:()=>({mode:'live'}),modal:{},$:(sel)=>sel==='#bb19Submit'?body:{},close:()=>{},alert:(x)=>{throw new Error('unexpected alert: '+x)},JSON,Number,String,Array,Map,Promise};
+vm.createContext(sandbox);
+vm.runInContext(m[0].replace(/\nfunction close\(\)[\s\S]*$/,'')+';this.submit=submit;',sandbox);
+(async()=>{await sandbox.submit();assert.equal(opened,77,'same exact active portfolio must be reopened from backend');assert.deepStrictEqual(calls,[{path:'/portfolios/77/trades',body:{symbol:'BA',side:'buy',quantity:56.64}},{path:'/portfolios/77/trades',body:{symbol:'COIN',side:'buy',quantity:35.12}},{path:'/portfolios/77/trades',body:{symbol:'CSCO',side:'buy',quantity:169.12}}]);console.log('Basket real execution Stage B: PASS');})().catch(e=>{console.error(e);process.exit(1)});
