@@ -6,7 +6,7 @@ permissions:
   contents: write
 jobs:
   build:
-    if: github.event.head_commit.message == 'Temporary Stage B builder'
+    if: github.event.head_commit.message == 'Retry Stage B builder with dependencies'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -102,6 +102,7 @@ jobs:
             console.log('No numeric hint -> GET /api/portfolios -> GET /api/portfolios/77 -> exact NVDA/BA market sell bodies; legacy identity calls = 0.');
           })().catch(e=>{console.error(e);process.exit(1)});
           EOF
+          npm ci --ignore-scripts
           node server/workspacePortfolioStageB.test.js
           npm test
       - name: Commit Stage B product changes and remove builder
