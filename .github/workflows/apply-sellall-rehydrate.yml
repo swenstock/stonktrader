@@ -15,9 +15,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
       - name: Patch and verify
         shell: bash
         run: |
+          npm ci
           python - <<'PY'
           from pathlib import Path
           p=Path('public/v45-desktop-trading-v45.js')
