@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "npm run test:entry-eligibility-truth-v1 && npm run test:session-leaderboard-truth-v1 && npm run test:prototype-account-seed-v1 && npm run test:auth-account-provisioning-v1 && npm run test:backend-authority-v1 && npm run test:workspace-stage-b2 && npm run test:workspace-stage-b1 && npm run test:workspace-stage-b && npm run test:workspace-stage-a && npm run test:orders-activity-panel && npm run test:backend-lockdown && npm run test:ticket-exchange-stage4 && npm run test:badge-quantity-lock && npm run test:ticket-exchange-stage2 && npm run test:ticket-exchange-stage1 && npm run test:payout && npm run test:settlement && npm run test:settlement-db && npm run test:corporate-ladder && npm run test:ticket-burn && npm run test:freeroll-route-funding && npm run test:scheduler-v45 && npm run test:freeroll-reserve && npm run test:rake && npm run test:quotes && npm run test:clock && npm run test:orders-blotter && npm run test:chart-shell-real-bars && npm run test:chart-stage2 && npm run test:chart-stage3 && npm run test:chart-stage4 && npm run test:chart-stage4-drawings && npm run test:chart-stage5 && npm run test:chart-stage6 && npm run test:chart-stage6-overlays && npm run test:chart-stage103-axis-lock",
+    "test": "npm run test:basket-real-execution-stage-b && npm run test:entry-eligibility-truth-v1 && npm run test:session-leaderboard-truth-v1 && npm run test:prototype-account-seed-v1 && npm run test:auth-account-provisioning-v1 && npm run test:backend-authority-v1 && npm run test:workspace-stage-b2 && npm run test:workspace-stage-b1 && npm run test:workspace-stage-b && npm run test:workspace-stage-a && npm run test:orders-activity-panel && npm run test:backend-lockdown && npm run test:ticket-exchange-stage4 && npm run test:badge-quantity-lock && npm run test:ticket-exchange-stage2 && npm run test:ticket-exchange-stage1 && npm run test:payout && npm run test:settlement && npm run test:settlement-db && npm run test:corporate-ladder && npm run test:ticket-burn && npm run test:freeroll-route-funding && npm run test:scheduler-v45 && npm run test:freeroll-reserve && npm run test:rake && npm run test:quotes && npm run test:clock && npm run test:orders-blotter && npm run test:chart-shell-real-bars && npm run test:chart-stage2 && npm run test:chart-stage3 && npm run test:chart-stage4 && npm run test:chart-stage4-drawings && npm run test:chart-stage5 && npm run test:chart-stage6 && npm run test:chart-stage6-overlays && npm run test:chart-stage103-axis-lock",
     "test:payout": "node server/payoutEngineV2.test.js",
     "test:settlement": "node server/satelliteSettlementPlanV45.test.js",
     "test:settlement-db": "node server/satelliteSettlementExecutorV45.test.js",
@@ -42,7 +42,8 @@
     "test:auth-account-provisioning-v1": "node server/authAccountProvisioningV1.test.js",
     "test:prototype-account-seed-v1": "node server/prototypeAccountSeed.test.js",
     "test:session-leaderboard-truth-v1": "node server/sessionIdentityLeaderboardTruth.test.js",
-    "test:entry-eligibility-truth-v1": "node server/entryEligibilityTruthV1.test.js"
+    "test:entry-eligibility-truth-v1": "node server/entryEligibilityTruthV1.test.js",
+    "test:basket-real-execution-stage-b": "node server/basketRealExecutionStageB.test.js"
   },
   "engines": {
     "node": ">=22.5.0"
