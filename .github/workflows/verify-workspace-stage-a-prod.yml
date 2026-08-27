@@ -1,0 +1,40 @@
+name: Verify Workspace Stage A Production
+on:
+  push:
+    branches: [claude-package-workspace-stage-a-c104338]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe production
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=https://stonk-broker-challenge.onrender.com
+          for i in $(seq 1 18); do
+            ROOT=$(curl -fsSL "$BASE/" || true)
+            MOD=$(curl -fsSL "$BASE/v45-workspace-portfolio-v1.js?v=1" || true)
+            HEALTH=$(curl -fsSL "$BASE/api/health" || true)
+            if grep -q 'v45-workspace-portfolio-v1.js?v=1' <<<"$ROOT" && grep -q 'SBCWorkspacePortfolioV1' <<<"$MOD" && grep -q '"exchangeFeePct":0.05' <<<"$HEALTH" && grep -q '"mainEvent":"retired-history-only"' <<<"$HEALTH" && grep -q '"freerollRemainder":"carry-forward"' <<<"$HEALTH"; then
+              {
+                echo "WORKSPACE CONSOLIDATION STAGE A — LIVE PRODUCTION VERIFY"
+                date -u '+Checked UTC: %Y-%m-%dT%H:%M:%SZ'
+                echo "stage_a_script_tag=PASS"
+                echo "stage_a_module_served=PASS"
+                echo "exchange_fee_frozen=PASS"
+                echo "main_event_retired=PASS"
+                echo "freeroll_carry_forward=PASS"
+                echo "health:"
+                echo "$HEALTH"
+              } | tee WORKSPACE_STAGE_A_PRODUCTION_VERIFY.txt
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Production did not expose the merged Stage A foundation within probe window" >&2
+          exit 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: workspace-stage-a-production-verify
+          path: WORKSPACE_STAGE_A_PRODUCTION_VERIFY.txt
+          if-no-files-found: error
