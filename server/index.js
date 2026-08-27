@@ -73,8 +73,6 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/test-clock", testClockRoutes);
 app.use("/api/dev", devRoutes);
 
-// Main Event is history-only. Refund/restore any stale open entries once, then
-// fail all future Main Event mutation paths closed.
 const mainEventRetirement = retireOpenMainEvents();
 if (mainEventRetirement.contestsRetired || mainEventRetirement.pendingAllocationsFailed) {
   console.warn('Main Event retirement applied', mainEventRetirement);
@@ -151,7 +149,7 @@ const EXTRA_BODY = '<script src="/v45-mobile-v3.js?v=4"></script><script src="/v
 let servedShell = exactV45Shell.toString("utf8");
 servedShell = servedShell
   .replace('function maybeShowFirstVisitTutorial(){', 'function maybeShowFirstVisitTutorial(){ return; /* QA HARD PAUSE */')
-  .replace('function maybeShowContextTutorial(view){', 'function maybeShowContextTutorial(){ return; /* QA HARD PAUSE */')
+  .replace('function maybeShowContextTutorial(view){', 'function maybeShowContextTutorial(view){ return; /* QA HARD PAUSE */')
   .replace("</head>", `${EXTRA_HEAD}</head>`)
   .replace("</body>", `${EXTRA_BODY}</body>`);
 const exactV45WithEnhancements = Buffer.from(servedShell, "utf8");
