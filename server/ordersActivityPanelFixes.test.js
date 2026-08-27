@@ -1,7 +1,8 @@
 const fs=require('fs');const vm=require('vm');const assert=require('assert');
 const adv=fs.readFileSync('public/v45-advanced-orders-v15.js','utf8');const desk=fs.readFileSync('public/v45-desktop-trading-v45.js','utf8');
 assert(!adv.includes('s.textContent=`@media(min-width:901px){#view-portfolio'),'legacy blotter hiding/scroll CSS must not be desktop-only');
-assert(adv.includes("status:'CANCELLED'"),'Recent Activity must include cancellations');
+assert(adv.includes("function activityEvents(){return (cache.trades||[]).map"),'Recent Activity must render completed backend trades only');
+assert(!adv.includes("status:'CANCELLED',at:o.cancelledAt"),'Recent Activity must not synthesize order cancellations');
 assert(adv.includes('portfolioSnapshot,submitOrder'),'real portfolio/order helpers must be exported');
 assert(!desk.includes("p.queued.push({side:'SELL'"),'Sell All must not push fake queued sells');
 assert(!desk.includes('delete p.holdings[symbol]'),'Sell All must not mutate fake holdings');
