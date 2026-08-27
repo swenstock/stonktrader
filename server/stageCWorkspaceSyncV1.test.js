@@ -1,0 +1,11 @@
+const assert=require('assert');
+const fs=require('fs');
+const js=fs.readFileSync('public/v45-stage-c-ui-cleanup-v1.js','utf8');
+assert(js.includes('SBCWorkspacePortfolioV1'),'background sync must use the real workspace portfolio authority');
+assert(js.includes('portfolioSnapshotById'),'background sync must fetch the exact active backend portfolio');
+assert(js.includes('refreshTradeTicket'),'background sync must refresh the OE ticket after backend hydration');
+assert(!js.includes('authority.openPortfolio(id)'),'background sync must never reopen/navigate the portfolio');
+assert(!js.includes("showView('portfolio')"),'background sync must not change the current viewport');
+assert(js.includes("/\\/api\\/advanced-orders-v15"),'Stage C must observe native advanced-order writes');
+assert(js.includes("method==='POST'||method==='PATCH'||method==='DELETE'"),'advanced-order submit/replace/cancel must trigger one canonical refresh path');
+console.log('Stage C no-jump OE + blotter sync: PASS');
