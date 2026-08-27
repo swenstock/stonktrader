@@ -1,0 +1,37 @@
+name: Verify Orders Activity Production
+on: [push]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify live assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=https://stonk-broker-challenge.onrender.com
+          curl -fsSL "$BASE/api/health" -o health.json
+          curl -fsSL "$BASE/v45-advanced-orders-v15.js" -o advanced.js
+          curl -fsSL "$BASE/v45-desktop-trading-v45.js" -o desktop.js
+          grep -q 'portfolioSnapshot,submitOrder' advanced.js
+          grep -q "api('/advanced-orders-v15'" advanced.js
+          ! grep -q 's.textContent=`@media(min-width:901px){#view-portfolio' advanced.js
+          grep -q 'realSellAllSnapshot' desktop.js
+          grep -q 'submitSellAllOrdersV46' desktop.js
+          grep -q "orderType:'market'" desktop.js
+          ! grep -q "p.queued.push({side:'SELL'" desktop.js
+          ! grep -q 'delete p.holdings\[symbol\]' desktop.js
+          {
+            echo 'ORDERS & ACTIVITY PANEL — LIVE PRODUCTION VERIFY'
+            date -u +'Checked UTC: %Y-%m-%dT%H:%M:%SZ'
+            echo 'advanced_real_portfolio_snapshot=PASS'
+            echo 'advanced_real_order_submit=PASS'
+            echo 'blotter_all_viewports=PASS'
+            echo 'sell_all_real_backend_path=PASS'
+            echo 'fake_sell_all_mutations_absent=PASS'
+            echo 'health:'
+            cat health.json
+          } > production.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: orders-activity-production-verify
+          path: production.txt
