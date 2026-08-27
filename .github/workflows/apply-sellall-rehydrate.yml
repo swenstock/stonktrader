@@ -1,0 +1,43 @@
+name: Apply Sell All UI Rehydrate
+on:
+  push:
+    branches: [sell-all-ui-rehydrate-v1]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: sell-all-ui-rehydrate-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch and verify
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('public/v45-desktop-trading-v45.js')
+          s=p.read_text()
+          old="const refreshed=await workspace.portfolioSnapshotById(Number(snapshot.id));await orders?.refresh?.(true);"
+          new="const refreshed=await workspace.portfolioSnapshotById(Number(snapshot.id));await window.SBCBackendAuthorityV1?.openPortfolio?.(Number(snapshot.id));await orders?.refresh?.(true);"
+          if old not in s: raise SystemExit('Sell All refresh anchor not found')
+          p.write_text(s.replace(old,new,1))
+          t=Path('server/workspacePortfolioStageB.test.js')
+          ts=t.read_text()
+          anchor="assert(source.includes('portfolioSnapshotById(Number(snapshot.id))'), 'Sell All must refresh the same backend portfolio after sells');"
+          add=anchor+"\nassert(source.includes('SBCBackendAuthorityV1?.openPortfolio?.(Number(snapshot.id))'), 'Sell All must rehydrate the visible workspace from the same backend portfolio after successful sells');"
+          if anchor in ts and 'rehydrate the visible workspace' not in ts:
+              t.write_text(ts.replace(anchor,add,1))
+          PY
+          node --check public/v45-desktop-trading-v45.js
+          npm test
+          rm .github/workflows/apply-sellall-rehydrate.yml
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add public/v45-desktop-trading-v45.js server/workspacePortfolioStageB.test.js .github/workflows/apply-sellall-rehydrate.yml
+          git commit -m "Stage B: rehydrate UI after Sell All"
+          git push origin HEAD:sell-all-ui-rehydrate-v1
