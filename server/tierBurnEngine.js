@@ -43,12 +43,13 @@ function ensureGenericHoldingsTable(db) {
         account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
         asset_type TEXT NOT NULL CHECK(typeof(asset_type) = 'text' AND length(trim(asset_type)) > 0),
         quantity INTEGER NOT NULL DEFAULT 0 CHECK(typeof(quantity) = 'integer' AND quantity >= 0),
+        quantity_listed INTEGER NOT NULL DEFAULT 0 CHECK(typeof(quantity_listed) = 'integer' AND quantity_listed >= 0 AND quantity_listed <= quantity),
         updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY(account_id, asset_type)
       );
 
-      INSERT INTO sbc_prize_holdings (account_id, asset_type, quantity, updated_at)
-      SELECT account_id, asset_type, quantity, updated_at
+      INSERT INTO sbc_prize_holdings (account_id, asset_type, quantity, quantity_listed, updated_at)
+      SELECT account_id, asset_type, quantity, 0, updated_at
       FROM sbc_prize_holdings_stage3_legacy;
 
       DROP TABLE sbc_prize_holdings_stage3_legacy;
@@ -61,10 +62,16 @@ function ensureGenericHoldingsTable(db) {
       account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       asset_type TEXT NOT NULL CHECK(typeof(asset_type) = 'text' AND length(trim(asset_type)) > 0),
       quantity INTEGER NOT NULL DEFAULT 0 CHECK(typeof(quantity) = 'integer' AND quantity >= 0),
+      quantity_listed INTEGER NOT NULL DEFAULT 0 CHECK(typeof(quantity_listed) = 'integer' AND quantity_listed >= 0 AND quantity_listed <= quantity),
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY(account_id, asset_type)
     );
   `);
+  const holdingColumns = new Set(db.prepare(`PRAGMA table_info(sbc_prize_holdings)`).all().map(row => row.name));
+  if (!holdingColumns.has('quantity_listed')) {
+    db.exec(`ALTER TABLE sbc_prize_holdings ADD COLUMN quantity_listed INTEGER NOT NULL DEFAULT 0
+      CHECK(typeof(quantity_listed) = 'integer' AND quantity_listed >= 0 AND quantity_listed <= quantity)`);
+  }
 }
 
 function ensureSchema(db) {
@@ -123,13 +130,18 @@ function burnTierForNextUnitInTransaction(db, { burnId, accountId, config }) {
   const tier = validateTierConfig(config);
 
   const row = prepareBigInt(db, `
-    SELECT quantity FROM sbc_prize_holdings
+    SELECT quantity, quantity_listed FROM sbc_prize_holdings
     WHERE account_id = ? AND asset_type = ?
   `).get(accountId, tier.sourceAssetType);
-  const available = row ? row.quantity : 0n;
+  const total = row ? row.quantity : 0n;
+  const listed = row ? row.quantity_listed : 0n;
+  const available = total - listed;
   if (available < tier.burnCount) {
-    const err = new Error(`insufficient ${tier.sourceAssetType} units`);
+    const err = new Error(`insufficient available ${tier.sourceAssetType} units`);
     err.code = 'INSUFFICIENT_TIER_UNITS';
+    err.totalUnits = total;
+    err.listedUnits = listed;
+    err.availableUnits = available;
     throw err;
   }
 
@@ -143,7 +155,7 @@ function burnTierForNextUnitInTransaction(db, { burnId, accountId, config }) {
   const holdingUpdate = prepareBigInt(db, `
     UPDATE sbc_prize_holdings
     SET quantity = quantity - ?, updated_at = CURRENT_TIMESTAMP
-    WHERE account_id = ? AND asset_type = ? AND quantity >= ?
+    WHERE account_id = ? AND asset_type = ? AND quantity - quantity_listed >= ?
   `).run(tier.burnCount, accountId, tier.sourceAssetType, tier.burnCount);
 
   if (!(holdingUpdate.changes === 1 || holdingUpdate.changes === 1n)) {
@@ -185,7 +197,8 @@ function burnTierForNextUnitInTransaction(db, { burnId, accountId, config }) {
     targetAssetType: tier.targetAssetType,
     sourceQuantityBurned: tier.burnCount,
     targetQuantityFunded: TARGET_QUANTITY,
-    remainingSourceUnits: available - tier.burnCount,
+    remainingSourceUnits: total - tier.burnCount,
+    remainingAvailableUnits: available - tier.burnCount,
     reserveBucket: tier.reserveBucket,
     reserveDebitSubunits: tier.reserveDebitSubunits,
   };

@@ -29,10 +29,15 @@ function getPlayerJuniorSnapshot(db, accountId) {
   assertAccountId(accountId);
 
   const countBig = getJuniorCount(db, accountId);
+  const holding = prepareBigInt(db, `SELECT quantity, quantity_listed FROM sbc_prize_holdings WHERE account_id=? AND asset_type='junior_broker_share'`).get(accountId);
+  const listedBig = holding ? holding.quantity_listed : 0n;
+  const availableBig = countBig - listedBig;
   const count = safeCount(countBig, 'Junior count');
+  const listed = safeCount(listedBig, 'listed Junior count');
+  const available = safeCount(availableBig, 'available Junior count');
   const redeemCount = safeCount(REDEEM_COUNT, 'redeem count');
-  const remainder = count % redeemCount;
-  const redeemable = count >= redeemCount;
+  const remainder = available % redeemCount;
+  const redeemable = available >= redeemCount;
   const progress = redeemable && remainder === 0 ? redeemCount : remainder;
 
   const rows = prepareBigInt(db, `
@@ -70,12 +75,14 @@ function getPlayerJuniorSnapshot(db, accountId) {
     assetType: 'junior_broker_share',
     displayName: 'Junior Stonk Broker',
     count,
+    listed,
+    available,
     redeemCount,
     progress,
     remainder,
     progressLabel: `${progress} / ${redeemCount}`,
     redeemable,
-    fullRedemptionsAvailable: Math.floor(count / redeemCount),
+    fullRedemptionsAvailable: Math.floor(available / redeemCount),
     history: rows.map(row => ({
       type: row.event_type,
       id: row.event_id,

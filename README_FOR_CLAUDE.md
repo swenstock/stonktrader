@@ -1,3 +1,5 @@
+> **AUTHORITATIVE CURRENT ECONOMICS:** Read `SBC_PRODUCT_RULES_CURRENT.md` first. This file contains historical implementation context and may include superseded Main Event-era material. Where they conflict, `SBC_PRODUCT_RULES_CURRENT.md` wins.
+
 # SBC GUI Handoff — integrate, do not rebuild backend
 
 ## Goal

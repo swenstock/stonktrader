@@ -34,7 +34,13 @@ const testClock = require("./testClock");
 const TEST_MODE = process.env.TEST_MODE === "true";
 const TEST_MAIN_EVENT_MINUTES = Number(process.env.TEST_MAIN_EVENT_MINUTES) || 10;
 
-function openNewContest(now = new Date()) {
+function openNewContest(_now = new Date()) {
+  const err = new Error('Main Event has been retired');
+  err.code = 'MAIN_EVENT_RETIRED';
+  throw err;
+}
+
+function legacyOpenNewContestDisabled(now = new Date()) {
   const testModeBypassActive = TEST_MODE && !testClock.getStatus().overridden;
   const { weekStart, weekEnd } = testModeBypassActive
     ? { weekStart: now, weekEnd: new Date(now.getTime() + TEST_MAIN_EVENT_MINUTES * 60000) }
@@ -50,7 +56,9 @@ function openNewContest(now = new Date()) {
   applyPendingContestAllocations(newContest);
 }
 
-function ensureOpenContest(now = new Date()) {
+function ensureOpenContest(_now = new Date()) { return null; }
+
+function legacyEnsureOpenContestDisabled(now = new Date()) {
   // Suspended while a clock override is active — see the matching note in
   // satelliteScheduler.js's ensureOpenSatellites for why.
   if (TEST_MODE && !testClock.getStatus().overridden) {
@@ -67,7 +75,13 @@ function ensureOpenContest(now = new Date()) {
   if (!existing) openNewContest(now);
 }
 
-function resolveContest(contest) {
+function resolveContest(_contest) {
+  const err = new Error('Main Event resolver is quarantined: Main Event has been retired');
+  err.code = 'MAIN_EVENT_RETIRED';
+  throw err;
+}
+
+function legacyResolveContestDisabled(contest) {
   const entries = db.prepare("SELECT * FROM contest_entries WHERE contest_id = ?").all(contest.id);
 
   if (entries.length < CONFIG.minEntrants) {
@@ -231,18 +245,12 @@ function payAffiliateCommission(entry, entryType = "contest") {
   return commission;
 }
 
-function tick(now = testClock.getNow()) {
-  ensureOpenContest(now);
-  const open = db.prepare("SELECT * FROM contests WHERE status = 'open'").all();
-  for (const contest of open) {
-    if (new Date(contest.week_end).getTime() <= now.getTime()) resolveContest(contest);
-  }
+function tick(_now = testClock.getNow()) {
+  return { retired: true };
 }
 
 function start() {
-  tick();
-  const interval = setInterval(() => tick(), 15000);
-  interval.unref?.();
+  return { retired: true };
 }
 
 module.exports = {

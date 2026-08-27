@@ -160,6 +160,14 @@ function redeemJuniorsForActivatedBroker(db, { redemptionId, accountId }) {
   } catch (err) {
     try { db.exec('ROLLBACK'); } catch (_) {}
     if (err && err.code === 'INSUFFICIENT_TIER_UNITS') {
+      if (typeof err.totalUnits === 'bigint' && err.totalUnits >= REDEEM_COUNT && err.availableUnits < REDEEM_COUNT) {
+        const translated = new Error(`${err.listedUnits} Junior Broker Badge${err.listedUnits === 1n ? '' : 's'} currently listed; cancel listing(s) before promotion`);
+        translated.code = 'JUNIORS_LISTED';
+        translated.totalUnits = err.totalUnits;
+        translated.listedUnits = err.listedUnits;
+        translated.availableUnits = err.availableUnits;
+        throw translated;
+      }
       const translated = new Error('20 Junior Broker shares required');
       translated.code = 'INSUFFICIENT_JUNIORS';
       throw translated;

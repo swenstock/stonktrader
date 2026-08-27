@@ -66,7 +66,7 @@ router.get("/", (req, res) => {
     }
   }
 
-  const current = db.prepare("SELECT * FROM contests WHERE status = 'open'").get();
+  const current = null;
   const history = db
     .prepare("SELECT * FROM contests WHERE status = 'resolved' ORDER BY resolved_at DESC LIMIT 30")
     .all()
@@ -100,53 +100,11 @@ router.get("/:id/results", (req, res) => {
   res.json(results);
 });
 
-router.post("/:id/enter", requireAuth, (req, res) => {
-  const contest = db.prepare("SELECT * FROM contests WHERE id = ?").get(req.params.id);
-  if (!contest) return res.status(404).json({ error: "Main Event not found" });
-  if (contest.status !== "open") return res.status(400).json({ error: "This week's Main Event is closed" });
-
-  const existingCount = db
-    .prepare("SELECT COUNT(*) as n FROM contest_entries WHERE contest_id = ? AND account_id = ?")
-    .get(contest.id, req.account.id).n;
-  if (existingCount >= CONFIG.maxEntriesPerAccount) {
-    return res.status(400).json({ error: `You've reached the max of ${CONFIG.maxEntriesPerAccount} entries for this week's Main Event` });
-  }
-
-  const useTicket = !!req.body?.useTicket;
-  const account = db.prepare("SELECT * FROM accounts WHERE id = ?").get(req.account.id);
-  const label = `Main Event · Week of ${new Date(contest.week_start).toLocaleDateString()} (Entry ${existingCount + 1})`;
-
-  if (useTicket) {
-    const ticket = db
-      .prepare("SELECT * FROM tickets WHERE account_id = ? AND status = 'unredeemed' ORDER BY created_at ASC LIMIT 1")
-      .get(account.id);
-    if (!ticket) return res.status(400).json({ error: "You don't have an unredeemed ticket" });
-
-    const portfolioId = createPortfolio(account.id, label);
-    db.exec("BEGIN");
-    db.prepare(
-      "INSERT INTO contest_entries (contest_id, account_id, portfolio_id, entry_fee_paid, paid_with_ticket_id) VALUES (?, ?, ?, ?, ?)"
-    ).run(contest.id, account.id, portfolioId, contest.entry_fee, ticket.id);
-    db.prepare(
-      "UPDATE tickets SET status = 'applied', applied_to_contest_id = ?, applied_at = ? WHERE id = ?"
-    ).run(contest.id, new Date().toISOString(), ticket.id);
-    db.exec("COMMIT");
-    return res.json({ ok: true, contestId: contest.id, portfolioId, paidWithTicket: true });
-  }
-
-  if (account.stonk_balance < contest.entry_fee) {
-    return res.status(400).json({ error: "Not enough STONK to enter" });
-  }
-
-  const portfolioId = createPortfolio(account.id, label);
-  db.exec("BEGIN");
-  custodian.debit(account.id, contest.entry_fee, "contest_entry", { referenceType: "contest", referenceId: contest.id });
-  db.prepare(
-    "INSERT INTO contest_entries (contest_id, account_id, portfolio_id, entry_fee_paid) VALUES (?, ?, ?, ?)"
-  ).run(contest.id, account.id, portfolioId, contest.entry_fee);
-  db.exec("COMMIT");
-
-  res.json({ ok: true, contestId: contest.id, portfolioId, entryFeePaid: contest.entry_fee, paidWithTicket: false });
+router.post("/:id/enter", requireAuth, (_req, res) => {
+  return res.status(410).json({
+    code: "MAIN_EVENT_RETIRED",
+    error: "Main Event has been retired. Tickets now enter their matching Corporate Ladder contests."
+  });
 });
 
 module.exports = router;

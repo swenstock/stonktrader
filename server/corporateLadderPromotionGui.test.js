@@ -8,7 +8,7 @@ assert.ok(html.includes('TICKETS GET YOU IN'));assert.ok(html.includes('BADGES G
 for(const tierKey of ['runner','clerk','trader','junior']){const r=computeCascadingContest({tierKey,fieldSize:20,poolUnallocatedStonk:39000});assert.equal(r.paidPlaces,2);assert.equal(r.payouts.length,2);assert.equal(r.reconciliation.prize,true);assert.equal(r.payouts.some(p=>p.ticketTier==='main_event'||p.award==='main_event_ticket'),false)}
 const runner=computePaidContest({tierKey:'runner',fieldSize:20,poolUnallocatedStonk:39000});assert.equal(runner.badgesAwarded,1);assert.equal(runner.payouts[0].badgeFundingContribution,1000);assert.equal(runner.payouts[1].stonkBonus,700);
 const clerk=computePaidContest({tierKey:'clerk',fieldSize:20,poolUnallocatedStonk:0});assert.deepStrictEqual(clerk.payouts.map(p=>[p.ticketTier,p.quantity]),[['runner',2],['runner',2]]);
-const free=computeFreerollPlan({fieldSize:20,reserveBalance:500});assert.equal(free.badgesAwarded,0);assert.equal(free.cashDistributed,500);assert.equal(free.payouts.some(p=>p.quantity>0),false);
+const free=computeFreerollPlan({fieldSize:20,reserveBalance:500});assert.equal(free.badgesAwarded,0);assert.equal(free.cashDistributed,0);assert.equal(free.reserveRemainder,500);assert.equal(free.payouts.length,0);
 console.log('Corporate ladder + promotion GUI: PASS');
 console.log('Promotion path:',"TICKETS GET YOU IN -> BADGES GET YOU PROMOTED -> COLLECT 20");
 console.log('Runner:', '39K carry + 1K contest -> Badge; 700 STONK fallback');

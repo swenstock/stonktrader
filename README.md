@@ -1,3 +1,5 @@
+> **AUTHORITATIVE CURRENT ECONOMICS:** Read `SBC_PRODUCT_RULES_CURRENT.md` first. Older sections below are implementation history and can contain superseded Main Event-era rules. Where they conflict, the current rules file wins.
+
 # Stonk Championship — Paper Trading Platform
 
 A real, multi-user paper trading app: account creation, live quotes (US + foreign

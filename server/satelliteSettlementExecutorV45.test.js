@@ -30,17 +30,17 @@ const cOut=executePaid({satellite:cSat,entries:cd.entries,ranked:cd.ranked});
 if(cOut.math.badgesAwarded!==0) throw new Error('Clerk should not self-fund a 40K Badge here');
 if(db.prepare("SELECT COUNT(*) n FROM tickets WHERE source_satellite_id=? AND ticket_type='runner'").get(cSat.id).n!==4) throw new Error('Clerk top 2 should each get 2 Runner tickets');
 
-// Free Roll: local 45.5K -> one fully-backed Badge + 5.5K cash; zero tickets.
+// Free Roll: local 45.5K -> one fully-backed Badge + 5.5K carried forward; zero cash/tickets.
 const fSat=sat('free','afternoon',0);const fd=entries(fSat,100,0);
 freerollReserve.deposit('afternoon',45500,{referenceType:'test',referenceId:fSat.id});
 const fOut=executeFreeroll({satellite:fSat,ranked:fd.ranked});
-if(fOut.math.badgesAwarded!==1||fOut.math.cashDistributed!==5500) throw new Error('Free Roll plan mismatch');
+if(fOut.math.badgesAwarded!==1||fOut.math.cashDistributed!==0||fOut.math.reserveRemainder!==5500) throw new Error('Free Roll carry-forward plan mismatch');
 if(getJuniorCount(db,accounts[0])!==2n) throw new Error('Free Roll Badge missing for rank 1');
 if(db.prepare('SELECT COUNT(*) n FROM tickets WHERE source_satellite_id=?').get(fSat.id).n!==0) throw new Error('Free Roll must issue zero tickets');
-if(Number(freerollReserve.get('afternoon').balance_stonk)!==0) throw new Error('Free Roll local reserve should be spent exactly');
-const cash=Number(db.prepare("SELECT COALESCE(SUM(stonk_bonus),0) n FROM satellite_results WHERE satellite_id=?").get(fSat.id).n);if(cash!==5500) throw new Error(`Free Roll cash mismatch ${cash}`);
+if(Number(freerollReserve.get('afternoon').balance_stonk)!==5500) throw new Error('Free Roll remainder should stay in local reserve');
+const cash=Number(db.prepare("SELECT COALESCE(SUM(stonk_bonus),0) n FROM satellite_results WHERE satellite_id=?").get(fSat.id).n);if(cash!==0) throw new Error(`Free Roll must not pay residual cash, got ${cash}`);
 
 console.log('satelliteSettlementExecutorV45 tests passed');
 console.log('Runner 39K carry -> 1K contribution -> Badge + 700 STONK');
 console.log('Clerk -> 2 Runner tickets each for protected finishers');
-console.log('Free Roll 45.5K -> Badge + 5.5K STONK, zero tickets');
+console.log('Free Roll 45.5K -> Badge + 5.5K carried forward, zero cash/tickets');

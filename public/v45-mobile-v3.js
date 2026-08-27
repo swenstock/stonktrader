@@ -45,7 +45,7 @@
     const steps=[...wrap.children].filter(x=>x.classList.contains('step'));
     const keys=['freeroll','runner','trader','junior'];
     const titles=['ENTER THE TRADING FLOOR','PICK YOUR FORMAT','FINISH TOP 10%','GET PROMOTED'];
-    const copies=['Pick a tier. Pick a session. Trade.','Weekly, daily, morning, afternoon or Degen.','Top 10% win something. Play, hold or sell the tickets you collect.','Collect 20 Jr. StonkBrokers. Get promoted to an Activated StonkBroker.'];
+    const copies=['Pick a tier. Pick a session. Trade.','Weekly, daily, morning, afternoon or Degen.','Paid contests protect the top 10%. Badges go first; fallback tickets can be played, upgraded, or traded.','Collect 20 Jr. StonkBrokers. Get promoted to an Activated StonkBroker.'];
 
     steps.forEach((step,i)=>{
       const num=step.querySelector('.num');const h=step.querySelector('h3');

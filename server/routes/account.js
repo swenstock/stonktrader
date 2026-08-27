@@ -24,6 +24,13 @@ router.post("/junior-broker/redeem", requireAuth, (req, res) => {
     const redemptionId = `player-ui:${req.account.id}:${crypto.randomUUID()}`;
     res.json(redeemPlayerJuniors(db, { accountId: req.account.id, redemptionId }));
   } catch (err) {
+    if (err && err.code === "JUNIORS_LISTED") {
+      const listed = Number(err.listedUnits || 0n);
+      return res.status(409).json({
+        code: "JUNIORS_LISTED",
+        error: `${listed} Jr. Broker Badge${listed === 1 ? " is" : "s are"} currently listed. Cancel the listing${listed === 1 ? "" : "s"} or collect another Badge before promotion.`
+      });
+    }
     if (err && err.code === "INSUFFICIENT_JUNIORS") {
       return res.status(409).json({ error: "20 Juniors are required to redeem an Activated Stonk Broker" });
     }
