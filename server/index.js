@@ -12,6 +12,7 @@ const useLegacySatellitePayout = false;
 process.env.PAYOUT_ENGINE_V45 = 'true';
 if (process.env.TEST_MODE === "true" && !process.env.TEST_SATELLITE_MINUTES) process.env.TEST_SATELLITE_MINUTES = "20";
 require("./schemaV45").run();
+const { seedPrototypeAccount } = require("./seedPrototypeAccount");
 
 const authRoutes = require("./routes/auth");
 const accountRoutes = require("./routes/account");
@@ -72,8 +73,6 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/test-clock", testClockRoutes);
 app.use("/api/dev", devRoutes);
 
-// Main Event is history-only. Refund/restore any stale open entries once, then
-// fail all future Main Event mutation paths closed.
 const mainEventRetirement = retireOpenMainEvents();
 if (mainEventRetirement.contestsRetired || mainEventRetirement.pendingAllocationsFailed) {
   console.warn('Main Event retirement applied', mainEventRetirement);
@@ -166,4 +165,5 @@ server.listen(PORT, () => {
   console.log(`Stonk paper trading server running on http://localhost:${PORT}`);
   console.log(`Satellite payout engine: ${satelliteScheduler.engineVersion || "legacy"}`);
   console.log(`Visible shell: exact V45 + Stage 4 Badge market + Stage 4 Junior collection/progress + Stage98 additive advanced chart indicator engine + standalone Stage94 advanced chart review overlay + price-sync v5 real My Contests owners + Stage89 financial display/activity + Stage87 first-paint basket actions/fixed submit/queue-equity display + Stage85 follow-up stable picker/slider/reference + centered full-width desktop workspace + Stage85 trader basket picker/readability cleanup + fixed-height portfolio top row/larger default chart/queued activity history + stabilized prize popout/basket controls/queue confirmation/performance + Stage 67 payout projections/chart popout/trade-size guard/My Contests cleanup + Stage 46 single-engine chart gesture lock v51 + Stage 45 stabilized/wide chart v50 + Stage 43 chart/order UI v48 + Stage 42 workspace v47; tutorials hard-paused`);
+  seedPrototypeAccount({ baseUrl: `http://127.0.0.1:${PORT}` }).catch(err => console.error(`Prototype seed failed: ${err.message}`));
 });
