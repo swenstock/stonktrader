@@ -1,0 +1,102 @@
+name: Claude Package Backend Lockdown
+
+on:
+  push:
+    branches:
+      - claude-package-backend-lockdown-16a4f29
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build exact merge package
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET_SHA=16a4f29f934ba259b01e2157406c11b7b6489144
+          BASE_SHA=8abcfd4f602dd31313d3cee6f5b31ed7e34da74a
+          SHORT=${TARGET_SHA:0:7}
+          ZIP="BACKEND_LOCKDOWN_FINAL_${SHORT}.zip"
+          MANIFEST="BACKEND_LOCKDOWN_CHANGED_FILES_SHA256.txt"
+          HANDOFF="CLAUDE_BACKEND_LOCKDOWN_HANDOFF.txt"
+
+          test "$(git rev-parse ${TARGET_SHA}^{tree})" = "36ebee0e95caa9dec1cd43f1747d1829109ba9c0"
+          git archive --format=zip --output="$ZIP" "$TARGET_SHA"
+          unzip -t "$ZIP" >/dev/null
+
+          {
+            echo "BACKEND LOCKDOWN RELEASE — AUTHORITATIVE MERGE PACKAGE"
+            echo "Merge commit: $TARGET_SHA"
+            echo "Tree: $(git rev-parse ${TARGET_SHA}^{tree})"
+            echo "Base commit: $BASE_SHA"
+            echo "Feature head: d243276e897a45430fe86fd9b5f81479e0a84525"
+            echo ""
+            echo "Source ZIP SHA-256:"
+            sha256sum "$ZIP"
+            echo ""
+            echo "Changed files vs Stage 4 base — content SHA-256 at authoritative merge:"
+            while IFS= read -r f; do
+              printf '%s  %s\n' "$(git show "$TARGET_SHA:$f" | sha256sum | awk '{print $1}')" "$f"
+            done < <(git diff --name-only "$BASE_SHA" "$TARGET_SHA")
+          } > "$MANIFEST"
+
+          {
+            echo "CLAUDE HANDOFF — SBC BACKEND LOCKDOWN RELEASE"
+            echo ""
+            echo "AUTHORITATIVE MERGE"
+            echo "Commit: $TARGET_SHA"
+            echo "Tree: $(git rev-parse ${TARGET_SHA}^{tree})"
+            echo "Parents:"
+            git rev-list --parents -n 1 "$TARGET_SHA"
+            echo ""
+            echo "SOURCE OF TRUTH"
+            echo "Read SBC_PRODUCT_RULES_CURRENT.md first. It supersedes conflicting Main Event-era economics in historical docs/comments/tests."
+            echo ""
+            echo "LOCKED BEHAVIOR"
+            echo "- Carry funding can issue multiple Jr. Broker Badges in one settlement: 80,000 -> 2; 120,000 -> 3; 39,999 still needs 1 from contest."
+            echo "- Free Roll remainder carries forward. No residual STONK cash payout from Free Roll reserve."
+            echo "- Canonical completed-sale exchange fee is 5%; buyer pays displayed price, seller receives 95%."
+            echo "- Main Event is retired for new entry/allocation/scheduler/settlement/active leaderboard mutation paths; stale open entries are retired/refunded or ticket-restored idempotently; historical resolved data remains readable."
+            echo "- /v45/ standalone frontend redirects to current root product."
+            echo "- Promotion requires 20 AVAILABLE Jr. Broker Badges; quantity_listed is excluded. 20 owned/1 listed rejects; 21 owned/1 listed promotes using 20 available."
+            echo "- Legacy payout engine activation fails closed rather than re-enabling superseded economics."
+            echo ""
+            echo "CI GATE"
+            echo "PR #124 feature head d243276e897a45430fe86fd9b5f81479e0a84525"
+            echo "V45 Rebuild CI run 33040714467: SUCCESS"
+            echo "All triggered Corporate Ladder / Junior / Chart / desktop workflows on that feature head were green before merge."
+            echo ""
+            echo "KEY BEHAVIORAL ACCEPTANCE OUTPUT"
+            echo "Backend Lockdown Release: PASS"
+            echo "Carry: 80K -> 2 Badges; 120K -> 3; 39,999 still needs 1 STONK from contest"
+            echo "Free Roll: 45,500 -> 1 Badge + 5,500 carried forward; zero residual cash"
+            echo "Exchange: canonical 5% fee survives missing TICKET_MARKET_FEE_PCT"
+            echo "Promotion: 20 owned / 1 listed rejected cleanly; 21 owned / 1 listed promotes using 20 available"
+            echo "Main Event: stale open cash refunded, ticket restored, pending allocation failed, scheduler tick remains retired"
+            echo ""
+            echo "IMPORTANT REVIEW NOTES"
+            echo "- Do not reintroduce Main Event mutation behavior from stale historical docs."
+            echo "- Do not pay Free Roll remainder as cash; it is carry-forward reserve."
+            echo "- Do not count listed Badges toward promotion availability."
+            echo "- Stage 3 seller listing reservation remains the proven race-safe lock; this release integrates promotion with quantity_listed rather than replacing that lock."
+            echo "- Source ZIP was built with git archive from the authoritative merge commit, not from this temporary packaging commit."
+          } > "$HANDOFF"
+
+          if unzip -Z1 "$ZIP" | grep -q '^.github/workflows/claude-package-backend-lockdown.yml$'; then
+            echo "ERROR: temporary packaging workflow leaked into authoritative source ZIP" >&2
+            exit 1
+          fi
+
+          mkdir -p artifact
+          mv "$ZIP" "$MANIFEST" "$HANDOFF" artifact/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backend-lockdown-16a4f29
+          path: artifact/*
+          if-no-files-found: error
