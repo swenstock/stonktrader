@@ -15,6 +15,7 @@ must(ui.includes('activeRealPortfolioId')&&ui.includes('portfolioSnapshotById')&
 must(ui.includes("side:'sell'")&&ui.includes('submitTradeById(Number(snapshot.id),body)')&&workspace.includes("api(`/portfolios/${id}/trades`"),'Sell All submits one real backend market sell per actual held position on the exact active portfolio');
 must(!ui.includes("p.cash=Number(p.cash||0)+(shares*price)")&&!ui.includes('delete p.holdings[symbol]')&&!ui.includes("p.queued.push({side:'SELL'"),'Sell All no longer mutates fake seeded portfolio cash, holdings, or local queue state');
 must(ui.includes('SELL ALL PARTIAL')&&ui.includes('NO SUCCESS WAS ASSUMED'),'Sell All reports partial/backend failures without optimistic local success');
+must(ui.includes('SBCBackendAuthorityV1?.openPortfolio?.(Number(snapshot.id))'),'Sell All rehydrates the visible workspace from the exact backend portfolio after successful sells');
 must(basket.includes('cashPct:100')&&basket.includes('[25,33,50,75,100]')&&basket.includes('bb19CashPct'),'basket supports preset and custom percent-of-available-cash execution sizing');
 must(basket.includes('cashBudget=available*(state.cashPct/100)')&&basket.includes('Math.min(1,cashBudget/raw)'),'basket cash percentage changes actual order sizing rather than only display copy');
 must(basket.includes('function normalizeTo100()')&&basket.includes('function equalWeight()')&&basket.includes('function resetDefaults()'),'basket has rebalance-to-100, equal-weight and reset-default operations');
