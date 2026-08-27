@@ -1,0 +1,40 @@
+/* Stage C readability + confirmation consistency. Additive only. */
+#view-portfolio .orders-activity-blotter-v15 .blotter-tabs-v15 button{font-size:11px!important;min-height:38px!important;letter-spacing:.02em!important}
+#view-portfolio .orders-activity-blotter-v15 .blotter-head-v15{font-size:9px!important;line-height:1.2!important;padding-bottom:7px!important}
+#view-portfolio .orders-activity-blotter-v15 .blotter-row-v15{font-size:11px!important;min-height:46px!important;padding:8px 10px!important}
+#view-portfolio .orders-activity-blotter-v15 .blotter-row-v15 strong{font-size:12px!important}
+#view-portfolio .orders-activity-blotter-v15 .blotter-row-v15 em{font-size:10px!important;line-height:1.25!important}
+#view-portfolio .orders-activity-blotter-v15 .blotter-row-v15 small{font-size:9px!important;line-height:1.25!important}
+#view-portfolio .orders-activity-blotter-v15 .blotter-actions-v15 button{font-size:9px!important;min-height:30px!important;padding:5px 8px!important}
+#view-portfolio .orders-activity-blotter-v15 .blotter-empty-v15{font-size:11px!important;min-height:62px!important}
+#view-portfolio .orders-activity-blotter-v15 .desktop-orders-empty-v45,
+#view-portfolio .orders-activity-blotter-v15>#queuedOrders,
+#view-portfolio .orders-activity-blotter-v15>#tradeHistory,
+#view-portfolio .orders-activity-blotter-v15>#workingOrdersV45,
+#view-portfolio .orders-activity-blotter-v15>.desktop-orders-tabs-v45,
+#view-portfolio .orders-activity-blotter-v15>.orders-activity-tabs{display:none!important}
+
+/* Normalize the compact buy/sell confirmation to the same visual weight as the receipt dialog. */
+.ta42-confirm{background:rgba(1,7,12,.82)!important;backdrop-filter:blur(7px)!important}
+.ta42-confirm>section{width:min(620px,94vw)!important;max-height:min(760px,90vh)!important;padding:24px 26px 22px!important;border-radius:16px!important;border:1px solid #2c5368!important;background:linear-gradient(180deg,#0b1b25,#06131b)!important;box-shadow:0 28px 90px rgba(0,0,0,.68)!important}
+.ta42-confirm .ta42-icon{font-size:34px!important;margin-bottom:6px!important}
+.ta42-confirm small{font-size:11px!important;letter-spacing:.12em!important;margin-bottom:7px!important;color:#8fc4dc!important;opacity:1!important}
+.ta42-confirm h2{font-size:clamp(24px,3vw,32px)!important;line-height:1.1!important;margin-bottom:12px!important}
+.ta42-confirm strong{font-size:18px!important;line-height:1.25!important;margin-bottom:8px!important}
+.ta42-confirm p{font-size:13px!important;line-height:1.5!important;max-width:520px!important;margin-bottom:18px!important;opacity:.86!important}
+.ta42-confirm .ta42-done{min-width:150px!important;min-height:42px!important;padding:10px 20px!important;border-radius:9px!important;font-size:12px!important}
+.ta42-confirm .ta42-x{font-size:26px!important}
+
+/* Receipt text should not drop below comfortable desktop reading size. */
+.sbc-trade-receipt-v1 section{font-size:12px!important}
+.sbc-trade-receipt-v1 header small{font-size:11px!important}
+.sbc-trade-receipt-v1 header p{font-size:13px!important}
+.sbc-trade-receipt-row-v1 b{font-size:13px!important}
+.sbc-trade-receipt-row-v1 span,.sbc-trade-receipt-row-v1 strong{font-size:12px!important}
+.sbc-trade-receipt-v1 footer{font-size:12px!important}
+
+@media(max-width:700px){
+  #view-portfolio .orders-activity-blotter-v15 .blotter-tabs-v15 button{font-size:10px!important}
+  #view-portfolio .orders-activity-blotter-v15 .blotter-row-v15{font-size:10px!important}
+  .ta42-confirm>section{width:min(94vw,620px)!important;padding:22px 18px 18px!important}
+}
