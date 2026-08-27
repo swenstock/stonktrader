@@ -1,0 +1,78 @@
+name: Claude Package Workspace Stage A
+on:
+  push:
+    branches: [claude-package-workspace-stage-a-c104338]
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build exact merge package
+        shell: bash
+        run: |
+          set -euo pipefail
+          MERGE=c104338d7ab49f4f5dc11a1259a5e9d130c2e6c1
+          BASE=03fbe393458c7fba35d2e9b464dac432a73fafb0
+          TREE=ec03bf828ea0b1ea44f1b432864881684f5e1c8e
+          OUT=WORKSPACE_CONSOLIDATION_STAGE_A_FINAL_c104338.zip
+          git archive --format=zip --output="$OUT" "$MERGE"
+          {
+            echo "WORKSPACE CONSOLIDATION STAGE A — AUTHORITATIVE MERGE PACKAGE"
+            echo "Merge commit: $MERGE"
+            echo "Tree: $TREE"
+            echo "Base commit: $BASE"
+            echo "Feature head: 6b50de6a310f6a7bca4e0a2d37dcbb436536031a"
+            echo
+            echo "Changed files vs prior main — content SHA-256 at authoritative merge:"
+            for f in package.json public/v45-workspace-portfolio-v1.js server/index.js server/workspacePortfolioStageA.test.js; do
+              git show "$MERGE:$f" | sha256sum | sed "s#  -#  $f#"
+            done
+            echo
+            echo "Source ZIP SHA-256:"
+            sha256sum "$OUT"
+          } > WORKSPACE_STAGE_A_CHANGED_FILES_SHA256.txt
+          cat > CLAUDE_WORKSPACE_STAGE_A_HANDOFF.txt <<'EOF'
+          WORKSPACE CONSOLIDATION — STAGE A HANDOFF
+
+          Scope: foundation only. No Sell All, Activity, Quick Trade, Basket, economics, reserve, payout, ticket, or Badge behavior was migrated in this stage.
+
+          Authoritative merge:
+          c104338d7ab49f4f5dc11a1259a5e9d130c2e6c1
+          Tree:
+          ec03bf828ea0b1ea44f1b432864881684f5e1c8e
+          Base:
+          03fbe393458c7fba35d2e9b464dac432a73fafb0
+          Feature head:
+          6b50de6a310f6a7bca4e0a2d37dcbb436536031a
+          PR: #126
+          V45 Rebuild CI: run 33051038364 — SUCCESS
+          All 19 Stage A PR workflows completed; failure count 0.
+
+          Stage A implementation:
+          - New public/v45-workspace-portfolio-v1.js provides one shared real-backend portfolio identity/snapshot foundation.
+          - Direct portfolio ID hints are accepted only if they correspond to an owned portfolio returned by GET /api/portfolios.
+          - If the live My Contests path has no numeric ID, identity is recovered from the selected contest context (category/tier/status/entry) against owned backend portfolio summaries.
+          - portfolioSnapshot() resolves the real owned portfolio ID and then fetches GET /api/portfolios/:id.
+          - The module is loaded before the advanced-orders script, but no existing feature is migrated to call it yet. Visible behavior is intentionally unchanged in Stage A.
+
+          Behavioral regression output:
+          Workspace Consolidation Stage A: PASS
+          My Contests, blotter hint, context hint, and window hint all resolved portfolio 77; stale unowned hint fell back safely; reserve resolved portfolio 91.
+
+          Independent review request:
+          1. Verify the source ZIP hash and four changed-file hashes.
+          2. Confirm Stage A does not change Sell All, Activity, Quick Trade, Basket, or backend economics.
+          3. Review the resolver's fallback mapping and ambiguity behavior, especially category/tier/status/Entry N matching.
+          4. Confirm it fails closed rather than guessing when identity cannot be uniquely established.
+          5. Only after Stage A is accepted should Stage B migrate Sell All to this shared foundation and require real browser network evidence.
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: workspace-stage-a-c104338
+          path: |
+            WORKSPACE_CONSOLIDATION_STAGE_A_FINAL_c104338.zip
+            WORKSPACE_STAGE_A_CHANGED_FILES_SHA256.txt
+            CLAUDE_WORKSPACE_STAGE_A_HANDOFF.txt
+          if-no-files-found: error
