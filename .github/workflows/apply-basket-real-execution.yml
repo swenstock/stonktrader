@@ -1,0 +1,86 @@
+name: Apply Basket Real Execution Fix
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.head_ref == 'basket-real-execution-v1'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch basket submit and tests
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re, json
+          p=Path('public/v45-basket-builder-v19.js')
+          s=p.read_text()
+          old=re.search(r"function submit\(\)\{.*?\}\nfunction close\(\)",s,re.S)
+          if not old:
+              raise SystemExit('submit function block not found')
+          new="""async function submit(){const b=$('#bb19Submit',modal),ctx=nativeCtx(),buys=state.review.rows.filter(r=>r.spend>.01&&r.quantity>0),authority=window.SBCBackendAuthorityV1,id=Number(window.activePortfolioId);if(!ctx||!(id>0)){alert('This real contest portfolio is no longer active. Reopen it and try again.');return;}if(!authority?.api||!authority?.openPortfolio){alert('Real portfolio service is unavailable. Refresh and try again.');return;}b.disabled=true;try{let done=0;for(const r of buys){b.textContent=`SUBMITTING ${done+1}/${buys.length}`;await authority.api(`/portfolios/${id}/trades`,{method:'POST',body:JSON.stringify({symbol:r.symbol,side:'buy',quantity:r.quantity})});done++;}await authority.openPortfolio(id);$('#bb19Body',modal).innerHTML=`<div class=\"bb19-success\"><b>✓</b><h3>${ctx.mode==='reserve'?'BASKET QUEUED':'BASKET COMPLETE'}</h3><p>${buys.length} real basket order${buys.length===1?'':'s'} ${ctx.mode==='reserve'?'queued for':'submitted to'} backend portfolio #${id}.</p><button id=\"bb19Done\">RETURN TO PORTFOLIO</button></div>`;$('#bb19Done',modal).onclick=()=>{close();};}catch(e){alert(e.message||String(e));b.disabled=false;b.textContent='TRY AGAIN';}}
+function close()"""
+          s=s[:old.start()]+new+s[old.end():]
+          p.write_text(s)
+
+          test=Path('server/basketRealExecutionStageB.test.js')
+          test.write_text(r'''const assert=require('assert');
+const fs=require('fs');
+const vm=require('vm');
+const src=fs.readFileSync('public/v45-basket-builder-v19.js','utf8');
+const m=src.match(/async function submit\(\)\{.*?\}\nfunction close\(\)/s);
+assert(m,'real basket submit function not found');
+const calls=[];let opened=null;
+const body={disabled:false,textContent:''};
+const sandbox={
+  window:{activePortfolioId:77,SBCBackendAuthorityV1:{
+    api:async(path,opts)=>{calls.push({path,body:JSON.parse(opts.body)});return {ok:true};},
+    openPortfolio:async id=>{opened=id;return {id,positions:[{symbol:'BA',quantity:56.64},{symbol:'COIN',quantity:35.12},{symbol:'CSCO',quantity:169.12}]};}
+  }},
+  state:{review:{rows:[{symbol:'BA',spend:10000,quantity:56.64},{symbol:'COIN',spend:10000,quantity:35.12},{symbol:'CSCO',spend:10000,quantity:169.12}]},selected:new Map()},
+  nativeCtx:()=>({mode:'live'}),
+  modal:{},
+  $:(sel)=>sel==='#bb19Submit'?body:{},
+  close:()=>{}, alert:(x)=>{throw new Error('unexpected alert: '+x)},
+  JSON,Number,String,Array,Map,Promise
+};
+vm.createContext(sandbox);
+vm.runInContext(m[0].replace(/\nfunction close\(\)[\s\S]*$/,'')+';this.submit=submit;',sandbox);
+(async()=>{await sandbox.submit();assert.equal(opened,77,'same exact active portfolio must be reopened from backend');assert.deepStrictEqual(calls,[
+ {path:'/portfolios/77/trades',body:{symbol:'BA',side:'buy',quantity:56.64}},
+ {path:'/portfolios/77/trades',body:{symbol:'COIN',side:'buy',quantity:35.12}},
+ {path:'/portfolios/77/trades',body:{symbol:'CSCO',side:'buy',quantity:169.12}}
+]);console.log('Basket real execution Stage B: PASS');console.log('3 visible basket holdings require 3 real backend trade POSTs to exact active portfolio #77, followed by backend reopen/hydration.');})().catch(e=>{console.error(e);process.exit(1)});
+''')
+
+          pkg=Path('package.json')
+          data=json.loads(pkg.read_text())
+          data['scripts']['test:basket-real-execution-stage-b']='node server/basketRealExecutionStageB.test.js'
+          data['scripts']['test']='npm run test:basket-real-execution-stage-b && '+data['scripts']['test']
+          pkg.write_text(json.dumps(data,indent=2)+'\n')
+
+          # Update Stage 41 validator so it rejects local-only basket mutation.
+          v=Path('scripts/validate-stage41-desktop-refine.js')
+          vs=v.read_text()
+          anchor="must(basket.includes('cashBudget=available*(state.cashPct/100)')&&basket.includes('Math.min(1,cashBudget/raw)'),'basket cash percentage changes actual order sizing rather than only display copy');"
+          add=anchor+"\nmust(basket.includes('SBCBackendAuthorityV1')&&basket.includes('/portfolios/${id}/trades')&&basket.includes('authority.openPortfolio(id)'),'basket submit persists real backend trades to exact active portfolio then rehydrates from backend');\nmust(!basket.includes('p.holdings=p.holdings||{}')&&!basket.includes('p.cash=Number(p.cash||0)-cost'),'basket submit no longer invents live holdings/cash in browser state');"
+          if anchor not in vs: raise SystemExit('validator anchor missing')
+          v.write_text(vs.replace(anchor,add))
+          PY
+          node server/basketRealExecutionStageB.test.js
+          node scripts/validate-stage41-desktop-refine.js
+          rm .github/workflows/apply-basket-real-execution.yml
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add public/v45-basket-builder-v19.js server/basketRealExecutionStageB.test.js package.json scripts/validate-stage41-desktop-refine.js .github/workflows/apply-basket-real-execution.yml
+          git commit -m "Stage B: persist basket trades to real active portfolio"
+          git push origin HEAD:${{ github.head_ref }}
