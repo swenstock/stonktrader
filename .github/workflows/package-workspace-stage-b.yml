@@ -1,0 +1,188 @@
+name: Claude Package Workspace Stage B
+on:
+  push:
+    branches: [claude-package-workspace-stage-b-1352df6]
+permissions:
+  contents: read
+jobs:
+  package-and-proof:
+    runs-on: ubuntu-latest
+    env:
+      TARGET_SHA: 1352df684b26fee0a826b843968fc4d8d52d6f3c
+      TARGET_TREE: 100e109bb5aacdca4fc6c3749bdbcd10fea513a0
+      BASE_SHA: c104338d7ab49f4f5dc11a1259a5e9d130c2e6c1
+      FEATURE_SHA: ddcf625df8b4a9d75abfb57c21423ce73e7af92e
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Checkout exact authoritative merge
+        run: git checkout --detach "$TARGET_SHA"
+      - name: Build source package and hashes
+        shell: bash
+        run: |
+          git archive --format=zip --output=WORKSPACE_CONSOLIDATION_STAGE_B_FINAL_1352df6.zip "$TARGET_SHA"
+          {
+            echo "WORKSPACE CONSOLIDATION STAGE B — AUTHORITATIVE MERGE PACKAGE"
+            echo "Merge commit: $TARGET_SHA"
+            echo "Tree: $TARGET_TREE"
+            echo "Base commit: $BASE_SHA"
+            echo "Feature head: $FEATURE_SHA"
+            echo
+            echo "Changed files vs Stage A — content SHA-256 at authoritative merge:"
+            sha256sum package.json public/v45-desktop-trading-v45.js server/workspacePortfolioStageB.test.js
+            echo
+            echo "Source ZIP SHA-256:"
+            sha256sum WORKSPACE_CONSOLIDATION_STAGE_B_FINAL_1352df6.zip
+          } > WORKSPACE_STAGE_B_CHANGED_FILES_SHA256.txt
+      - name: Run exact Stage B behavioral proof
+        run: |
+          npm ci --ignore-scripts
+          node server/workspacePortfolioStageB.test.js | tee WORKSPACE_STAGE_B_BEHAVIORAL_TEST.txt
+      - name: Install Chromium proof harness
+        shell: bash
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Real Chromium network and DOM proof
+        shell: bash
+        run: |
+          cat > /tmp/stage-b-browser-proof.js <<'EOF'
+          const http=require('http');
+          const fs=require('fs');
+          const {chromium}=require('playwright');
+          const workspace=fs.readFileSync('public/v45-workspace-portfolio-v1.js','utf8');
+          const desktop=fs.readFileSync('public/v45-desktop-trading-v45.js','utf8');
+          function between(start,next){const a=desktop.indexOf(start),b=desktop.indexOf(next,a);if(a<0||b<=a)throw new Error(`missing ${start}`);return desktop.slice(a,b)}
+          const sellFns=[
+            between('async function realSellAllSnapshot()','function sellAllPositions'),
+            between('function sellAllPositions','async function submitSellAllOrdersV46'),
+            between('async function submitSellAllOrdersV46','async function openSellAll'),
+            between('async function openSellAll()','async function executeSellAll'),
+            between('async function executeSellAll()','let activeOrderTab=')
+          ].join('\n');
+          const portfolio={id:77,label:'Full Day — Clerk (Entry 2)',context:{type:'satellite',tierId:'full_day',priceLevel:'low',status:'open',startsAt:'2026-08-27T13:30:00Z'}};
+          const snapshot={...portfolio,cash:70000,positions:[{symbol:'NVDA',quantity:170.86},{symbol:'BA',quantity:9},{symbol:'VZ',quantity:0}]};
+          const submitted=[];
+          const html=`<!doctype html><html><body>
+          <button type="button" data-sell-all-v46>SELL ALL</button><div id="stageBStatus"></div>
+          <script>localStorage.setItem('token','browser.proof.token');window.activePortfolioContext={session:'DAILY CHALLENGE',tier:'clerk',mode:'live',entry:2};window.currentPortfolio=()=>({starting:100000,holdings:{}});window.SBCAdvancedOrdersV15={portfolioId(){throw new Error('LEGACY IDENTITY CALLED')},portfolioSnapshot(){throw new Error('LEGACY SNAPSHOT CALLED')},submitOrder:async body=>{const r=await fetch('/api/orders',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw new Error('order rejected');return r.json()},refresh:async()=>{},renderBlotter:()=>{}};</script>
+          <script src="/workspace.js"></script>
+          <script>const $=(s,r=document)=>r.querySelector(s);function showConfirm(eyebrow,title,detail='',subdetail='',icon='✓'){document.getElementById('stageBStatus').textContent=[eyebrow,title,detail,subdetail].join(' | ')}function closeSellAll(){document.getElementById('sellAllConfirmV46')?.remove();}${sellFns};document.querySelector('[data-sell-all-v46]').onclick=openSellAll;</script>
+          </body></html>`;
+          const server=http.createServer((req,res)=>{
+            const send=(code,type,body)=>{res.writeHead(code,{'Content-Type':type});res.end(body)};
+            if(req.url==='/'){return send(200,'text/html',html)}
+            if(req.url==='/workspace.js'){return send(200,'application/javascript',workspace)}
+            if(req.method==='GET'&&req.url==='/api/portfolios'){return send(200,'application/json',JSON.stringify([portfolio]))}
+            if(req.method==='GET'&&req.url==='/api/portfolios/77'){return send(200,'application/json',JSON.stringify(snapshot))}
+            if(req.method==='POST'&&req.url==='/api/orders'){let raw='';req.on('data',c=>raw+=c);req.on('end',()=>{const body=JSON.parse(raw);submitted.push(body);send(200,'application/json',JSON.stringify({accepted:true,id:submitted.length,...body}))});return}
+            if(req.url==='/evidence'){return send(200,'application/json',JSON.stringify({submitted}))}
+            send(404,'application/json',JSON.stringify({error:'not found'}));
+          });
+          (async()=>{
+            await new Promise(r=>server.listen(0,'127.0.0.1',r));
+            const port=server.address().port;
+            const browser=await chromium.launch({headless:true});
+            const page=await browser.newPage({viewport:{width:1440,height:900}});
+            const network=[];
+            page.on('request',req=>{if(req.url().includes('/api/'))network.push({phase:'request',method:req.method(),url:new URL(req.url()).pathname,postData:req.postData()||null})});
+            page.on('response',res=>{if(res.url().includes('/api/'))network.push({phase:'response',status:res.status(),url:new URL(res.url()).pathname})});
+            await page.goto(`http://127.0.0.1:${port}/`);
+            await page.click('[data-sell-all-v46]');
+            await page.waitForSelector('#sellAllConfirmV46');
+            const dialog=await page.locator('#sellAllConfirmV46').innerText();
+            await page.click('[data-sell-all-confirm-v46]');
+            await page.waitForFunction(()=>document.getElementById('stageBStatus').textContent.includes('SELL ALL ACCEPTED'));
+            const status=await page.locator('#stageBStatus').innerText();
+            const evidence=await (await page.request.get(`http://127.0.0.1:${port}/evidence`)).json();
+            const out={merge:process.env.TARGET_SHA,dialog,status,network,submitted:evidence.submitted};
+            fs.writeFileSync('WORKSPACE_STAGE_B_BROWSER_NETWORK_DOM_EVIDENCE.json',JSON.stringify(out,null,2));
+            if(!dialog.includes('2 real open positions'))throw new Error(`wrong dialog: ${dialog}`);
+            if(!status.includes('2 MARKET SELL ORDERS ACCEPTED'))throw new Error(`wrong status: ${status}`);
+            const gets=network.filter(x=>x.phase==='response').map(x=>`${x.status} ${x.url}`);
+            if(!gets.includes('200 /api/portfolios')||!gets.includes('200 /api/portfolios/77'))throw new Error(`missing portfolio traffic ${JSON.stringify(network)}`);
+            if(evidence.submitted.length!==2||evidence.submitted[0].portfolioId!==77||evidence.submitted[0].quantity!==170.86||evidence.submitted[1].quantity!==9)throw new Error(`wrong orders ${JSON.stringify(evidence.submitted)}`);
+            console.log(JSON.stringify(out,null,2));
+            await browser.close();server.close();
+          })().catch(e=>{console.error(e);server.close();process.exit(1)});
+          EOF
+          node /tmp/stage-b-browser-proof.js | tee WORKSPACE_STAGE_B_BROWSER_PROOF.txt
+      - name: Verify public Render service and attempt direct Render API evidence
+        shell: bash
+        run: |
+          set +e
+          ASSET_OK=0
+          for i in $(seq 1 36); do
+            curl -fsS --max-time 20 "https://stonk-broker-challenge.onrender.com/v45-desktop-trading-v45.js?proof=$TARGET_SHA-$i" -o /tmp/live-desktop.js
+            if grep -Fq 'workspace=window.SBCWorkspacePortfolioV1' /tmp/live-desktop.js && ! grep -Fq 'const portfolioId=api.portfolioId()' /tmp/live-desktop.js; then ASSET_OK=1; break; fi
+            sleep 5
+          done
+          curl -fsS --max-time 30 "https://stonk-broker-challenge.onrender.com/api/health?proof=$TARGET_SHA" -o WORKSPACE_STAGE_B_LIVE_HEALTH.json
+          {
+            echo "WORKSPACE CONSOLIDATION STAGE B — PUBLIC PRODUCTION VERIFY"
+            echo "target_merge=$TARGET_SHA"
+            echo "stage_b_live_asset=$([ "$ASSET_OK" = 1 ] && echo PASS || echo FAIL)"
+            echo "canonical_workspace_call=$(grep -Fq 'workspace=window.SBCWorkspacePortfolioV1' /tmp/live-desktop.js && echo PASS || echo FAIL)"
+            echo "legacy_sellall_identity_removed=$(! grep -Fq 'const portfolioId=api.portfolioId()' /tmp/live-desktop.js && echo PASS || echo FAIL)"
+            echo "health_http=$(test -s WORKSPACE_STAGE_B_LIVE_HEALTH.json && echo PASS || echo FAIL)"
+          } > WORKSPACE_STAGE_B_PRODUCTION_VERIFY.txt
+          if [ -n "$RENDER_API_KEY" ]; then
+            curl -fsS -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/services/srv-d9u81q9t0dsc73cpns80/deploys?limit=10" -o WORKSPACE_STAGE_B_RENDER_DEPLOYS.json
+            curl -fsS -G -H "Authorization: Bearer $RENDER_API_KEY" "https://api.render.com/v1/logs" --data-urlencode "ownerId=tea-d9u7smajnfac73ce71jg" --data-urlencode "resource=srv-d9u81q9t0dsc73cpns80" --data-urlencode "limit=100" -o WORKSPACE_STAGE_B_RENDER_LOGS.json
+            echo "render_api_secret=AVAILABLE" >> WORKSPACE_STAGE_B_PRODUCTION_VERIFY.txt
+          else
+            echo '{"unavailable":"RENDER_API_KEY secret is not configured in this GitHub repository"}' > WORKSPACE_STAGE_B_RENDER_DEPLOYS.json
+            cp WORKSPACE_STAGE_B_RENDER_DEPLOYS.json WORKSPACE_STAGE_B_RENDER_LOGS.json
+            echo "render_api_secret=UNAVAILABLE" >> WORKSPACE_STAGE_B_PRODUCTION_VERIFY.txt
+          fi
+          cat WORKSPACE_STAGE_B_PRODUCTION_VERIFY.txt
+          test "$ASSET_OK" = 1
+          test -s WORKSPACE_STAGE_B_LIVE_HEALTH.json
+      - name: Write Claude handoff
+        shell: bash
+        run: |
+          cat > CLAUDE_WORKSPACE_STAGE_B_HANDOFF.txt <<EOF
+          WORKSPACE CONSOLIDATION STAGE B — SELL ALL
+
+          AUTHORITATIVE MERGE
+          commit: $TARGET_SHA
+          tree: $TARGET_TREE
+          base: $BASE_SHA
+          feature head: $FEATURE_SHA
+          PR: #127
+          PR V45 Rebuild CI: 33053858575 (run 445) — success
+
+          SCOPE
+          Stage B only. Sell All now obtains identity + positions through SBCWorkspacePortfolioV1.portfolioSnapshot(). SBCAdvancedOrdersV15 remains the real submitOrder/refresh/blotter service. Quick Trade, Activity, Basket, chart, and frozen economics were not changed.
+
+          ROOT CAUSE
+          Before Stage B, realSellAllSnapshot() required SBCAdvancedOrdersV15.portfolioId() and portfolioSnapshot(). That was a legacy parallel identity path and failed for the real My Contests context with no numeric ID. Stage B removes those legacy identity calls from Sell All and delegates to the Stage A canonical owned-portfolio resolver.
+
+          BEHAVIORAL PROOF
+          server/workspacePortfolioStageB.test.js executes the production Sell All functions and the actual Stage A module. The legacy AdvancedOrders identity methods deliberately fail if called. With no numeric ID, the test requires GET /api/portfolios -> GET /api/portfolios/77 and then exact market-sell bodies for NVDA 170.86 and BA 9, with legacy identity calls = 0.
+
+          BROWSER PROOF
+          WORKSPACE_STAGE_B_BROWSER_NETWORK_DOM_EVIDENCE.json is produced by real headless Chromium using the exact production Stage A module and exact extracted production Sell All functions from this merge. It requires the rendered confirmation DOM, 200 responses for /api/portfolios and /api/portfolios/77, and exact POST /api/orders bodies for the resolved portfolio/quantities.
+
+          PRODUCTION
+          WORKSPACE_STAGE_B_PRODUCTION_VERIFY.txt and LIVE_HEALTH verify the public Render service serves the new canonical Sell All function. Direct Render API deploy/log files are included when a repository RENDER_API_KEY secret exists; otherwise those two files explicitly record that connector/secret limitation and must not be represented as direct list_deploys/list_logs evidence.
+
+          STOP HERE. Do not review Stage C as part of this package.
+          EOF
+      - name: Upload Stage B package
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-stage-b-1352df6
+          path: |
+            WORKSPACE_CONSOLIDATION_STAGE_B_FINAL_1352df6.zip
+            WORKSPACE_STAGE_B_CHANGED_FILES_SHA256.txt
+            WORKSPACE_STAGE_B_BEHAVIORAL_TEST.txt
+            WORKSPACE_STAGE_B_BROWSER_NETWORK_DOM_EVIDENCE.json
+            WORKSPACE_STAGE_B_BROWSER_PROOF.txt
+            WORKSPACE_STAGE_B_PRODUCTION_VERIFY.txt
+            WORKSPACE_STAGE_B_LIVE_HEALTH.json
+            WORKSPACE_STAGE_B_RENDER_DEPLOYS.json
+            WORKSPACE_STAGE_B_RENDER_LOGS.json
+            CLAUDE_WORKSPACE_STAGE_B_HANDOFF.txt
