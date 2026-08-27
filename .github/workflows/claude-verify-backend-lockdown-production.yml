@@ -1,0 +1,59 @@
+name: Claude Verify Backend Lockdown Production
+
+on:
+  push:
+    branches:
+      - claude-package-backend-lockdown-16a4f29
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe live Render deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://stonk-broker-challenge.onrender.com'
+          OUT=PRODUCTION_VERIFY.txt
+          : > "$OUT"
+
+          echo 'SBC BACKEND LOCKDOWN — LIVE PRODUCTION VERIFICATION' | tee -a "$OUT"
+          date -u '+Checked UTC: %Y-%m-%dT%H:%M:%SZ' | tee -a "$OUT"
+          echo "Base: $BASE" | tee -a "$OUT"
+          echo | tee -a "$OUT"
+
+          ROOT_CODE=$(curl --retry 5 --retry-delay 2 --max-time 60 -sS -o /tmp/root.html -w '%{http_code}' "$BASE/")
+          echo "root_http=$ROOT_CODE" | tee -a "$OUT"
+          test "$ROOT_CODE" = '200'
+
+          V45_FINAL=$(curl --retry 5 --retry-delay 2 --max-time 60 -sSL -o /tmp/v45.html -w '%{url_effective}' "$BASE/v45/")
+          echo "v45_effective_url=$V45_FINAL" | tee -a "$OUT"
+          test "$V45_FINAL" = "$BASE/"
+          cmp -s /tmp/root.html /tmp/v45.html
+          echo 'v45_redirect_to_root=PASS' | tee -a "$OUT"
+
+          HEALTH_CODE=$(curl --retry 5 --retry-delay 2 --max-time 60 -sS -o /tmp/health.json -w '%{http_code}' "$BASE/api/health")
+          echo "health_http=$HEALTH_CODE" | tee -a "$OUT"
+          cat /tmp/health.json | tee -a "$OUT"
+          echo | tee -a "$OUT"
+
+          ECON_CODE=$(curl --retry 5 --retry-delay 2 --max-time 60 -sS -o /tmp/economics.json -w '%{http_code}' "$BASE/api/economics")
+          echo "economics_http=$ECON_CODE" | tee -a "$OUT"
+          cat /tmp/economics.json | tee -a "$OUT"
+          echo | tee -a "$OUT"
+
+          BADGE_CODE=$(curl --retry 5 --retry-delay 2 --max-time 60 -sS -o /tmp/badge.json -w '%{http_code}' "$BASE/api/badge-market/book")
+          echo "badge_book_http=$BADGE_CODE" | tee -a "$OUT"
+          test "$BADGE_CODE" = '200'
+          cat /tmp/badge.json | tee -a "$OUT"
+          echo | tee -a "$OUT"
+
+          echo 'production_probe=PASS' | tee -a "$OUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backend-lockdown-production-verify
+          path: PRODUCTION_VERIFY.txt
+          if-no-files-found: error
