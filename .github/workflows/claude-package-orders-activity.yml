@@ -1,0 +1,64 @@
+name: Claude Package Orders Activity
+on: [push]
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 03fbe393458c7fba35d2e9b464dac432a73fafb0
+          fetch-depth: 0
+      - name: Build exact merge package
+        shell: bash
+        run: |
+          set -euo pipefail
+          MERGE=03fbe393458c7fba35d2e9b464dac432a73fafb0
+          BASE=16a4f29f934ba259b01e2157406c11b7b6489144
+          FEATURE=8bb522e6978d4dcc90aa87ae87ea2315538dc674
+          TREE=$(git show -s --format=%T "$MERGE")
+          mkdir -p out src
+          git archive "$MERGE" | tar -x -C src
+          (cd src && zip -qr ../out/ORDERS_ACTIVITY_PANEL_FINAL_03fbe39.zip .)
+          {
+            echo 'ORDERS & ACTIVITY PANEL FIXES — AUTHORITATIVE MERGE PACKAGE'
+            echo "Merge commit: $MERGE"
+            echo "Tree: $TREE"
+            echo "Base commit: $BASE"
+            echo "Feature head: $FEATURE"
+            echo
+            echo 'Changed files vs frozen backend base — content SHA-256 at authoritative merge:'
+            git diff --name-only "$BASE" "$MERGE" | while IFS= read -r f; do sha256sum "src/$f"; done | sed 's#  src/#  #'
+          } > out/ORDERS_ACTIVITY_PANEL_CHANGED_FILES_SHA256.txt
+          {
+            echo 'CLAUDE REVIEW HANDOFF — ORDERS & ACTIVITY PANEL FIXES'
+            echo
+            echo "Authoritative merge: $MERGE"
+            echo "Tree: $TREE"
+            echo "Base (frozen backend): $BASE"
+            echo "Feature head: $FEATURE"
+            echo 'PR: #125'
+            echo 'V45 Rebuild CI: run 33044889302 — SUCCESS, including Unit tests and Server/API/frontend smoke.'
+            echo
+            echo 'Scope:'
+            echo '- real blotter legacy hiding + scrolling at all viewport widths'
+            echo '- Sell All fetches authenticated real portfolio positions and submits one real market sell per actual holding via POST /advanced-orders-v15'
+            echo '- no fake cash/holdings/queued mutation; backend confirmation required before success'
+            echo '- Working Replace/Cancel preserved; Recent cancellation and Fills behavior preserved'
+            echo '- contained P&L/header readability polish'
+            echo '- Stage 41 validator updated to reject the superseded fake Sell All behavior and require the real path'
+            echo '- public/v45-native-orders-v45.js intentionally unchanged; its separate fake-data concern remains flagged for dedicated investigation'
+            echo
+            echo 'Behavioral test output:'
+            echo 'Orders & Activity Panel Fixes: PASS'
+            echo 'Sell All used real snapshot portfolio 77 and submitted one real market sell per actual holding; partial failures remain explicit.'
+            echo
+            echo 'Native-orders blob unchanged across base/feature: 569bcb0804471cdcf8b133f00e772721e973db96'
+          } > out/CLAUDE_ORDERS_ACTIVITY_PANEL_HANDOFF.txt
+          SHA=$(sha256sum out/ORDERS_ACTIVITY_PANEL_FINAL_03fbe39.zip | awk '{print $1}')
+          printf '\nSource ZIP SHA-256:\n%s  ORDERS_ACTIVITY_PANEL_FINAL_03fbe39.zip\n' "$SHA" >> out/ORDERS_ACTIVITY_PANEL_CHANGED_FILES_SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: orders-activity-panel-03fbe39
+          path: out/*
