@@ -76,7 +76,6 @@ async function frontendBehaviorTests() {
   const stage = sandbox.window.__SBC_TICKET_EXCHANGE_STAGE1_TEST;
   assert(stage, 'Stage 1 browser behavior hooks must be available');
 
-  // Acceptance 1: real backend book is primary; static book is fallback only on fetch failure.
   fetchImpl = async input => {
     assert(String(input).includes('/api/ticket-market/book/runner'));
     return makeResponse({
@@ -95,7 +94,6 @@ async function frontendBehaviorTests() {
   await sandbox.window.renderTicketMarket();
   assert.strictEqual(fallbackRenders, 1, 'failed real book fetch must invoke existing fallback renderer exactly once');
 
-  // Acceptance 3: the exact owned ticket ID survives into POST /offers unchanged.
   sandbox.ticketOrder = { side:'SELL', name:'Runner', price:777, listingId: 424242 };
   sandbox.ownedTicketContext = { name:'Runner', ticketId: 424242 };
   const preserved = sandbox.window.openMarketSell();
@@ -109,7 +107,6 @@ async function frontendBehaviorTests() {
   assert.strictEqual(offerBody.ticketId, 424242, 'POST /offers must receive byte-for-byte same numeric ticket ID');
   assert.strictEqual(offerBody.askPrice, 777);
 
-  // Acceptance 4: backend failure cannot become a local fake success.
   const writesBeforeFailure = localWrites;
   fetchImpl = async () => makeResponse({error:'forced failure'}, false, 500);
   await assert.rejects(() => stage.submitCurrentOffer(888), /forced failure/);
@@ -142,7 +139,6 @@ async function crossAccountAcceptanceTest() {
   process.env.DB_PATH = dbPath;
   process.env.SESSION_SECRET = 'ticket-exchange-stage1-secret';
 
-  // Load DB only after DB_PATH is fixed for this process.
   const db = require('./db');
   require('./schemaV45').run();
   const { sign } = require('./auth');
@@ -152,7 +148,7 @@ async function crossAccountAcceptanceTest() {
     const userId = Number(db.prepare('INSERT INTO users(email,password_hash,display_name,referral_code) VALUES(?,?,?,?)')
       .run(email,'x:y',display,code).lastInsertRowid);
     const accountId = Number(db.prepare('INSERT INTO accounts(user_id,stonk_balance) VALUES(?,?)').run(userId,balance).lastInsertRowid);
-    return { userId, accountId, token: sign({userId}) };
+    return { userId, accountId, token: sign({userId,email}) };
   };
   const accountA = mkAccount('stage1-a@test','Account A','STAGE1A',5000);
   const accountB = mkAccount('stage1-b@test','Account B','STAGE1B',5000);
@@ -178,7 +174,6 @@ async function crossAccountAcceptanceTest() {
     assert.strictEqual(listResponse.status, 200, `Account A real listing failed: ${JSON.stringify(listed)}`);
     assert.strictEqual(listed.ok, true);
 
-    // Acceptance 2: genuine Account B request with a different token/session.
     const bookResponse = await fetch(`${base}/book/runner`, {headers:{authorization:`Bearer ${accountB.token}`}});
     const book = await bookResponse.json();
     assert.strictEqual(bookResponse.status, 200);

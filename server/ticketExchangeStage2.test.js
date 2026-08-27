@@ -140,7 +140,7 @@ async function backendBehaviorTests(){
   const mkAccount=(email,display,code,balance)=>{
     const userId=Number(db.prepare('INSERT INTO users(email,password_hash,display_name,referral_code) VALUES(?,?,?,?)').run(email,'x:y',display,code).lastInsertRowid);
     const accountId=Number(db.prepare('INSERT INTO accounts(user_id,stonk_balance) VALUES(?,?)').run(userId,balance).lastInsertRowid);
-    return {userId,accountId,token:sign({userId})};
+    return {userId,accountId,token:sign({userId,email})};
   };
   const A=mkAccount('stage2-a@test','Account A','STAGE2A',5000);
   const B=mkAccount('stage2-b@test','Account B','STAGE2B',5000);

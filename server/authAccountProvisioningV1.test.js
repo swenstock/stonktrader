@@ -4,7 +4,7 @@ const path = require('path');
 
 const realLoad = Module._load;
 let accounts = [];
-const users = new Set([7]);
+const users = new Map([[7,{id:7,email:'x@example.com'}]]);
 let insertCount = 0;
 
 const fakeDb = {
@@ -12,8 +12,11 @@ const fakeDb = {
     if (/SELECT \* FROM accounts WHERE user_id = \?/i.test(sql)) {
       return { get(userId) { return accounts.find(a => a.user_id === userId) || undefined; } };
     }
+    if (/SELECT id, email FROM users WHERE id = \?/i.test(sql)) {
+      return { get(userId) { return users.get(userId); } };
+    }
     if (/SELECT id FROM users WHERE id = \?/i.test(sql)) {
-      return { get(userId) { return users.has(userId) ? { id:userId } : undefined; } };
+      return { get(userId) { const u=users.get(userId); return u ? { id:u.id } : undefined; } };
     }
     if (/INSERT INTO accounts \(user_id, stonk_balance\) VALUES \(\?, 0\)/i.test(sql)) {
       return { run(userId) { insertCount++; accounts.push({ id:100 + insertCount, user_id:userId, stonk_balance:0 }); return { lastInsertRowid:100 + insertCount }; } };

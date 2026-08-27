@@ -21,13 +21,12 @@ function assert(condition, message) {
 }
 
 async function main() {
+  const email = 'route-funding@test';
   const userId = Number(db.prepare(
     "INSERT INTO users(email,password_hash,display_name,referral_code) VALUES('route-funding@test','x:y','Route Funding','ROUTE50')"
   ).run().lastInsertRowid);
   const accountId = Number(db.prepare('INSERT INTO accounts(user_id,stonk_balance) VALUES(?,1000)').run(userId).lastInsertRowid);
 
-  // Degen Hours permits paid entry while the room is open. Clerk = price_level low,
-  // with 150 contest portion + protected 50 STONK Free Roll contribution.
   const now = new Date();
   const satellite = db.prepare(`INSERT INTO satellites
     (tier_id,price_level,name,entry_fee,ticket_cost,opens_at,locks_at,status,settlement_version)
@@ -45,7 +44,7 @@ async function main() {
   });
 
   try {
-    const token = sign({ userId });
+    const token = sign({ userId, email });
     const before = Number(freerollReserve.get('hourly')?.balance_stonk || 0);
     assert(before === 0, `expected fresh Free Roll V45 reserve 0, got ${before}`);
 
@@ -67,9 +66,6 @@ async function main() {
     const contribution = db.prepare('SELECT * FROM freeroll_entry_contributions_v45 WHERE entry_id=?').get(entry.id);
     assert(contribution && Number(contribution.amount_stonk) === 50, 'route entry must record exactly one 50 STONK contribution');
 
-    // Simulate duplicate processing of the exact same entry ID. The helper's
-    // entry-ID idempotency must prevent a second freeroll_fund UPDATE, which in
-    // turn prevents trg_v45_mirror_freeroll_contribution from firing again.
     const retry = creditEntryContributionInTransaction({
       entryId: Number(entry.id),
       categoryId: 'hourly',
