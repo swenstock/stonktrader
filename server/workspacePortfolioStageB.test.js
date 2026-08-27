@@ -2,60 +2,18 @@ const assert=require('assert');
 const fs=require('fs');
 const vm=require('vm');
 const path=require('path');
-
 const workspaceSrc=fs.readFileSync(path.join(__dirname,'../public/v45-workspace-portfolio-v1.js'),'utf8');
 const desktopSrc=fs.readFileSync(path.join(__dirname,'../public/v45-desktop-trading-v45.js'),'utf8');
-
-function between(start,next){
-  const a=desktopSrc.indexOf(start),b=desktopSrc.indexOf(next,a);
-  assert(a>=0&&b>a,`production function not found: ${start}`);
-  return desktopSrc.slice(a,b);
-}
-const sellSrc=[
-  between('async function realSellAllSnapshot()','function sellAllPositions'),
-  between('function sellAllPositions','async function submitSellAllOrdersV46'),
-  between('async function submitSellAllOrdersV46','async function openSellAll')
-].join('\n');
-
+function between(start,next){const a=desktopSrc.indexOf(start),b=desktopSrc.indexOf(next,a);assert(a>=0&&b>a,`production function not found: ${start}`);return desktopSrc.slice(a,b);}
+const sellSrc=[between('function activeRealPortfolioId()','async function realSellAllSnapshot'),between('async function realSellAllSnapshot()','function sellAllPositions'),between('function sellAllPositions','async function submitSellAllOrdersV46'),between('async function submitSellAllOrdersV46','async function openSellAll')].join('\n');
 (async()=>{
-  const store=new Map([['token','stage.b.token']]);
-  const calls=[],submitted=[];
-  let legacyIdentityCalls=0;
-  const portfolio={id:77,label:'Full Day — Clerk (Entry 2)',context:{type:'satellite',tierId:'full_day',priceLevel:'low',status:'open',startsAt:'2026-08-27T13:30:00Z'}};
-  const snapshot={...portfolio,cash:70000,positions:[{symbol:'NVDA',quantity:170.86},{symbol:'BA',quantity:9},{symbol:'VZ',quantity:0}]};
-  const orders={
-    portfolioId(){legacyIdentityCalls++;return null;},
-    async portfolioSnapshot(){legacyIdentityCalls++;throw new Error('legacy resolver must not run');},
-    async submitOrder(body){submitted.push(body);return{id:submitted.length,...body};}
-  };
-  const sandbox={
-    window:{SBCAdvancedOrdersV15:orders},
-    localStorage:{get length(){return store.size},getItem:k=>store.get(k)||null,key:i=>[...store.keys()][i]||null},
-    activePortfolioContext:{session:'DAILY CHALLENGE',tier:'clerk',mode:'live',entry:2},
-    currentPortfolio:()=>({starting:100000,holdings:{}}),
-    fetch:async url=>{calls.push(url);let body,status=200;if(url==='/api/portfolios')body=[portfolio];else if(url==='/api/portfolios/77')body=snapshot;else{body={error:'unexpected'};status=404}return{ok:status<400,status,json:async()=>body}},
-    console,setTimeout,clearTimeout,RegExp,Date,Number,String,Object,Array,Map,Set,Promise
-  };
-  sandbox.window.window=sandbox.window;
-  vm.createContext(sandbox);
-  vm.runInContext(workspaceSrc,sandbox);
-  vm.runInContext(`${sellSrc}\nwindow.__stageB={realSellAllSnapshot,sellAllPositions,submitSellAllOrdersV46};`,sandbox);
-  const api=sandbox.window.__stageB;
-
-  const loaded=await api.realSellAllSnapshot();
-  assert.strictEqual(loaded.id,77,'Sell All must resolve the real My Contests portfolio through Stage A');
-  assert.deepStrictEqual(calls,['/api/portfolios','/api/portfolios/77'],'Sell All must make the owned-list then resolved-snapshot backend reads');
-  assert.strictEqual(legacyIdentityCalls,0,'legacy AdvancedOrders identity helpers must not be consulted');
-  assert.strictEqual(api.sellAllPositions(loaded).length,2,'only real positive backend positions are sellable');
-
-  const result=await api.submitSellAllOrdersV46(orders,loaded);
-  assert.strictEqual(result.accepted.length,2);
-  assert.strictEqual(result.failed.length,0);
-  assert.deepStrictEqual(JSON.parse(JSON.stringify(submitted)),[
-    {portfolioId:77,symbol:'NVDA',side:'sell',orderType:'market',quantity:170.86},
-    {portfolioId:77,symbol:'BA',side:'sell',orderType:'market',quantity:9}
-  ],'Sell All must submit the exact backend portfolio ID and exact backend position quantities');
-
-  console.log('Workspace Consolidation Stage B — Sell All: PASS');
-  console.log('No numeric hint -> GET /api/portfolios -> GET /api/portfolios/77 -> exact NVDA/BA market sell bodies; legacy identity calls = 0.');
+  const store=new Map([['token','stage.b.token']]),calls=[];
+  const state={id:77,label:'Degen Hours — Free (Entry 1)',cash:70000,context:{type:'satellite',tierId:'hourly',priceLevel:'free',status:'open',startsAt:'2026-08-27T14:30:00Z'},positions:[{symbol:'BA',quantity:56.23},{symbol:'COIN',quantity:35.1},{symbol:'VZ',quantity:0}]};
+  const localStorage={get length(){return store.size},getItem:k=>store.get(k)||null,key:i=>[...store.keys()][i]||null,setItem:(k,v)=>store.set(k,String(v)),removeItem:k=>store.delete(k)};
+  function ok(body){return{ok:true,status:200,json:async()=>body}} function fail(status,body){return{ok:false,status,json:async()=>body}}
+  const fetch=async(url,opts={})=>{calls.push({url,method:opts.method||'GET',body:opts.body||null});assert.strictEqual(opts.headers?.Authorization,'Bearer stage.b.token');if(url==='/api/portfolios/77'&&(opts.method||'GET')==='GET')return ok(JSON.parse(JSON.stringify(state)));if(url==='/api/portfolios/77/trades'&&opts.method==='POST'){const body=JSON.parse(opts.body||'{}');assert.strictEqual(body.side,'sell');const pos=state.positions.find(p=>p.symbol===body.symbol);assert(pos&&pos.quantity>0);assert.strictEqual(Number(body.quantity),Number(pos.quantity));pos.quantity=0;return ok({ok:true,symbol:body.symbol,side:'sell',quantity:body.quantity,price:100});}if(url==='/api/portfolios')throw new Error('Sell All must not re-resolve through owned portfolio list once a real portfolio is open.');return fail(404,{error:'unexpected '+url});};
+  const sandbox={window:{activePortfolioId:77},localStorage,fetch,console,setTimeout,clearTimeout,RegExp,Date,Number,String,Object,Array,Map,Set,Promise,activePortfolioContext:{portfolioId:88,portfolio_id:88,session:'DEGEN HOURS',tier:'free',mode:'live',entry:1},currentPortfolio:()=>({id:99,portfolioId:99,holdings:{FAKE:{shares:999}}})};sandbox.window.window=sandbox.window;vm.createContext(sandbox);vm.runInContext(workspaceSrc,sandbox);vm.runInContext(`${sellSrc}\nwindow.__stageB={activeRealPortfolioId,realSellAllSnapshot,sellAllPositions,submitSellAllOrdersV46};`,sandbox);const sell=sandbox.window.__stageB,workspace=sandbox.window.SBCWorkspacePortfolioV1;
+  assert.strictEqual(sell.activeRealPortfolioId(),77);const loaded=await sell.realSellAllSnapshot();assert.strictEqual(loaded.id,77);assert.deepStrictEqual(calls.map(x=>`${x.method} ${x.url}`),['GET /api/portfolios/77']);assert.strictEqual(sell.sellAllPositions(loaded).length,2);
+  const result=await sell.submitSellAllOrdersV46(workspace,loaded);assert.strictEqual(result.accepted.length,2);assert.strictEqual(result.failed.length,0);assert.deepStrictEqual(calls.slice(1,3).map(x=>({method:x.method,url:x.url,body:JSON.parse(x.body)})),[{method:'POST',url:'/api/portfolios/77/trades',body:{symbol:'BA',side:'sell',quantity:56.23}},{method:'POST',url:'/api/portfolios/77/trades',body:{symbol:'COIN',side:'sell',quantity:35.1}}]);
+  const refreshed=await workspace.portfolioSnapshotById(77);assert.strictEqual(sell.sellAllPositions(refreshed).length,0);assert.deepStrictEqual(calls.map(x=>`${x.method} ${x.url}`),['GET /api/portfolios/77','POST /api/portfolios/77/trades','POST /api/portfolios/77/trades','GET /api/portfolios/77']);console.log('Workspace Consolidation Stage B — Sell All: PASS');console.log('Active real portfolio 77 -> direct GET -> BA/COIN real sell POSTs -> direct GET 77 -> zero positive holdings.');
 })().catch(e=>{console.error(e);process.exit(1)});
