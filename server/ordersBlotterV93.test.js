@@ -14,7 +14,7 @@ assert(ui.includes('BUY') || ui.includes('side'), 'Side text renderer missing');
 assert(!ui.includes("icon=x.side==='BUY'?'▲':'▼'"), 'Legacy up/down arrow renderer must not own this blotter');
 assert(ui.includes('REPLACE</button>') && ui.includes('CANCEL</button>'), 'Working cancel/replace controls missing');
 assert(ui.includes("status:'FILLED'"), 'Fill status rendering missing');
-assert(ui.includes('PLACED / WORKING') && ui.includes("status:'CANCELLED'") && ui.includes("status:'TRIGGERED'"), 'Recent Activity lifecycle states missing');
+const activityMatch=ui.match(/function activityEvents\(\)\{([\s\S]*?)\}\nfunction installBlotterStyle/);assert(activityMatch,'Recent Activity renderer missing');assert(activityMatch[1].includes('cache.trades'),'Recent Activity must read authoritative trades');assert(!activityMatch[1].includes('cache.orders'),'Recent Activity must not synthesize order lifecycle events');
 
 assert(route.includes("router.patch('/:id'"), 'Cancel/replace backend route missing');
 assert(route.includes("order_type || 'market'"), 'Unified market/advanced order DTO missing');
