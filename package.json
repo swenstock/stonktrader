@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "npm run test:session-leaderboard-truth-v1 && npm run test:prototype-account-seed-v1 && npm run test:auth-account-provisioning-v1 && npm run test:backend-authority-v1 && npm run test:workspace-stage-b2 && npm run test:workspace-stage-b1 && npm run test:workspace-stage-b && npm run test:workspace-stage-a && npm run test:orders-activity-panel && npm run test:backend-lockdown && npm run test:ticket-exchange-stage4",
+    "test": "npm run test:session-leaderboard-truth-v1 && npm run test:prototype-account-seed-v1 && npm run test:auth-account-provisioning-v1 && npm run test:backend-authority-v1 && npm run test:workspace-stage-b2 && npm run test:workspace-stage-b1 && npm run test:workspace-stage-b && npm run test:workspace-stage-a && npm run test:orders-activity-panel && npm run test:backend-lockdown && npm run test:ticket-exchange-stage4 && npm run test:badge-quantity-lock && npm run test:ticket-exchange-stage2 && npm run test:ticket-exchange-stage1",
     "test:payout": "node server/payoutEngineV2.test.js",
     "test:settlement": "node server/satelliteSettlementPlanV45.test.js",
     "test:settlement-db": "node server/satelliteSettlementExecutorV45.test.js",
