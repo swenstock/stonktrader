@@ -79,10 +79,28 @@
   function install(){
     if(typeof window.openSelectedMCPortfolio!=='function' || window.openSelectedMCPortfolio.__entrySyncV8)return;
     const original=window.openSelectedMCPortfolio.__entrySyncOriginal || window.openSelectedMCPortfolio;
+    function openExistingOwnedEntry(bundle){
+      const {ctx}=bundle;
+      if(typeof activePortfolioContext==='undefined')return false;
+      activePortfolioContext=ctx;
+      if(typeof pendingPortfolioContext!=='undefined')pendingPortfolioContext=null;
+      if(typeof portfolioReturnView!=='undefined')portfolioReturnView=ctx.returnView||'my';
+      if(typeof tradeSide!=='undefined')tradeSide='buy';
+      if(typeof tradeInputMode!=='undefined')tradeInputMode='shares';
+      if(typeof selectedTradePercent!=='undefined')selectedTradePercent=50;
+      if(typeof quickTradePercent!=='undefined')quickTradePercent=null;
+      document.getElementById('rulesGate')?.classList.remove('open');
+      document.querySelectorAll('.quick-percent-row button').forEach(b=>b.classList.remove('active'));
+      if(typeof renderPortfolio==='function')renderPortfolio();
+      if(typeof showView==='function')showView('portfolio');
+      return true;
+    }
+
     function synced(tab,id,isLive){
       const bundle=buildContext(tab,id,isLive);
       if(bundle)seedFromContest(bundle);
       synced.__lastArgs={tab,id,isLive};
+      if(tab==='live'&&bundle&&openExistingOwnedEntry(bundle))return true;
       return original.apply(this,arguments);
     }
     synced.__entrySyncV7=true;
