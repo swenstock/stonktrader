@@ -1,0 +1,99 @@
+name: Package Workspace Stage B1
+on:
+  push:
+    branches: [claude-package-workspace-stage-b1-cfbe4bd]
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    env:
+      TARGET_SHA: cfbe4bd0c37c17f08c3e51a4df3c2eb7e5148a3a
+      TARGET_TREE: a588c4be7cfe95ca9a1a901e7badf049ef7b2691
+      BASE_SHA: 1352df684b26fee0a826b843968fc4d8d52d6f3c
+      FEATURE_SHA: 232655e21199b587f59d68aa1a5c0ea534720c73
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Checkout authoritative merge
+        run: git checkout --detach "$TARGET_SHA"
+      - name: Build exact source package and hashes
+        run: |
+          git archive --format=zip --output=WORKSPACE_CONSOLIDATION_STAGE_B1_FINAL_cfbe4bd.zip "$TARGET_SHA"
+          {
+            echo "WORKSPACE CONSOLIDATION STAGE B.1 — AUTHORITATIVE MERGE PACKAGE"
+            echo "Merge commit: $TARGET_SHA"
+            echo "Tree: $TARGET_TREE"
+            echo "Base commit: $BASE_SHA"
+            echo "Feature head: $FEATURE_SHA"
+            echo
+            echo "Changed files vs Stage B — content SHA-256:"
+            sha256sum package.json public/v45-workspace-portfolio-v1.js server/workspacePortfolioStageB1.test.js
+            echo
+            echo "Source ZIP SHA-256:"
+            sha256sum WORKSPACE_CONSOLIDATION_STAGE_B1_FINAL_cfbe4bd.zip
+          } > WORKSPACE_STAGE_B1_CHANGED_FILES_SHA256.txt
+      - name: Run Stage B1 behavioral proof
+        run: node server/workspacePortfolioStageB1.test.js | tee WORKSPACE_STAGE_B1_BEHAVIORAL_TEST.txt
+      - name: Verify public Render asset deploy
+        shell: bash
+        run: |
+          set -e
+          OK=0
+          for i in $(seq 1 48); do
+            if curl -fsS --max-time 25 "https://stonk-broker-challenge.onrender.com/v45-workspace-portfolio-v1.js?b1=$TARGET_SHA-$i" -o /tmp/live-b1.js; then
+              if grep -Fq "SIGN IN TO TRADE" /tmp/live-b1.js && grep -Fq "localStorage.getItem('token')" /tmp/live-b1.js && grep -Fq "/api/auth/" /tmp/live-b1.js; then OK=1; break; fi
+            fi
+            sleep 5
+          done
+          curl -fsS --max-time 30 "https://stonk-broker-challenge.onrender.com/api/health?b1=$TARGET_SHA" -o WORKSPACE_STAGE_B1_LIVE_HEALTH.json
+          {
+            echo "WORKSPACE CONSOLIDATION STAGE B.1 — PUBLIC PRODUCTION VERIFY"
+            echo "target_merge=$TARGET_SHA"
+            echo "auth_bridge_asset=$([ "$OK" = 1 ] && echo PASS || echo FAIL)"
+            echo "sign_in_prompt=$(grep -Fq 'SIGN IN TO TRADE' /tmp/live-b1.js && echo PASS || echo FAIL)"
+            echo "canonical_token_key=$(grep -Fq \"localStorage.getItem('token')\" /tmp/live-b1.js && echo PASS || echo FAIL)"
+            echo "auth_endpoint_bridge=$(grep -Fq '/api/auth/' /tmp/live-b1.js && echo PASS || echo FAIL)"
+            echo "health_http=$(test -s WORKSPACE_STAGE_B1_LIVE_HEALTH.json && echo PASS || echo FAIL)"
+            echo "REAL_LIVE_AUTHENTICATED_SELL_ALL=NOT_CLAIMED_PENDING_USER_CLICK"
+          } > WORKSPACE_STAGE_B1_PRODUCTION_VERIFY.txt
+          cat WORKSPACE_STAGE_B1_PRODUCTION_VERIFY.txt
+          test "$OK" = 1
+      - name: Write Claude handoff
+        run: |
+          cat > CLAUDE_WORKSPACE_STAGE_B1_HANDOFF.txt <<EOF
+          WORKSPACE CONSOLIDATION STAGE B.1 — AUTH HANDOFF REPAIR ONLY
+
+          AUTHORITATIVE MERGE
+          commit: $TARGET_SHA
+          tree: $TARGET_TREE
+          base: $BASE_SHA
+          feature head: $FEATURE_SHA
+          PR: #128
+          V45 Rebuild CI: 33059668567 (run 446) — success
+
+          ROOT CAUSE CONFIRMED
+          The production / route serves the exact V45 shell plus enhancement scripts. That exact shell contains no login/session creation. /v45 redirects to /. The legacy v45.js auth client therefore does not run on the screen in the live tour. Backend auth contract remains POST /api/auth/login|signup -> signed SBC token -> localStorage.token -> Authorization: Bearer token.
+
+          FIX
+          Only SBCWorkspacePortfolioV1 auth handling changed. It now uses exactly localStorage.token, can obtain that token through the existing backend login/signup endpoints when a protected workspace request needs authentication, and attaches the exact returned token as Authorization: Bearer. A stale 401 clears only that canonical token and requests fresh authentication once. Existing Sell All order submission remains unchanged and will see the same localStorage.token through SBCAdvancedOrdersV15.
+
+          TEST
+          workspacePortfolioStageB1.test.js plants a decoy authToken, proves it is ignored, executes the production authenticate() against /api/auth/login, verifies the returned token is stored as localStorage.token, then requires /api/portfolios to carry Authorization: Bearer <exact returned token>.
+
+          ACCEPTANCE LIMIT
+          Public production asset deployment is verified, but DO NOT call Stage B.1 accepted until Andrew performs a real live authenticated Sell All click and confirms the real /api/portfolios request and order submission complete. No seeded browser harness is offered as a substitute.
+
+          STOP HERE. Stage C is not part of this package.
+          EOF
+      - uses: actions/upload-artifact@v4
+        with:
+          name: workspace-stage-b1-cfbe4bd
+          path: |
+            WORKSPACE_CONSOLIDATION_STAGE_B1_FINAL_cfbe4bd.zip
+            WORKSPACE_STAGE_B1_CHANGED_FILES_SHA256.txt
+            WORKSPACE_STAGE_B1_BEHAVIORAL_TEST.txt
+            WORKSPACE_STAGE_B1_PRODUCTION_VERIFY.txt
+            WORKSPACE_STAGE_B1_LIVE_HEALTH.json
+            CLAUDE_WORKSPACE_STAGE_B1_HANDOFF.txt
