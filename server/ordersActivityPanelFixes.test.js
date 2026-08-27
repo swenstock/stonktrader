@@ -1,0 +1,11 @@
+const fs=require('fs');const vm=require('vm');const assert=require('assert');
+const adv=fs.readFileSync('public/v45-advanced-orders-v15.js','utf8');const desk=fs.readFileSync('public/v45-desktop-trading-v45.js','utf8');
+assert(!adv.includes('s.textContent=`@media(min-width:901px){#view-portfolio'),'legacy blotter hiding/scroll CSS must not be desktop-only');
+assert(adv.includes("status:'CANCELLED'"),'Recent Activity must include cancellations');
+assert(adv.includes('portfolioSnapshot,submitOrder'),'real portfolio/order helpers must be exported');
+assert(!desk.includes("p.queued.push({side:'SELL'"),'Sell All must not push fake queued sells');
+assert(!desk.includes('delete p.holdings[symbol]'),'Sell All must not mutate fake holdings');
+const m=desk.match(/function sellAllPositions\(snapshot\)\{.*?\}\nasync function submitSellAllOrdersV46\(api,snapshot\)\{.*?\}\nasync function openSellAll/s);assert(m,'Sell All real-order core not found');
+const ctx={};vm.runInNewContext(m[0].replace(/\nasync function openSellAll[\s\S]*$/,'' )+';this.sellAllPositions=sellAllPositions;this.submitSellAllOrdersV46=submitSellAllOrdersV46;',ctx);
+const calls=[];const api={submitOrder:async body=>{calls.push(body);return {ok:true,queued:true,id:calls.length};}};
+(async()=>{const snap={id:77,positions:[{symbol:'AMZN',quantity:3.5},{symbol:'META',quantity:2},{symbol:'ZERO',quantity:0}]};const out=await ctx.submitSellAllOrdersV46(api,snap);assert.equal(out.positions.length,2);assert.equal(out.accepted.length,2);assert.equal(out.failed.length,0);assert.deepStrictEqual(JSON.parse(JSON.stringify(calls)),[{portfolioId:77,symbol:'AMZN',side:'sell',orderType:'market',quantity:3.5},{portfolioId:77,symbol:'META',side:'sell',orderType:'market',quantity:2}]);const partialCalls=[];const partialApi={submitOrder:async body=>{partialCalls.push(body);if(body.symbol==='META')throw new Error('reject');return {ok:true};}};const partial=await ctx.submitSellAllOrdersV46(partialApi,snap);assert.equal(partial.accepted.length,1);assert.equal(partial.failed.length,1);assert.equal(partialCalls.length,2);console.log('Orders & Activity Panel Fixes: PASS');console.log('Sell All used real snapshot portfolio 77 and submitted one real market sell per actual holding; partial failures remain explicit.');})();
