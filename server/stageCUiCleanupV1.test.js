@@ -8,6 +8,12 @@ assert(js.includes('api.refresh(true)'),'successful trade must force canonical a
 assert(js.includes('api.renderBlotter()'),'successful trade must rerender existing blotter');
 assert(js.includes('/\\/api\\/portfolios\\/\\d+\\/trades'),'cleanup must observe portfolio trade POSTs');
 assert(js.includes("method==='POST'"),'cleanup must scope activity refresh to POST trade completion');
+assert(js.includes('scheduleRefresh(true)'),'successful real trade POST must force backend portfolio rehydrate');
+assert(js.includes('canonicalTradeSignature()'),'async advanced-order fills must be detected from canonical trades');
+assert(js.includes('SBCBackendAuthorityV1'),'portfolio rehydrate must use existing backend authority');
+assert(js.includes('authority.openPortfolio(id)'),'rehydrate must reopen the exact active backend portfolio');
+assert(js.includes('api.cache.portfolioId||window.activePortfolioId'),'rehydrate must preserve exact active portfolio identity');
+assert(!js.includes('holdings['),'cleanup must not fabricate or directly patch holdings');
 assert(!js.includes('basketOrder:true'),'cleanup must not mutate basket/trade bodies');
 assert(!js.includes('JSON.stringify(body'),'cleanup must not rewrite trade request bodies');
 assert(js.includes("desktop-orders-empty-v45"),'legacy desktop empty state must be retired inside modern blotter');
@@ -23,4 +29,4 @@ assert(server.includes('stageCUiCleanup: "v1-activity-refresh-readable-confirm"'
 assert(server.includes('/v45-stage-c-ui-cleanup-v1.css?v=1'),'cleanup CSS must be served');
 assert(server.includes('/v45-stage-c-ui-cleanup-v1.js?v=1'),'cleanup JS must be served');
 assert(server.includes(".replace('function maybeShowContextTutorial(view){', 'function maybeShowContextTutorial(view){ return; /* QA HARD PAUSE */')"),'tutorial hard-pause signature must remain unchanged');
-console.log('Stage C UI cleanup v1 acceptance guard: PASS');
+console.log('Stage C UI cleanup v1 acceptance + backend rehydrate guard: PASS');

@@ -2,7 +2,7 @@
 'use strict';
 if(window.__sbcStageCUiCleanupV1)return;window.__sbcStageCUiCleanupV1=true;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
-let refreshTimer=null;
+let refreshTimer=null,portfolioSyncTimer=null,lastTradeSignature=null,forcePortfolioSync=false,portfolioSyncBusy=false;
 const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>`$${Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
@@ -15,7 +15,6 @@ function renderRecentWithCancelled(){
   if(!api?.cache||!body)return;
   const trades=Array.isArray(api.cache.trades)?api.cache.trades:[],orders=Array.isArray(api.cache.orders)?api.cache.orders:[];
   const cancelled=orders.filter(o=>String(o.status)==='cancelled'&&o.cancelledAt);
-  if(!cancelled.length)return;
   const events=[
     ...trades.map(t=>({side:t.side,symbol:t.symbol,qty:Number(t.quantity||0).toLocaleString(undefined,{maximumFractionDigits:4}),price:money(t.price),status:'FILLED',at:t.timestamp,cancelled:false})),
     ...cancelled.map(o=>({id:o.id,side:o.side,symbol:o.symbol,qty:qtyText(o),price:orderPrice(o),status:'CANCELLED',at:o.cancelledAt,cancelled:true}))
@@ -24,6 +23,29 @@ function renderRecentWithCancelled(){
   if(body.dataset.stageCRecentSignature===signature&&body.querySelectorAll('[data-stage-c-cancelled]').length===cancelled.length)return;
   body.dataset.stageCRecentSignature=signature;
   body.innerHTML=events.length?events.map(recentRow).join(''):'<div class="blotter-empty-v15">No recent order activity.</div>';
+}
+function canonicalTradeSignature(){
+  const trades=Array.isArray(window.SBCAdvancedOrdersV15?.cache?.trades)?window.SBCAdvancedOrdersV15.cache.trades:[];
+  return trades.map(t=>`${t.id||''}:${String(t.side||'')}:${String(t.symbol||'')}:${Number(t.quantity||0)}:${String(t.timestamp||'')}`).join('|');
+}
+async function syncActiveBackendPortfolio(force=false){
+  if(portfolioSyncBusy)return;
+  const api=window.SBCAdvancedOrdersV15,authority=window.SBCBackendAuthorityV1;
+  if(!api?.cache||!authority?.openPortfolio)return;
+  const sig=canonicalTradeSignature();
+  if(lastTradeSignature===null){lastTradeSignature=sig;if(!force)return;}
+  const changed=sig!==lastTradeSignature;
+  if(changed)lastTradeSignature=sig;
+  if(!force&&!changed)return;
+  const id=Number(api.cache.portfolioId||window.activePortfolioId||0);
+  if(!(id>0))return;
+  portfolioSyncBusy=true;
+  try{await authority.openPortfolio(id);}catch(_){}finally{portfolioSyncBusy=false;}
+}
+function schedulePortfolioSync(force=false){
+  if(force)forcePortfolioSync=true;
+  clearTimeout(portfolioSyncTimer);
+  portfolioSyncTimer=setTimeout(()=>syncActiveBackendPortfolio(forcePortfolioSync).finally(()=>{forcePortfolioSync=false;}),90);
 }
 function cleanupLegacyActivity(){
   const blotter=$('#view-portfolio .orders-activity-blotter-v15');
@@ -53,9 +75,17 @@ function suppressBasketDuplicateConfirm(){
 async function refreshCanonicalActivity(){
   const api=window.SBCAdvancedOrdersV15;
   if(!api?.refresh||!api?.renderBlotter)return;
-  try{await api.refresh(true);api.renderBlotter();cleanupLegacyActivity();renderRecentWithCancelled();}catch(_){}
+  try{
+    await api.refresh(true);
+    api.renderBlotter();
+    cleanupLegacyActivity();
+    renderRecentWithCancelled();
+    await syncActiveBackendPortfolio(forcePortfolioSync);
+    forcePortfolioSync=false;
+  }catch(_){}
 }
-function scheduleRefresh(){
+function scheduleRefresh(forcePortfolio=false){
+  if(forcePortfolio)forcePortfolioSync=true;
   clearTimeout(refreshTimer);
   refreshTimer=setTimeout(refreshCanonicalActivity,80);
   setTimeout(refreshCanonicalActivity,420);
@@ -69,15 +99,15 @@ function wrapFetch(){
     const response=await original(input,init);
     try{
       const url=urlOf(input),method=methodOf(input,init);
-      if(response.ok&&method==='POST'&&/\/api\/portfolios\/\d+\/trades(?:\?|$)/.test(url))scheduleRefresh();
+      if(response.ok&&method==='POST'&&/\/api\/portfolios\/\d+\/trades(?:\?|$)/.test(url))scheduleRefresh(true);
     }catch(_){}
     return response;
   };
   wrapped.__stageCUiCleanupV1=true;
   window.fetch=wrapped;
 }
-function run(){wrapFetch();cleanupLegacyActivity();suppressBasketDuplicateConfirm();renderRecentWithCancelled();}
-new MutationObserver(()=>{cleanupLegacyActivity();suppressBasketDuplicateConfirm();renderRecentWithCancelled();}).observe(document.documentElement,{childList:true,subtree:true});
+function run(){wrapFetch();cleanupLegacyActivity();suppressBasketDuplicateConfirm();renderRecentWithCancelled();schedulePortfolioSync(false);}
+new MutationObserver(()=>{cleanupLegacyActivity();suppressBasketDuplicateConfirm();renderRecentWithCancelled();schedulePortfolioSync(false);}).observe(document.documentElement,{childList:true,subtree:true});
 window.addEventListener('sbc:orders-change',()=>setTimeout(refreshCanonicalActivity,0));
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
 setTimeout(run,300);setTimeout(run,1200);
