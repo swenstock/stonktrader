@@ -134,7 +134,6 @@ async function backendBehaviorTests(){
   try{fs.unlinkSync(dbPath);}catch(_){}
   process.env.DB_PATH=dbPath;
   process.env.SESSION_SECRET='ticket-exchange-stage2-secret';
-  process.env.TICKET_MARKET_FEE_PCT='0.10';
 
   const db=require('./db'); require('./schemaV45').run();
   const {sign}=require('./auth'); const router=require('./routes/ticketMarket');
@@ -162,7 +161,7 @@ async function backendBehaviorTests(){
 
     const sold=await call(`/bids/${bidId}/sell`,A.token,'POST',{ticketId:runnerId});
     assert.strictEqual(sold.r.status,200,JSON.stringify(sold.d));
-    assert.strictEqual(sold.d.soldFor,1000); assert.strictEqual(sold.d.platformFee,100); assert.strictEqual(sold.d.sellerReceived,900);
+    assert.strictEqual(sold.d.soldFor,1000); assert.strictEqual(sold.d.platformFee,50); assert.strictEqual(sold.d.sellerReceived,950);
     const ticket=db.prepare('SELECT * FROM tickets WHERE id=?').get(runnerId);
     const bidRow=db.prepare('SELECT * FROM ticket_bids WHERE id=?').get(bidId);
     const listing=db.prepare('SELECT * FROM ticket_listings WHERE id=?').get(listingId);
@@ -172,7 +171,7 @@ async function backendBehaviorTests(){
     assert.strictEqual(bidRow.status,'filled');
     assert.strictEqual(Number(bidRow.filled_ticket_id),runnerId);
     assert.strictEqual(listing.status,'cancelled','same-ticket active listing must be atomically cancelled');
-    assert.strictEqual(aBalanceAfter-aBalanceBefore,900,'seller balance must rise by bid minus fee');
+    assert.strictEqual(aBalanceAfter-aBalanceBefore,950,'seller balance must rise by bid minus canonical 5% fee');
 
     const bid2=await call('/bids',B.token,'POST',{ticketType:'runner',bidPrice:700});
     assert.strictEqual(bid2.r.status,200,JSON.stringify(bid2.d));
@@ -183,7 +182,7 @@ async function backendBehaviorTests(){
     assert.strictEqual(clerk.account_id,A.accountId); assert.strictEqual(clerk.status,'unredeemed');
 
     console.log('Ticket Exchange Stage 2 backend: PASS');
-    console.log(`A sold listed Runner ticket ${runnerId} to distinct B bid ${bidId}: 1000 gross / 900 seller / 100 fee; listing ${listingId}=cancelled; wrong Clerk->Runner bid rejected`);
+    console.log(`A sold listed Runner ticket ${runnerId} to distinct B bid ${bidId}: 1000 gross / 950 seller / 50 fee; listing ${listingId}=cancelled; wrong Clerk->Runner bid rejected`);
   } finally { await new Promise(resolve=>server.close(resolve)); }
 }
 

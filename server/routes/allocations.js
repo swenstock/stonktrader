@@ -38,6 +38,10 @@ router.post("/", requireAuth, (req, res) => {
     return res.status(400).json({ error: "targetType must be 'contest' or 'satellite'" });
   }
 
+  if (targetType === "contest") {
+    return res.status(410).json({ code: "MAIN_EVENT_RETIRED", error: "Main Event has been retired. Use the Corporate Ladder contests instead." });
+  }
+
   let finalTierId, finalPriceLevel, maxAllowed;
   if (targetType === "satellite") {
     const validTier = TIERS.find((t) => t.categoryId === tierId && t.priceLevel === priceLevel);

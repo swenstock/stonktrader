@@ -13,12 +13,12 @@ const {
   recordJuniorIssuanceInTransaction,
 } = require('./juniorBrokerStage2');
 const { creditIssuanceInTransaction, getBalances } = require('./prizeReserveLedger');
+const { EXCHANGE_FEE_PCT } = require('./economicsPolicyV45');
 
 const BADGE_ASSET_TYPE = ASSET_TYPE;
 const MINT_PRICE_STONK = 48000;
 const BADGE_FLOOR_STONK = 36666.6;
 const MISPRICING_THRESHOLD = Math.max(0, Number(process.env.BADGE_MARKET_WARNING_THRESHOLD || 0.25));
-const EXCHANGE_FEE_PCT = Math.max(0, Math.min(1, Number(process.env.TICKET_MARKET_FEE_PCT || 0)));
 
 function assertAccountId(id) {
   if (!Number.isSafeInteger(id) || id <= 0) throw new TypeError('accountId must be a positive safe integer');

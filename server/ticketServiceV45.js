@@ -1,7 +1,7 @@
 const db = require('./db');
 const reserveLedger = require('./reserveLedger');
 
-const TICKET_TYPES = new Set(['runner','clerk','trader','junior','main_event']);
+const TICKET_TYPES = new Set(['runner','clerk','trader','junior']);
 
 function normalizeType(type) {
   const t = String(type || '').toLowerCase();
@@ -10,6 +10,7 @@ function normalizeType(type) {
 }
 
 function issueTicket({ accountId, ticketType, backingStonk, sourceSatelliteId = null, fundMainEventReserve = false }) {
+  if (fundMainEventReserve) { const err = new Error('Main Event ticket funding is retired'); err.code='MAIN_EVENT_RETIRED'; throw err; }
   const type = normalizeType(ticketType);
   const backing = Number(backingStonk);
   if (!(backing > 0)) throw new Error('Ticket backing must be positive');
@@ -25,12 +26,6 @@ function issueTicket({ accountId, ticketType, backingStonk, sourceSatelliteId = 
     referenceType: 'ticket', referenceId: info.lastInsertRowid,
   });
 
-  if (type === 'main_event' && fundMainEventReserve) {
-    reserveLedger.record('main_event_reserve', backing, 'main_event_ticket_funded', {
-      referenceType: 'ticket', referenceId: info.lastInsertRowid,
-    });
-  }
-
   return db.prepare('SELECT * FROM tickets WHERE id = ?').get(info.lastInsertRowid);
 }
 
@@ -44,8 +39,9 @@ function consumeTicket({ ticketId, accountId, appliedToContestId = null, applied
   const ticket = getOwnedTicket(ticketId, accountId);
   if (!ticket) throw new Error('Ticket not found');
   if (ticket.status !== 'unredeemed') throw new Error('Ticket is not available to redeem');
-  if (!!appliedToContestId === !!appliedToSatelliteId) {
-    throw new Error('Specify exactly one redemption target');
+  if (appliedToContestId != null) { const err = new Error('Main Event ticket redemption is retired'); err.code='MAIN_EVENT_RETIRED'; throw err; }
+  if (!appliedToSatelliteId) {
+    throw new Error('Specify a satellite redemption target');
   }
 
   db.prepare(`UPDATE tickets SET status='applied', applied_to_contest_id=?, applied_to_satellite_id=?, applied_at=? WHERE id=?`)

@@ -3,7 +3,7 @@ const router = express.Router();
 const requireAuth = require('../middleware/requireAuth');
 const custodian = require('../custodian');
 const { TEST_MODE } = require('../testClock');
-const { computePaidContest, computeFreerollRequirement } = require('../payoutEngineV2');
+const { computePaidContest, computeFreerollPlan } = require('../payoutEngineV2');
 const { issueTicket } = require('../ticketServiceV45');
 
 const TEST_TICKET_BACKING = Object.freeze({
@@ -11,7 +11,6 @@ const TEST_TICKET_BACKING = Object.freeze({
   clerk: 200,
   trader: 400,
   junior: 1050,
-  main_event: 3000,
 });
 
 router.use((req, res, next) => {
@@ -54,7 +53,8 @@ router.get('/payout-preview', (req, res) => {
   const tier = String(req.query.tier || 'trader').toLowerCase();
   const fieldSize = Math.max(1, Math.min(100000, Math.round(Number(req.query.field || 100))));
   if (tier === 'free' || tier === 'freeroll') {
-    return res.json({ type: 'freeroll', ...computeFreerollRequirement({ fieldSize }) });
+    const reserveBalance = Math.max(0, Number(req.query.reserve || 0));
+    return res.json({ type: 'freeroll', ...computeFreerollPlan({ fieldSize, reserveBalance }) });
   }
   try {
     res.json({ type: 'paid', ...computePaidContest({ tierKey: tier, fieldSize }) });

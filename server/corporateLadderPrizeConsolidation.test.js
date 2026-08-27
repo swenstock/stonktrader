@@ -49,8 +49,8 @@ assert.strictEqual(junior.reconciliation.prize,true);
 const free = computeFreerollPlan({fieldSize:100,reserveBalance:45500});
 assert.strictEqual(free.badgesAwarded,1);
 assert.strictEqual(free.badgeSpend,40000);
-assert.strictEqual(free.cashDistributed,5500);
-assert.strictEqual(free.reserveRemainder,0);
+assert.strictEqual(free.cashDistributed,0);
+assert.strictEqual(free.reserveRemainder,5500);
 assert.strictEqual(free.payouts.some(p=>p.ticketTier),false);
 
 console.log('Corporate Ladder Prize Consolidation math: PASS');

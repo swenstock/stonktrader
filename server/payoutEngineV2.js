@@ -195,7 +195,7 @@ function computePaidContest({ tierKey, fieldSize, poolUnallocatedStonk = 0 }) {
         payouts.push(badgeAward(rank, needed));
         remainingContest = money(remainingContest - needed);
         badgeContributions = money(badgeContributions + needed);
-        currentCarry = 0; // the 40K unit is consumed by issuance
+        currentCarry = money(Math.max(0, currentCarry - BADGE_FUNDING_UNIT)); // consume exactly one 40K carry unit
       } else {
         break;
       }
@@ -216,7 +216,7 @@ function computePaidContest({ tierKey, fieldSize, poolUnallocatedStonk = 0 }) {
         payouts.push(badgeAward(rank, needed));
         remainingContest = money(remainingContest - needed);
         badgeContributions = money(badgeContributions + needed);
-        currentCarry = 0;
+        currentCarry = money(Math.max(0, currentCarry - BADGE_FUNDING_UNIT));
       } else {
         break;
       }
@@ -277,18 +277,11 @@ function computeFreerollPlan({ fieldSize, reserveBalance, badgeFundingUnit = BAD
   for (let i = 0; i < badgesAwarded; i++) payouts.push(badgeAward(i + 1, badgeFundingUnit));
   reserve = money(reserve - badgesAwarded * badgeFundingUnit);
 
-  // No top-10% funding promise: whatever local reserve remains is simply
-  // distributed over a top-10%-sized prize band. Zero reserve means zero prize.
-  const cashPlaces = reserve > 0 ? Math.min(fieldSize, paidPlacesFor(fieldSize)) : 0;
-  if (cashPlaces > 0) {
-    const shares = splitResidualTopDown(reserve, cashPlaces);
-    shares.forEach((amount, i) => {
-      const rank = badgesAwarded + i + 1;
-      if (rank <= fieldSize && amount > 0) payouts.push(cashAward(rank, amount));
-    });
-  }
-
-  const cashDistributed = money(payouts.reduce((n, p) => n + p.stonkBonus, 0));
+  // Free Roll has no top-10% cash promise. It exists to accumulate funded
+  // Badge units. Any amount below the next complete 40,000-STONK Badge stays
+  // in the dedicated Free Roll reserve and rolls forward to future contests.
+  // There is deliberately no residual STONK payout.
+  const cashDistributed = 0;
   const badgeSpend = money(badgesAwarded * badgeFundingUnit);
   return {
     status: 'OK',
@@ -296,8 +289,8 @@ function computeFreerollPlan({ fieldSize, reserveBalance, badgeFundingUnit = BAD
     badgesAwarded,
     badgeSpend,
     cashDistributed,
-    reserveSpend: money(badgeSpend + cashDistributed),
-    reserveRemainder: money(Math.max(0, reserve - cashDistributed)),
+    reserveSpend: badgeSpend,
+    reserveRemainder: reserve,
     payouts,
   };
 }

@@ -15,28 +15,32 @@ function optionalAccountId(req) {
 
 function summarize(rows, accountId, source) {
   const fieldSize = rows.length;
-  const paidPlaces = fieldSize ? Math.max(1, Math.ceil(fieldSize * 0.10)) : 0;
+  const isFreeroll = source?.type === 'satellite' && source?.priceLevel === 'free';
+  const paidPlaces = isFreeroll ? 0 : (fieldSize ? Math.max(1, Math.ceil(fieldSize * 0.10)) : 0);
   const moneyLine = paidPlaces ? rows[paidPlaces - 1] : null;
-  const enriched = rows.map(r => ({
-    ...r,
-    isPrizeZone: paidPlaces > 0 && r.rank <= paidPlaces,
-    isMoneyLine: paidPlaces > 0 && r.rank === paidPlaces,
-    isMine: accountId != null && r.accountId === accountId,
-  }));
+  const enriched = rows.map(r => {
+    const actualFreePrize = isFreeroll && r.prizeType && r.prizeType !== 'none';
+    return {
+      ...r,
+      isPrizeZone: isFreeroll ? !!actualFreePrize : (paidPlaces > 0 && r.rank <= paidPlaces),
+      isMoneyLine: isFreeroll ? false : (paidPlaces > 0 && r.rank === paidPlaces),
+      isMine: accountId != null && r.accountId === accountId,
+    };
+  });
   const mine = enriched.filter(r => r.isMine);
   const best = mine[0] || null;
   let userPosition = null;
   if (best) {
-    const inside = best.rank <= paidPlaces;
+    const inside = isFreeroll ? !!best.isPrizeZone : best.rank <= paidPlaces;
     userPosition = {
       bestRank: best.rank,
       fieldSize,
       paidPlaces,
       insidePrizeZone: inside,
-      spotsInside: inside ? paidPlaces - best.rank : 0,
-      spotsToMoney: inside ? 0 : best.rank - paidPlaces,
-      pnlGapToMoney: moneyLine ? Number((moneyLine.pl - best.pl).toFixed(2)) : null,
-      pnlCushion: moneyLine && inside ? Number((best.pl - moneyLine.pl).toFixed(2)) : 0,
+      spotsInside: isFreeroll ? null : (inside ? paidPlaces - best.rank : 0),
+      spotsToMoney: isFreeroll ? null : (inside ? 0 : best.rank - paidPlaces),
+      pnlGapToMoney: isFreeroll ? null : (moneyLine ? Number((moneyLine.pl - best.pl).toFixed(2)) : null),
+      pnlCushion: isFreeroll ? null : (moneyLine && inside ? Number((best.pl - moneyLine.pl).toFixed(2)) : 0),
       entryCount: mine.length,
     };
   }
@@ -121,8 +125,9 @@ router.get('/contest/:id', (req,res) => {
   const contest=db.prepare('SELECT * FROM contests WHERE id=?').get(req.params.id);
   if(!contest)return res.status(404).json({error:'Contest not found'});
   const accountId=optionalAccountId(req);
-  const rows=contest.status==='resolved'?resolvedContestRows(contest.id):openContestRows(contest.id);
-  res.json(summarize(rows,accountId,{type:'contest',id:contest.id,name:'Main Event',status:contest.status,opensAt:contest.week_start,locksAt:contest.week_end}));
+  if (contest.status !== 'resolved') return res.status(410).json({code:'MAIN_EVENT_RETIRED',error:'Main Event is retired; only resolved historical results remain readable'});
+  const rows=resolvedContestRows(contest.id);
+  res.json(summarize(rows,accountId,{type:'historical_contest',id:contest.id,name:'Historical Main Event',status:contest.status,opensAt:contest.week_start,locksAt:contest.week_end}));
 });
 
 router.get('/sources', (req,res) => {
@@ -134,13 +139,8 @@ router.get('/sources', (req,res) => {
     FROM satellites WHERE satellites.status IN ('open','resolved','blocked')
     ORDER BY CASE satellites.status WHEN 'open' THEN 0 WHEN 'blocked' THEN 1 ELSE 2 END,
       COALESCE(satellites.resolved_at,satellites.locks_at) DESC LIMIT 100`).all();
-  const contests=db.prepare(`SELECT contests.id, contests.status, contests.week_start AS opensAt,
-      contests.week_end AS locksAt,
-      (SELECT COUNT(*) FROM contest_entries WHERE contest_id=contests.id) AS fieldSize
-    FROM contests WHERE contests.status IN ('open','resolved') ORDER BY contests.week_start DESC LIMIT 20`).all()
-    .map(c=>({...c,name:'Main Event',type:'contest'}));
   res.json({
-    contests,
+    contests: [],
     satellites:satellites.map(s=>({...s,type:'satellite'})),
   });
 });

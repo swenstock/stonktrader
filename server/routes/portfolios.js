@@ -70,14 +70,7 @@ function tradeAvailability(portfolioId) {
 
   const contest = contestForPortfolio(portfolioId);
   if (contest) {
-    if (contest.status !== "open") return { allowed:false, reason:"The Main Event is no longer open for trading.", now };
-    if (now.getTime() < new Date(contest.week_start).getTime() || now.getTime() >= new Date(contest.week_end).getTime()) {
-      return { allowed:false, reason:"The Main Event is outside its active week.", now };
-    }
-    if (!isCompressedTestContest(contest) && !regularMarketOpen(now)) {
-      return { allowed:false, reason:"US equity trading is closed. The Main Event resumes at the next regular-market open.", now };
-    }
-    return { allowed:true, now, type:"contest", source:contest };
+    return { allowed:false, reason:"Main Event has been retired. This portfolio is historical and read-only.", now, type:"historical_contest", source:contest };
   }
   return { allowed:false, reason:"This portfolio is not attached to an active SBC contest.", now };
 }

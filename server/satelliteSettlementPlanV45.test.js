@@ -22,7 +22,8 @@ assert.equal(trader.math.reconciliation.prize,true);
 const free=planFreeroll({ranked:ranked(100),reserveBalance:45500});
 assert.equal(free.math.badgesAwarded,1);
 assert.equal(free.math.badgeSpend,40000);
-assert.equal(free.math.cashDistributed,5500);
+assert.equal(free.math.cashDistributed,0);
+assert.equal(free.math.reserveRemainder,5500);
 assert.equal(free.awards.some(a=>a.ticketQuantity>0),false);
 
 console.log('satelliteSettlementPlanV45 tests passed');

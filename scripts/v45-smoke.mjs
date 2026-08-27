@@ -31,6 +31,15 @@ if (cfg.tiers.runner.playerPrice !== 100 || cfg.tiers.clerk.playerPrice !== 200 
 
 const buyer = await call('/auth/signup', { method:'POST', body:{displayName:`Buyer${stamp.slice(-5)}`,email:buyerEmail,password:'testpass123'} });
 const seller = await call('/auth/signup', { method:'POST', body:{displayName:`Seller${stamp.slice(-5)}`,email:sellerEmail,password:'testpass123'} });
+
+// ---- BACKEND LOCKDOWN / MAIN EVENT RETIREMENT ----
+await expectError('/contests/999999/enter', { method:'POST', token:buyer.token, body:{} }, '410');
+await expectError('/allocations', { method:'POST', token:buyer.token, body:{targetType:'contest',tierId:'main_event',allocations:[]} }, '410');
+const sourcesAfterRetirement = await call('/leaderboard-v45/sources', { token:buyer.token });
+if (Array.isArray(sourcesAfterRetirement.contests) && sourcesAfterRetirement.contests.length !== 0) throw new Error('Main Event must not appear as an active leaderboard source');
+const origin = base.replace(/\/api\/?$/, '');
+const retiredV45 = await fetch(origin + '/v45/index.html', { redirect:'follow' });
+if (!retiredV45.ok || new URL(retiredV45.url).pathname !== '/') throw new Error('Legacy /v45 frontend did not redirect to current root product');
 await call('/dev/fund', { method:'POST', token:buyer.token, body:{amount:20000} });
 await call('/dev/fund', { method:'POST', token:seller.token, body:{amount:20000} });
 
@@ -99,7 +108,7 @@ await call(`/ticket-market/offers/${offer.id}/buy`, { method:'POST', token:buyer
 const buyerAfterOffer = await call('/tickets', { token:buyer.token });
 if ((buyerAfterOffer.inventory.clerk?.owned || 0) !== 1) throw new Error('Clerk ticket did not transfer to offer buyer');
 const finalRunnerBook = await call('/ticket-market/book/runner');
-if (Number(finalRunnerBook.exchangeFeePct) !== 0) throw new Error('Default exchange fee must remain 0 until product decision');
+if (Number(finalRunnerBook.exchangeFeePct) !== 0.05) throw new Error('Canonical exchange fee must be 5%');
 
 // ---- TEST CLOCK + DETERMINISTIC SIM DATA ----
 const clock = await call('/test-clock', { method:'POST', token:buyer.token, body:{datetime:'2026-08-17T09:30'} });
@@ -113,9 +122,9 @@ const payout = await call('/dev/payout-preview?tier=trader&field=100');
 if (payout.status !== 'OK' || payout.paidPlaces !== 10 || !payout.reconciliation?.entry || !payout.reconciliation?.prize) {
   throw new Error('Trader-100 payout preview failed reconciliation');
 }
-const free = await call('/dev/payout-preview?tier=free&field=1000');
-if (free.paidPlaces !== 100 || free.ticketsRequired !== 200 || free.liabilityRequired !== 20000) {
-  throw new Error('Freeroll top-10% requirement is wrong');
+const free = await call('/dev/payout-preview?tier=free&field=1000&reserve=45500');
+if (free.badgesAwarded !== 1 || free.badgeSpend !== 40000 || free.cashDistributed !== 0 || free.reserveRemainder !== 5500) {
+  throw new Error('Freeroll carry-forward rule is wrong');
 }
 
 console.log('V45 end-to-end simulated smoke test passed');

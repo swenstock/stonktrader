@@ -5,8 +5,11 @@ const path = require("path");
 const cors = require("cors");
 const { exactV45Shell, EXPECTED_BYTES, EXPECTED_SHA256 } = require("./v45ExactShell");
 
-const useLegacySatellitePayout = String(process.env.PAYOUT_ENGINE_V45 || "v45").toLowerCase() === "legacy";
-process.env.PAYOUT_ENGINE_V45 = useLegacySatellitePayout ? "legacy" : "true";
+if (String(process.env.PAYOUT_ENGINE_V45 || 'v45').toLowerCase() === 'legacy') {
+  throw new Error('Legacy satellite payout engine is retired; PAYOUT_ENGINE_V45=legacy is no longer allowed');
+}
+const useLegacySatellitePayout = false;
+process.env.PAYOUT_ENGINE_V45 = 'true';
 if (process.env.TEST_MODE === "true" && !process.env.TEST_SATELLITE_MINUTES) process.env.TEST_SATELLITE_MINUTES = "20";
 require("./schemaV45").run();
 
@@ -35,6 +38,7 @@ const adminRoutes = require("./routes/admin");
 const testClockRoutes = require("./routes/testClock");
 const devRoutes = require("./routes/dev");
 const contestScheduler = require("./contestScheduler");
+const { retireOpenMainEvents } = require('./mainEventRetirementV45');
 const satelliteScheduler = useLegacySatellitePayout ? require("./satelliteScheduler") : require("./satelliteSchedulerV45");
 const marketOpenScheduler = require("./marketOpenScheduler");
 const marketQueueV14 = require("./marketQueueV14");
@@ -68,7 +72,12 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/test-clock", testClockRoutes);
 app.use("/api/dev", devRoutes);
 
-// Main Event retired: keep historical scheduler module readable, but do not open new Main Event contests.
+// Main Event is history-only. Refund/restore any stale open entries once, then
+// fail all future Main Event mutation paths closed.
+const mainEventRetirement = retireOpenMainEvents();
+if (mainEventRetirement.contestsRetired || mainEventRetirement.pendingAllocationsFailed) {
+  console.warn('Main Event retirement applied', mainEventRetirement);
+}
 satelliteScheduler.start();
 marketOpenScheduler.start();
 marketQueueV14.start();
@@ -125,6 +134,9 @@ app.get("/api/health", (req, res) => res.json({
   leaderboardPlacement: "v34-popup-only",
   ticketExchangeControls: "v36-prototype-orders-ticket-actions-scroll",
   badgeExchange: "stage4-real-badge-market",
+  exchangeFeePct: require("./economicsPolicyV45").EXCHANGE_FEE_PCT,
+  mainEvent: "retired-history-only",
+  freerollRemainder: "carry-forward",
   myTicketsCleanup: "v37-raw-text-removed",
   juniorCollectionUi: "stage4-v1",
 }));
@@ -143,6 +155,7 @@ servedShell = servedShell
 const exactV45WithEnhancements = Buffer.from(servedShell, "utf8");
 
 app.get(["/", "/v45-exact"], (req, res) => res.type("html").send(exactV45WithEnhancements));
+app.use("/v45", (_req, res) => res.redirect(302, "/"));
 app.use(express.static(path.join(__dirname, "..", "public")));
 
 const server = http.createServer(app);

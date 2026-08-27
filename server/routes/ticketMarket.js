@@ -3,9 +3,9 @@ const router = express.Router();
 const db = require('../db');
 const custodian = require('../custodian');
 const requireAuth = require('../middleware/requireAuth');
+const { EXCHANGE_FEE_PCT } = require('../economicsPolicyV45');
 
 const TICKET_TYPES = new Set(['runner','clerk','trader','junior']);
-const EXCHANGE_FEE_PCT = Math.max(0, Math.min(1, Number(process.env.TICKET_MARKET_FEE_PCT || 0)));
 
 function optionalAccountId(req) {
   const header = req.headers.authorization || '';

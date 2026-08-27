@@ -143,61 +143,13 @@ function applyPendingSatelliteAllocations(satellite) {
   }
 }
 
-function applyPendingContestAllocations(contest) {
-  const pending = db
-    .prepare(
-      "SELECT * FROM pending_allocations WHERE target_type='contest' AND target_tier_id='main_event' AND status='pending'"
-    )
-    .all();
-
-  for (const pa of pending) {
-    const account = db.prepare("SELECT * FROM accounts WHERE id = ?").get(pa.account_id);
-    const existingCount = db
-      .prepare("SELECT COUNT(*) as n FROM contest_entries WHERE contest_id = ? AND account_id = ?")
-      .get(contest.id, pa.account_id).n;
-
-    if (existingCount >= MAIN_EVENT_MAX_ENTRIES) {
-      db.prepare("UPDATE pending_allocations SET status='failed', fail_reason=? WHERE id=?").run(
-        "Already at the max entries for the Main Event",
-        pa.id
-      );
-      continue;
-    }
-
-    const ticket = db
-      .prepare("SELECT * FROM tickets WHERE account_id = ? AND status = 'unredeemed' ORDER BY created_at ASC LIMIT 1")
-      .get(pa.account_id);
-
-    if (!ticket && (!account || account.stonk_balance < contest.entry_fee)) {
-      db.prepare("UPDATE pending_allocations SET status='failed', fail_reason=? WHERE id=?").run(
-        "Not enough STONK at open (and no unredeemed ticket)",
-        pa.id
-      );
-      continue;
-    }
-
-    const label = `Main Event · Week of ${new Date(contest.week_start).toLocaleDateString()} (Entry ${existingCount + 1})`;
-    const portfolioId = createPortfolio(pa.account_id, label);
-    db.exec("BEGIN");
-    if (ticket) {
-      db.prepare(
-        "INSERT INTO contest_entries (contest_id, account_id, portfolio_id, entry_fee_paid, paid_with_ticket_id) VALUES (?, ?, ?, ?, ?)"
-      ).run(contest.id, pa.account_id, portfolioId, contest.entry_fee, ticket.id);
-      db.prepare(
-        "UPDATE tickets SET status = 'applied', applied_to_contest_id = ?, applied_at = ? WHERE id = ?"
-      ).run(contest.id, new Date().toISOString(), ticket.id);
-    } else {
-      custodian.debit(pa.account_id, contest.entry_fee, "contest_entry", { referenceType: "contest", referenceId: contest.id });
-      db.prepare(
-        "INSERT INTO contest_entries (contest_id, account_id, portfolio_id, entry_fee_paid) VALUES (?, ?, ?, ?)"
-      ).run(contest.id, pa.account_id, portfolioId, contest.entry_fee);
-    }
-    applyAllocationToPortfolio(portfolioId, JSON.parse(pa.allocations_json));
-    db.prepare(
-      "UPDATE pending_allocations SET status='applied', applied_to_contest_id=?, applied_at=? WHERE id=?"
-    ).run(contest.id, new Date().toISOString(), pa.id);
-    db.exec("COMMIT");
-  }
+function applyPendingContestAllocations(_contest) {
+  // Main Event is history-only. Any stale pending reservations are failed
+  // explicitly so no future scheduler change can silently create entries.
+  const info = db.prepare(`UPDATE pending_allocations
+    SET status='failed', fail_reason='Main Event retired'
+    WHERE target_type='contest' AND target_tier_id='main_event' AND status='pending'`).run();
+  return { retired: true, failedPending: Number(info.changes || 0) };
 }
 
 module.exports = {
