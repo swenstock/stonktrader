@@ -108,7 +108,7 @@ jobs:
             await browser.close();server.close();
           })().catch(e=>{console.error(e);server.close();process.exit(1)});
           EOF
-          node /tmp/stage-b-browser-proof.js | tee WORKSPACE_STAGE_B_BROWSER_PROOF.txt
+          NODE_PATH="$PWD/node_modules" node /tmp/stage-b-browser-proof.js | tee WORKSPACE_STAGE_B_BROWSER_PROOF.txt
       - name: Verify public Render service and attempt direct Render API evidence
         shell: bash
         run: |
