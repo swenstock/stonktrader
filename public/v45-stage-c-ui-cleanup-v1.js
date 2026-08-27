@@ -28,68 +28,51 @@ function canonicalTradeSignature(){
   const trades=Array.isArray(window.SBCAdvancedOrdersV15?.cache?.trades)?window.SBCAdvancedOrdersV15.cache.trades:[];
   return trades.map(t=>`${t.id||''}:${String(t.side||'')}:${String(t.symbol||'')}:${Number(t.quantity||0)}:${String(t.timestamp||'')}`).join('|');
 }
+function activeLocalPortfolio(){try{return typeof currentPortfolio==='function'?currentPortfolio():null;}catch(_){return null;}}
+function hydrateLocalFromBackend(snapshot){
+  const p=activeLocalPortfolio();if(!p||!snapshot)return false;
+  const holdings={};
+  for(const pos of Array.isArray(snapshot.positions)?snapshot.positions:[]){const symbol=String(pos.symbol||'').toUpperCase();if(symbol&&Number(pos.quantity)>0)holdings[symbol]={shares:Number(pos.quantity),avg:Number(pos.avgCost||pos.price||0)};}
+  p.id=Number(snapshot.id);p.portfolioId=Number(snapshot.id);p.cash=Number(snapshot.cash||0);p.holdings=holdings;p.__backendOwned=true;
+  if(Number.isFinite(Number(snapshot.totalValue))){p.value=Number(snapshot.totalValue);p.totalValue=Number(snapshot.totalValue);}
+  return true;
+}
 async function syncActiveBackendPortfolio(force=false){
   if(portfolioSyncBusy)return;
-  const api=window.SBCAdvancedOrdersV15,authority=window.SBCBackendAuthorityV1;
-  if(!api?.cache||!authority?.openPortfolio)return;
+  const api=window.SBCAdvancedOrdersV15,workspace=window.SBCWorkspacePortfolioV1;
+  if(!api?.cache||!workspace?.portfolioSnapshotById)return;
   const sig=canonicalTradeSignature();
   if(lastTradeSignature===null){lastTradeSignature=sig;if(!force)return;}
   const changed=sig!==lastTradeSignature;
   if(changed)lastTradeSignature=sig;
   if(!force&&!changed)return;
-  const id=Number(api.cache.portfolioId||window.activePortfolioId||0);
-  if(!(id>0))return;
+  const id=Number(api.cache.portfolioId||window.activePortfolioId||0);if(!(id>0))return;
   portfolioSyncBusy=true;
-  try{await authority.openPortfolio(id);}catch(_){}finally{portfolioSyncBusy=false;}
-}
-function schedulePortfolioSync(force=false){
-  if(force)forcePortfolioSync=true;
-  clearTimeout(portfolioSyncTimer);
-  portfolioSyncTimer=setTimeout(()=>syncActiveBackendPortfolio(forcePortfolioSync).finally(()=>{forcePortfolioSync=false;}),90);
-}
-function cleanupLegacyActivity(){
-  const blotter=$('#view-portfolio .orders-activity-blotter-v15');
-  if(!blotter)return;
-  $$('.desktop-orders-empty-v45',blotter).forEach(x=>x.remove());
-  ['#queuedOrders','#tradeHistory','#workingOrdersV45','.desktop-orders-tabs-v45','.orders-activity-tabs'].forEach(sel=>{
-    $$(sel,blotter).forEach(x=>{x.hidden=true;x.setAttribute('aria-hidden','true');x.style.setProperty('display','none','important');});
-  });
-  const legacyEmpty=/\bNo activity yet\b|\bNo recent activity yet\b|Your trade decisions will appear here|Completed buys, sells and triggered orders will appear here/i;
-  $$('*',blotter).forEach(x=>{
-    if(x.closest('.blotter-root-v15'))return;
-    const text=clean(x.textContent);
-    if(text&&text.length<180&&legacyEmpty.test(text)){
-      x.hidden=true;x.setAttribute('aria-hidden','true');x.style.setProperty('display','none','important');
+  try{
+    const snapshot=await workspace.portfolioSnapshotById(id);
+    if(Number(snapshot?.id)!==id)return;
+    if(hydrateLocalFromBackend(snapshot)){
+      if(typeof refreshTradeTicket==='function')refreshTradeTicket();
+      window.dispatchEvent(new CustomEvent('sbc:portfolio-synced',{detail:{portfolioId:id}}));
     }
-  });
-  $$('.blotter-body-v15',blotter).forEach(body=>{
-    if(body.querySelector('.blotter-row-v15'))$$('.blotter-empty-v15',body).forEach(x=>x.remove());
-  });
+  }catch(_){}finally{portfolioSyncBusy=false;}
+}
+function schedulePortfolioSync(force=false){if(force)forcePortfolioSync=true;clearTimeout(portfolioSyncTimer);portfolioSyncTimer=setTimeout(()=>syncActiveBackendPortfolio(forcePortfolioSync).finally(()=>{forcePortfolioSync=false;}),90);}
+function cleanupLegacyActivity(){
+  const blotter=$('#view-portfolio .orders-activity-blotter-v15');if(!blotter)return;
+  $$('.desktop-orders-empty-v45',blotter).forEach(x=>x.remove());
+  ['#queuedOrders','#tradeHistory','#workingOrdersV45','.desktop-orders-tabs-v45','.orders-activity-tabs'].forEach(sel=>{$$(sel,blotter).forEach(x=>{x.hidden=true;x.setAttribute('aria-hidden','true');x.style.setProperty('display','none','important');});});
+  const legacyEmpty=/\bNo activity yet\b|\bNo recent activity yet\b|Your trade decisions will appear here|Completed buys, sells and triggered orders will appear here/i;
+  $$('*',blotter).forEach(x=>{if(x.closest('.blotter-root-v15'))return;const text=clean(x.textContent);if(text&&text.length<180&&legacyEmpty.test(text)){x.hidden=true;x.setAttribute('aria-hidden','true');x.style.setProperty('display','none','important');}});
+  $$('.blotter-body-v15',blotter).forEach(body=>{if(body.querySelector('.blotter-row-v15'))$$('.blotter-empty-v15',body).forEach(x=>x.remove());});
   renderRecentWithCancelled();
 }
-function suppressBasketDuplicateConfirm(){
-  const basket=$('.bb19-overlay:not([hidden])'),confirm=$('#ta42Confirm');
-  if(!basket||!confirm)return;
-  if(/TRADE COMPLETE/i.test(clean(confirm.textContent)))confirm.remove();
-}
+function suppressBasketDuplicateConfirm(){const basket=$('.bb19-overlay:not([hidden])'),confirm=$('#ta42Confirm');if(!basket||!confirm)return;if(/TRADE COMPLETE/i.test(clean(confirm.textContent)))confirm.remove();}
 async function refreshCanonicalActivity(){
-  const api=window.SBCAdvancedOrdersV15;
-  if(!api?.refresh||!api?.renderBlotter)return;
-  try{
-    await api.refresh(true);
-    api.renderBlotter();
-    cleanupLegacyActivity();
-    renderRecentWithCancelled();
-    await syncActiveBackendPortfolio(forcePortfolioSync);
-    forcePortfolioSync=false;
-  }catch(_){}
+  const api=window.SBCAdvancedOrdersV15;if(!api?.refresh||!api?.renderBlotter)return;
+  try{await api.refresh(true);api.renderBlotter();cleanupLegacyActivity();renderRecentWithCancelled();await syncActiveBackendPortfolio(forcePortfolioSync);forcePortfolioSync=false;}catch(_){}
 }
-function scheduleRefresh(forcePortfolio=false){
-  if(forcePortfolio)forcePortfolioSync=true;
-  clearTimeout(refreshTimer);
-  refreshTimer=setTimeout(refreshCanonicalActivity,80);
-  setTimeout(refreshCanonicalActivity,420);
-}
+function scheduleRefresh(forcePortfolio=false){if(forcePortfolio)forcePortfolioSync=true;clearTimeout(refreshTimer);refreshTimer=setTimeout(refreshCanonicalActivity,80);setTimeout(refreshCanonicalActivity,420);}
 function urlOf(input){try{return typeof input==='string'?input:input?.url||'';}catch(_){return'';}}
 function methodOf(input,init){return String(init?.method||input?.method||'GET').toUpperCase();}
 function wrapFetch(){
@@ -100,11 +83,11 @@ function wrapFetch(){
     try{
       const url=urlOf(input),method=methodOf(input,init);
       if(response.ok&&method==='POST'&&/\/api\/portfolios\/\d+\/trades(?:\?|$)/.test(url))scheduleRefresh(true);
+      if(response.ok&&(method==='POST'||method==='PATCH'||method==='DELETE')&&/\/api\/advanced-orders-v15(?:\/\d+)?(?:\?|$)/.test(url))scheduleRefresh(false);
     }catch(_){}
     return response;
   };
-  wrapped.__stageCUiCleanupV1=true;
-  window.fetch=wrapped;
+  wrapped.__stageCUiCleanupV1=true;window.fetch=wrapped;
 }
 function run(){wrapFetch();cleanupLegacyActivity();suppressBasketDuplicateConfirm();renderRecentWithCancelled();schedulePortfolioSync(false);}
 new MutationObserver(()=>{cleanupLegacyActivity();suppressBasketDuplicateConfirm();renderRecentWithCancelled();schedulePortfolioSync(false);}).observe(document.documentElement,{childList:true,subtree:true});
