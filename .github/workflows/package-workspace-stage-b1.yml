@@ -48,14 +48,18 @@ jobs:
             sleep 5
           done
           curl -fsS --max-time 30 "https://stonk-broker-challenge.onrender.com/api/health?b1=$TARGET_SHA" -o WORKSPACE_STAGE_B1_LIVE_HEALTH.json
+          SIGNIN=FAIL; grep -Fq "SIGN IN TO TRADE" /tmp/live-b1.js && SIGNIN=PASS
+          TOKENKEY=FAIL; grep -Fq "localStorage.getItem('token')" /tmp/live-b1.js && TOKENKEY=PASS
+          AUTHBRIDGE=FAIL; grep -Fq "/api/auth/" /tmp/live-b1.js && AUTHBRIDGE=PASS
+          HEALTH=FAIL; test -s WORKSPACE_STAGE_B1_LIVE_HEALTH.json && HEALTH=PASS
           {
             echo "WORKSPACE CONSOLIDATION STAGE B.1 — PUBLIC PRODUCTION VERIFY"
             echo "target_merge=$TARGET_SHA"
-            echo "auth_bridge_asset=$([ "$OK" = 1 ] && echo PASS || echo FAIL)"
-            echo "sign_in_prompt=$(grep -Fq 'SIGN IN TO TRADE' /tmp/live-b1.js && echo PASS || echo FAIL)"
-            echo "canonical_token_key=$(grep -Fq \"localStorage.getItem('token')\" /tmp/live-b1.js && echo PASS || echo FAIL)"
-            echo "auth_endpoint_bridge=$(grep -Fq '/api/auth/' /tmp/live-b1.js && echo PASS || echo FAIL)"
-            echo "health_http=$(test -s WORKSPACE_STAGE_B1_LIVE_HEALTH.json && echo PASS || echo FAIL)"
+            if [ "$OK" = 1 ]; then echo "auth_bridge_asset=PASS"; else echo "auth_bridge_asset=FAIL"; fi
+            echo "sign_in_prompt=$SIGNIN"
+            echo "canonical_token_key=$TOKENKEY"
+            echo "auth_endpoint_bridge=$AUTHBRIDGE"
+            echo "health_http=$HEALTH"
             echo "REAL_LIVE_AUTHENTICATED_SELL_ALL=NOT_CLAIMED_PENDING_USER_CLICK"
           } > WORKSPACE_STAGE_B1_PRODUCTION_VERIFY.txt
           cat WORKSPACE_STAGE_B1_PRODUCTION_VERIFY.txt
