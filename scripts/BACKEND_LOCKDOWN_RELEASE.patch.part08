@@ -1,0 +1,41 @@
+@@ -123,13 +130,18 @@ function burnTierForNextUnitInTransaction(db, { burnId, accountId, config }) {
+   const tier = validateTierConfig(config);
+ 
+   const row = prepareBigInt(db, `
+-    SELECT quantity FROM sbc_prize_holdings
++    SELECT quantity, quantity_listed FROM sbc_prize_holdings
+     WHERE account_id = ? AND asset_type = ?
+   `).get(accountId, tier.sourceAssetType);
+-  const available = row ? row.quantity : 0n;
++  const total = row ? row.quantity : 0n;
++  const listed = row ? row.quantity_listed : 0n;
++  const available = total - listed;
+   if (available < tier.burnCount) {
+-    const err = new Error(`insufficient ${tier.sourceAssetType} units`);
++    const err = new Error(`insufficient available ${tier.sourceAssetType} units`);
+     err.code = 'INSUFFICIENT_TIER_UNITS';
++    err.totalUnits = total;
++    err.listedUnits = listed;
++    err.availableUnits = available;
+     throw err;
+   }
+ 
+@@ -143,7 +155,7 @@ function burnTierForNextUnitInTransaction(db, { burnId, accountId, config }) {
+   const holdingUpdate = prepareBigInt(db, `
+     UPDATE sbc_prize_holdings
+     SET quantity = quantity - ?, updated_at = CURRENT_TIMESTAMP
+-    WHERE account_id = ? AND asset_type = ? AND quantity >= ?
++    WHERE account_id = ? AND asset_type = ? AND quantity - quantity_listed >= ?
+   `).run(tier.burnCount, accountId, tier.sourceAssetType, tier.burnCount);
+ 
+   if (!(holdingUpdate.changes === 1 || holdingUpdate.changes === 1n)) {
+@@ -185,7 +197,8 @@ function burnTierForNextUnitInTransaction(db, { burnId, accountId, config }) {
+     targetAssetType: tier.targetAssetType,
+     sourceQuantityBurned: tier.burnCount,
+     targetQuantityFunded: TARGET_QUANTITY,
+-    remainingSourceUnits: available - tier.burnCount,
++    remainingSourceUnits: total - tier.burnCount,
++    remainingAvailableUnits: available - tier.burnCount,
+     reserveBucket: tier.reserveBucket,
+     reserveDebitSubunits: tier.reserveDebitSubunits,
+   };
