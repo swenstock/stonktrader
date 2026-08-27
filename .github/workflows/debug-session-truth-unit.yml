@@ -26,3 +26,4 @@ jobs:
           path: |
             unit-output.txt
             unit-exit-code.txt
+# temporary branch-only diagnostic; remove before merge
