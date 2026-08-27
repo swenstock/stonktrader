@@ -7,7 +7,7 @@ const TIER_BY_PRICE={free:'free',runner:'runner',low:'clerk',mid:'trader',high:'
 const SESSION_BY_CATEGORY={weekly_qualifier:'WEEKLY PORTFOLIO',full_day:'DAILY CHALLENGE',morning:'MORNING MARKET',afternoon:'AFTERNOON MARKET',hourly:'DEGEN HOURS',race_to_close:'DEGEN RACE TO THE CLOSE'};
 const TICKET_BY_PRICE={runner:'runner',low:'clerk',mid:'trader',high:'junior'};
 const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function token(){return localStorage.getItem('token')||'';}
 async function ensureAuth(){if(token())return token();const w=window.SBCWorkspacePortfolioV1;if(!w?.ownedPortfolios)throw new Error('Sign in is required.');await w.ownedPortfolios();if(!token())throw new Error('Sign in is required.');return token();}
 async function api(path,opts={}){const t=await ensureAuth();const r=await fetch(`/api${path}`,{...opts,headers:{'Content-Type':'application/json',Authorization:`Bearer ${t}`,...(opts.headers||{})},cache:'no-store'});const out=await r.json().catch(()=>({}));if(!r.ok)throw new Error(out.error||`Request failed (${r.status})`);return out;}
