@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 if(window.__sbcTradeReceiptV1)return;window.__sbcTradeReceiptV1=true;
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const qty=v=>{const n=Number(v);return Number.isFinite(n)?n.toLocaleString(undefined,{maximumFractionDigits:6}):''};
 const money=v=>{const n=Number(v);return Number.isFinite(n)&&n>0?'$'+n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):''};
 let batch=null;
