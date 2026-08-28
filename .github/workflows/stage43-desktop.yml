@@ -1,8 +1,7 @@
 name: Stage 43 Desktop Chart + Order UI
 
 on:
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   desktop-stage43:
