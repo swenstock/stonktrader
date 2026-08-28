@@ -52,7 +52,7 @@ function priceWindow(){
   let win=$('.stage43-price-window-v48',ticket);
   if(!win){win=document.createElement('section');win.className='stage43-price-window-v48';win.innerHTML='<header><div><small>ORDER CONDITIONS</small><b data-stage43-price-title>PRICE</b></div><button type="button" data-stage43-price-close aria-label="Close order condition window">×</button></header><div class="stage43-price-fields-v48"></div>';const grid=$('.desktop-order-grid-v45',ticket);grid?grid.after(win):adv.after(win);$('[data-stage43-price-close]',win).onclick=()=>{const market=$('[data-adv-type="market"]',ticket);market?.click();setTimeout(()=>syncPriceWindow(ticket),10)};}
   const host=$('.stage43-price-fields-v48',win);if(row.parentElement!==host)host.appendChild(row);
-  $$('[data-adv-type],[data-stop-mode]',ticket).forEach(b=>{if(b.dataset.stage43PriceBound)return;b.dataset.stage43PriceBound='1';b.addEventListener('click',()=>setTimeout(()=>syncPriceWindow(ticket),0));});
+  $$('[data-adv-type],[data-stop-mode]',ticket).forEach(b=>{if(b.dataset.stage43PriceBound)return;b.dataset.stage43PriceBound='1';b.addEventListener('click',()=>setTimeout(()=>{syncPriceWindow(ticket);const type=ticket.dataset.advType||'market';const input=type==='limit'?$('.adv-limit-price-v15',ticket):['stop','stop_limit'].includes(type)?$('.adv-stop-price-v15',ticket):null;if(input&&document.activeElement!==input)input.focus({preventScroll:true});},0));});
   syncPriceWindow(ticket);
 }
 function syncPriceWindow(ticket){
@@ -60,7 +60,6 @@ function syncPriceWindow(ticket){
   const title=$('[data-stage43-price-title]',win);if(type==='market'){win.hidden=true;return;}
   win.hidden=false;title.textContent=type==='limit'?'LIMIT PRICE':type==='stop'?'STOP LOSS':'STOP LOSS + LIMIT';
   const limit=$('.adv-limit-v15',win),stop=$('.adv-stop-v15',win);if(limit)limit.hidden=!(type==='limit'||type==='stop_limit');if(stop)stop.hidden=!(type==='stop'||type==='stop_limit');
-  if(type==='limit')$('.adv-limit-price-v15',win)?.focus();else $('.adv-stop-price-v15',win)?.focus();
 }
 
 function layoutCleanup(){
