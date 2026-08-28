@@ -1,7 +1,6 @@
 name: Stage 37 Basket Loader
 on:
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 jobs:
   basket-loader:
     runs-on: ubuntu-latest
