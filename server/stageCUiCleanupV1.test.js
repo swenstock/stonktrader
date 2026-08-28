@@ -14,7 +14,9 @@ assert(js.includes('SBCWorkspacePortfolioV1'),'portfolio rehydrate must use the 
 assert(js.includes('portfolioSnapshotById(id)'),'rehydrate must fetch the exact active backend portfolio without navigation');
 assert(!js.includes('authority.openPortfolio(id)'),'background rehydrate must not call the navigation/openPortfolio path');
 assert(js.includes('api.cache.portfolioId||window.activePortfolioId'),'rehydrate must preserve exact active portfolio identity');
-assert(!js.includes('holdings['),'cleanup must not fabricate or directly patch holdings');
+assert(js.includes('Array.isArray(snapshot.positions)?snapshot.positions:[]'),'local holdings must be rebuilt only from the exact backend snapshot positions');
+assert(js.includes('p.holdings=holdings'),'rehydrate must replace local holdings from the backend-derived map');
+assert(!js.includes('p.holdings[symbol]'),'cleanup must not incrementally invent or patch per-symbol holdings');
 assert(!js.includes('basketOrder:true'),'cleanup must not mutate basket/trade bodies');
 assert(!js.includes('JSON.stringify(body'),'cleanup must not rewrite trade request bodies');
 assert(js.includes("desktop-orders-empty-v45"),'legacy desktop empty state must be retired inside modern blotter');
