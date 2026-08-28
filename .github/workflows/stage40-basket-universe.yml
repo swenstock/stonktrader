@@ -1,7 +1,6 @@
 name: Stage 40 Basket Universe
 on:
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 jobs:
   basket-universe:
     runs-on: ubuntu-latest
