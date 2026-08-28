@@ -1,8 +1,7 @@
 name: Stage 35 Mobile Round Two
 
 on:
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   mobile-round-two:
