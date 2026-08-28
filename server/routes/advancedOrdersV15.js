@@ -116,7 +116,18 @@ router.patch('/:id', requireAuth, (req, res) => {
   db.prepare(`UPDATE market_queue_orders_v14
     SET quantity=?, percent=?, order_type=?, limit_price=?, stop_price=?, triggered_at=NULL, replaced_at=CURRENT_TIMESTAMP
     WHERE id=?`).run(nextQuantity, nextPercent, orderType, limitPrice, stopPrice, row.id);
-  res.json({ ok:true, order:dto(ownedOrder(row.id, req.account.id)) });
+
+  marketQueue.tick();
+  const current = ownedOrder(row.id, req.account.id);
+  if (current?.status === 'failed') {
+    return res.status(400).json({ error:current.fail_reason || 'Replacement could not be executed.' });
+  }
+  res.json({
+    ok:true,
+    filled:current?.status === 'executed',
+    queued:current?.status === 'pending',
+    order:current ? dto(current) : null,
+  });
 });
 
 router.delete('/:id', requireAuth, (req, res) => {
