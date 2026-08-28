@@ -61,12 +61,29 @@ router.post('/', requireAuth, (req, res) => {
     ensureAuditColumns();
     const queued = marketQueue.enqueueAdvanced(portfolioId, req.body || {});
     const typeLabel = queued.orderType.replace('_',' ').toUpperCase();
+    if (!queued.targetOpenAt) marketQueue.tick();
+    const current = ownedOrder(queued.id, req.account.id);
+    if (current?.status === 'failed') {
+      return res.status(400).json({ error:current.fail_reason || `${typeLabel} order could not be executed.` });
+    }
+    if (current?.status === 'executed') {
+      return res.status(200).json({
+        ok:true,
+        queued:false,
+        filled:true,
+        id:queued.id,
+        orderType:queued.orderType,
+        order:dto(current),
+        message:`${typeLabel} order filled immediately at $${Number(current.executed_price||0).toFixed(2)}.`,
+      });
+    }
     res.status(202).json({
       ok:true,
       queued:true,
       id:queued.id,
       orderType:queued.orderType,
       targetOpenAt:queued.targetOpenAt,
+      order:current?dto(current):null,
       message:queued.targetOpenAt
         ? `${typeLabel} order accepted. The market is currently closed, so SBC will begin monitoring it at the next eligible market open.`
         : `${typeLabel} order accepted. SBC is monitoring it against the live simulated quote.`,
