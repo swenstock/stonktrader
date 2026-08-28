@@ -1,7 +1,6 @@
 name: Stage 41 Desktop Refinement
 on:
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 jobs:
   refine:
     runs-on: ubuntu-latest
