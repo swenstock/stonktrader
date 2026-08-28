@@ -1,8 +1,7 @@
 name: Stage 44 Chart Scale + Pan
 
 on:
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   desktop-stage44:
