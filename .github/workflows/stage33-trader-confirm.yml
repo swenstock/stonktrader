@@ -1,8 +1,7 @@
 name: Stage 33 Trader Confirm
 
 on:
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   validate-trader-confirm:
