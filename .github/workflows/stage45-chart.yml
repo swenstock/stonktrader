@@ -1,7 +1,5 @@
 name: Stage 45 Chart Stability
 on:
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 jobs:
   chart-stage45:

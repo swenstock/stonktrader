@@ -1,10 +1,7 @@
 name: Stage 47 Header Analytics Strip
 
 on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [stage47-header-analytics-strip]
+  workflow_dispatch:
 
 jobs:
   validate:

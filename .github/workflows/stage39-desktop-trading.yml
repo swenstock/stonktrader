@@ -1,8 +1,7 @@
 name: Stage 39 Desktop Trading Workspace
 
 on:
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   desktop-trading:

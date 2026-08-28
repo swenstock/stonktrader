@@ -1,8 +1,7 @@
 name: Stage 36 Mobile My Contests + How
 
 on:
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   mobile-stage36:

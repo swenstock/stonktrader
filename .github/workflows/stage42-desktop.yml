@@ -1,7 +1,6 @@
 name: Stage 42 Basket Library + Desktop Layout
 on:
-  pull_request:
-    branches: [main]
+  workflow_dispatch:
 jobs:
   desktop-stage42:
     runs-on: ubuntu-latest
