@@ -1,7 +1,6 @@
 name: Stage 56 Native Analytics Signature
 on:
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
 jobs:
   validate-stage56:
     runs-on: ubuntu-latest
