@@ -25,6 +25,14 @@ assert(route.includes('if (!queued.targetOpenAt) marketQueue.tick();'), 'Executa
 assert(route.includes("current?.status === 'executed'"), 'Immediate advanced fills must return filled state to the client');
 assert(route.includes("current?.status === 'failed'"), 'Immediate advanced execution failures must surface instead of pretending to work');
 
+const patchMatch=route.match(/router\.patch\('\/:id'[\s\S]*?router\.delete/);
+assert(patchMatch,'Advanced replace route missing');
+assert(patchMatch[0].includes('triggered_at=NULL'), 'Replacing Stop/Stop-Limit must clear stale trigger state before re-evaluation');
+assert(patchMatch[0].includes('marketQueue.tick();'), 'Replacing Limit/Stop/Stop-Limit must immediately re-evaluate the new prices');
+assert(patchMatch[0].includes("filled:current?.status === 'executed'"), 'Replacement response must expose an immediate fill');
+assert(patchMatch[0].includes("queued:current?.status === 'pending'"), 'Non-marketable replacement must remain Working/pending');
+assert(patchMatch[0].indexOf('triggered_at=NULL') < patchMatch[0].indexOf('marketQueue.tick();'), 'Stop-Limit trigger reset must happen before immediate re-evaluation');
+
 const syncPriceMatch=stage43.match(/function syncPriceWindow\(ticket\)\{([\s\S]*?)\n\}/);
 assert(syncPriceMatch, 'Stage 43 price-window sync missing');
 assert(!syncPriceMatch[1].includes('.focus('), 'Passive price-window sync must never steal focus from ticker/order controls');
