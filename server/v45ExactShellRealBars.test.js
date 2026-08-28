@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const {
   exactV45Shell,
   applyRealChartDataPatch,
+  applyRealQuickTradePatch,
   REAL_BARS_PATCH_MARKER,
 } = require('./v45ExactShell');
 
@@ -80,7 +81,57 @@ function flushPromises() {
   assert.strictEqual(api.ensureRealBars('FAIL', '1m'), null, 'failed endpoint must continue falling back');
   assert.strictEqual(fetchCalls, 3, 'failed endpoint must remain retryable rather than poisoning cache');
 
-  console.log('Exact V45 real chart data integration behavior: PASS');
+  // Primary Quick Buy / Quick Sell must submit through real backend authority.
+  const quickIdempotent = applyRealQuickTradePatch(exactV45Shell);
+  assert.strictEqual(
+    crypto.createHash('sha256').update(quickIdempotent).digest('hex'),
+    crypto.createHash('sha256').update(exactV45Shell).digest('hex'),
+    'reapplying quick-trade patch must be byte-identical'
+  );
+  const submitStart=html.indexOf('async function submitPortfolioOrder(){');
+  const submitEnd=html.indexOf('function executeOrder(p,order){',submitStart);
+  assert(submitStart>=0&&submitEnd>submitStart,'must isolate patched Quick Trade submit function');
+  const submitSource=html.slice(submitStart,submitEnd).trim();
+  for(const required of ['workspace.submitTradeById(pid,body)','quantity:o.shares','percent:selectedTradePercent']){
+    assert(submitSource.includes(required),`Quick Trade must include ${required}`);
+  }
+  for(const forbidden of ['executeOrder(','p.queued.push','p.history.unshift','p.cash-=','p.cash+=','p.holdings[']){
+    assert(!submitSource.includes(forbidden),`Quick Trade must not retain local mutation: ${forbidden}`);
+  }
+
+  async function runQuickCase(mode,result){
+    const calls=[],events=[],timers=[];
+    const err={classList:{contains:()=>false,add:()=>{}},textContent:''};
+    const note={className:'',textContent:''};
+    const buttons={quickBuyBtn:{disabled:false},quickSellBtn:{disabled:false},submitTradeBtn:{disabled:false}};
+    const quickContext={
+      console,
+      currentPortfolio:()=>({id:321,cash:100000,holdings:{},queued:[],history:[]}),
+      proposedOrder:()=>({sym:'NVDA',shares:12.5}),
+      tradeInputMode:mode,tradeSide:'buy',selectedTradePercent:75,activePortfolioContext:{mode:'live',portfolioId:321},
+      window:{activePortfolioId:321,SBCWorkspacePortfolioV1:{submitTradeById:async(id,body)=>{calls.push({id,body});return result;}},dispatchEvent:e=>events.push(e)},
+      document:{getElementById:id=>id==='orderError'?err:id==='quickTradeNote'?note:buttons[id]||null},
+      CustomEvent:function(type,init){this.type=type;this.detail=init?.detail},
+      setTimeout:fn=>{timers.push(fn);return timers.length;},
+      refreshTradeTicket:()=>{},refreshQuickTrade:()=>{},String,Number
+    };
+    vm.createContext(quickContext);
+    vm.runInContext(`${submitSource}\nthis.submitPortfolioOrder=submitPortfolioOrder;`,quickContext);
+    const out=await quickContext.submitPortfolioOrder();
+    timers.forEach(fn=>fn());
+    return {calls,events,out,note};
+  }
+
+  const sharesCase=await runQuickCase('shares',{ok:true,symbol:'NVDA',side:'buy',quantity:12.5,price:100,queued:false});
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(sharesCase.calls)),[{id:321,body:{symbol:'NVDA',side:'buy',quantity:12.5}}]);
+  assert.strictEqual(sharesCase.out.queued,false);
+
+  const percentCase=await runQuickCase('percent',{ok:true,queued:true,message:'queued'});
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(percentCase.calls)),[{id:321,body:{symbol:'NVDA',side:'buy',percent:75}}]);
+  assert(percentCase.events.some(e=>e.type==='sbc:orders-change'),'queued Quick Trade must refresh canonical order activity');
+  assert.strictEqual(percentCase.note.textContent,'queued');
+
+  console.log('Exact V45 real chart + Quick Trade backend behavior: PASS');
 })().catch(err => {
   console.error(err);
   process.exit(1);
