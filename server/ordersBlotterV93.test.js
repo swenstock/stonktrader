@@ -3,6 +3,7 @@ const assert = require('assert');
 
 const ui = fs.readFileSync(require.resolve('../public/v45-advanced-orders-v15.js'), 'utf8');
 const route = fs.readFileSync(require.resolve('./routes/advancedOrdersV15.js'), 'utf8');
+const stage43 = fs.readFileSync(require.resolve('../public/v45-desktop-stage43-v48.js'), 'utf8');
 
 assert(ui.includes('data-blotter-tab="queued"'), 'Queue tab missing');
 assert(ui.includes('data-blotter-tab="working"'), 'Working Orders tab missing');
@@ -20,6 +21,14 @@ assert(route.includes("router.patch('/:id'"), 'Cancel/replace backend route miss
 assert(route.includes("order_type || 'market'"), 'Unified market/advanced order DTO missing');
 assert(route.includes("status='cancelled', cancelled_at=CURRENT_TIMESTAMP"), 'Cancellation audit timestamp missing');
 assert(route.includes('replaced_at=CURRENT_TIMESTAMP'), 'Replace audit timestamp missing');
+assert(route.includes('if (!queued.targetOpenAt) marketQueue.tick();'), 'Executable advanced orders must be evaluated immediately on submission');
+assert(route.includes("current?.status === 'executed'"), 'Immediate advanced fills must return filled state to the client');
+assert(route.includes("current?.status === 'failed'"), 'Immediate advanced execution failures must surface instead of pretending to work');
+
+const syncPriceMatch=stage43.match(/function syncPriceWindow\(ticket\)\{([\s\S]*?)\n\}/);
+assert(syncPriceMatch, 'Stage 43 price-window sync missing');
+assert(!syncPriceMatch[1].includes('.focus('), 'Passive price-window sync must never steal focus from ticker/order controls');
+assert(stage43.includes('focus({preventScroll:true})'), 'Intentional order-type selection may focus its price field without scrolling the workspace');
 
 // Behavioral regression: executions are represented by the authoritative trades
 // feed in Recent Activity. They must not enter the legacy fuzzy price matcher,
