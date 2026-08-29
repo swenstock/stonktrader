@@ -14,10 +14,12 @@ must(ui.includes('/v45-test-stonk-faucet-v1.js?v=1'),'TEST STONK faucet remains 
 must(faucet.includes("fetch('/api/dev/fund'")&&faucet.includes('amount=250000')&&faucet.includes("localStorage.getItem('token')")&&faucet.includes("id='fundTestStonk'")&&faucet.includes("textContent='+ TEST STONK'"),'TEST STONK control credits 250,000 through authenticated backend custodian faucet');
 must(faucet.includes("fetch('/api/dev/order-book'")&&faucet.includes("id='seedTestOrderBook'")&&faucet.includes("textContent='+ TEST ORDER BOOK'"),'TEST order-book control calls the backend QA depth seeder');
 must(!/localStorage\.setItem\([^\n]*stonk/i.test(faucet),'TEST STONK faucet does not fabricate a browser-local balance');
-must(stageC.includes('/v45-test-stonk-faucet-v1.js?v=2')&&stageC.includes('/v45-exchange-own-orders-v1.js?v=3'),'final direct UI owner bootstraps TEST STONK and simple own-order helper');
+must(stageC.includes('/v45-test-stonk-faucet-v1.js?v=2')&&stageC.includes('/v45-exchange-own-orders-v1.js?v=4'),'final direct UI owner bootstraps TEST STONK and stable own-order manager');
 must(own.includes("fetch('/api/ticket-market/mine'")&&own.includes('YOUR OFFER')&&own.includes('YOUR BID')&&own.includes('sbc-own-book-row'),'own active backend ticket orders are designated in their books');
-must(own.includes('button disabled')&&own.includes('You cannot trade against your own order'),'visible own orders cannot be self-traded');
-must(own.includes("• (${label})")&&!own.includes('border:2px solid ${accent}')&&!own.includes('box-shadow:0 0 0 1px ${accent} inset'),'user-owned orders use a simple inline designation without special flashing/highlight treatment');
+must(!own.includes('MutationObserver'),'own-order helper does not use mutation-observer reinsertion loops');
+must(own.includes('MANAGE ORDER')&&own.includes('CHANGE PRICE')&&own.includes('CANCEL ORDER'),'clicking an own order exposes explicit manage controls');
+must(own.includes("method:'PATCH'")&&own.includes("method:'DELETE'")&&own.includes('/api/ticket-market/offers/')&&own.includes('/api/ticket-market/bids/'),'own-order change and cancel use real backend ticket-market endpoints');
+must(own.includes("data-own-side")&&own.includes("data-own-id")&&own.includes("data-own-price")&&own.includes("Click to change price or cancel"),'own book rows carry stable backend management identity');
 must(own.includes('function sortBook(book,ascending)')&&own.includes('rowPrice(a)-rowPrice(b)')&&own.includes('rowPrice(b)-rowPrice(a)')&&own.includes('sortBook(ask,true)')&&own.includes('sortBook(bid,false)'),'visible offers sort low-to-high and bids high-to-low after own rows are inserted');
 must(own.includes("replace(/JR\\.?\\s*STONKBROKER/gi,'JR BROKER')")&&own.includes("replace(/JUNIOR\\s+STONK\\s*BROKER/gi,'JR BROKER')"),'visible junior tier market labels normalize to JR BROKER');
 must(own.includes("classList.add('tm36-book-scroll')")&&own.includes("overflowY='auto'")&&own.includes("['askBook','bidBook']"),'bid and offer books are vertically scrollable');
