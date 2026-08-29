@@ -17,7 +17,9 @@ const nativeAlert=window.alert?.bind(window);if(nativeAlert&&!window.alert.__sbc
 document.addEventListener('click',e=>{const edit=e.target?.closest?.('[data-tm36-edit]'),cancel=e.target?.closest?.('[data-tm36-cancel]');if(!edit&&!cancel)return;if(!e.target?.closest?.('#view-exchange'))return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation?.();if(edit)handleLegacyEdit(edit);else handleLegacyCancel(cancel);},true);
 function ensureRoutingFill(){if(window.__sbcExchangeRoutingFillV1||document.querySelector('script[data-sbc-exchange-routing-fill]'))return;const s=document.createElement('script');s.src='/v45-exchange-routing-fill-v1.js?v=1';s.setAttribute('data-sbc-exchange-routing-fill','1');document.head.appendChild(s);}
 function ensureTierIntegrity(){if(window.__sbcExchangeTierIntegrityV1||document.querySelector('script[data-sbc-exchange-tier-integrity]'))return;const s=document.createElement('script');s.src='/v45-exchange-tier-integrity-v1.js?v=1';s.setAttribute('data-sbc-exchange-tier-integrity','1');document.head.appendChild(s);}
+function ensureMyActivity(){if(window.__sbcExchangeMyActivityV1||document.querySelector('script[data-sbc-exchange-my-activity]'))return;const s=document.createElement('script');s.src='/v45-exchange-my-activity-v1.js?v=1';s.setAttribute('data-sbc-exchange-my-activity','1');document.head.appendChild(s);}
 window.SBCExchangeDialogV1={notice,confirm:confirmAction,promptPrice,close};
 ensureRoutingFill();
 ensureTierIntegrity();
+ensureMyActivity();
 })();
