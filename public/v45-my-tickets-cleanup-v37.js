@@ -40,7 +40,7 @@ function wireBasketLive(){
   updateBasketPreview();
 }
 function ensureSettlement(){
-  if(!window.__sbcTicketNativeHooksV41&&!document.querySelector('script[data-sbc-ticket-native-v41]')){const s=document.createElement('script');s.src='/v45-ticket-native-hooks-v41.js?v=47';s.dataset.sbcTicketNativeV41='1';document.head.appendChild(s);}
+  if(!window.__sbcTicketNativeHooksV41&&!document.querySelector('script[data-sbc-ticket-native-v41]')){const s=document.createElement('script');s.src='/v45-ticket-native-hooks-v41.js?v=48';s.dataset.sbcTicketNativeV41='1';document.head.appendChild(s);}
   if(!document.querySelector('link[data-sbc-ticket-settlement-v38]')){const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-ticket-settlement-v38.css?v=38';l.dataset.sbcTicketSettlementV38='1';document.head.appendChild(l);}
   if(!window.__sbcTicketSettlementV38&&!document.querySelector('script[data-sbc-ticket-settlement-v38]')){const s=document.createElement('script');s.src='/v45-ticket-settlement-v38.js?v=39';s.dataset.sbcTicketSettlementV38='1';document.head.appendChild(s);}
   if(!window.__sbcTicketRecentV40&&!document.querySelector('script[data-sbc-ticket-recent-v40]')){const s=document.createElement('script');s.src='/v45-ticket-recent-v40.js?v=40';s.dataset.sbcTicketRecentV40='1';document.head.appendChild(s);}
