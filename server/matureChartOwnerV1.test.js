@@ -32,6 +32,8 @@ assert(client.includes("kineticScroll:{mouse:false,touch:true}"),'desktop mouse 
 assert(client.includes("if(x>=r.width-72)"),'right price-axis wheel must have an independent interaction zone');
 assert(client.includes('ts.getVisibleLogicalRange()')&&client.includes('boundedLogicalRange(prior,bars.length)'),'data refresh must preserve a bounded manually moved viewport');
 assert(client.includes('subscribeVisibleLogicalRangeChange(enforceViewportBounds)'),'native panning must be bounded at the chart owner rather than by a second gesture layer');
+assert(client.includes('function viewportReady(v)')&&client.includes('!c||!v||!viewportReady(v)'),'hidden/zero-size workspaces must not own a mature chart yet');
+assert(client.includes('requestAnimationFrame(()=>requestAnimationFrame(ensureMounted))'),'workspace view transitions must wait for layout before chart ownership');
 assert(client.includes("window.addEventListener('sbc:active-symbol-change'"),'chart must subscribe to canonical symbol events');
 assert(!client.includes('window.chartSymbol')&&!client.includes('window.selectedSymbol')&&!client.includes('window.activeSymbol'),'dead global symbol guessing must be removed');
 assert(!client.includes('setInterval(()=>{install')&&!client.includes('setInterval(()=>ensureMounted'),'chart owner must not poll/remount the DOM');
