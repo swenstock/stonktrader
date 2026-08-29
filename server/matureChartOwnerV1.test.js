@@ -39,6 +39,9 @@ assert(!client.includes('window.chartSymbol')&&!client.includes('window.selected
 assert(!client.includes('setInterval(()=>{install')&&!client.includes('setInterval(()=>ensureMounted'),'chart owner must not poll/remount the DOM');
 assert(sync.includes("window.selectChartSymbol=wrapped"),'existing selectChartSymbol must remain the canonical setter seam');
 assert(sync.includes("new CustomEvent('sbc:active-symbol-change'"),'canonical setter must publish explicit active-symbol events');
+assert(sync.includes('function guardMatureStyleClick(e)'),'mature style controls must be intercepted before legacy chart style handlers');
+assert(sync.includes("state.chartType=style==='LINE'?'line':'candles'"),'Candles/Line controls must directly change the mature chart series owner');
+assert(sync.includes('function installTickCandleBridge()'),'1s chart must repair doji-only legacy tick candles before mature rendering');
 assert(stage45.includes('if(window.__sbcMatureChartOwnerV1)return;'),'legacy Stage45 gestures must retire when mature owner is active');
 assert(server.includes('/vendor/lightweight-charts-4.2.3.js'),'server must serve pinned local chart library');
 assert(server.includes('/v45-active-symbol-sync-v1.js'),'server must serve active-symbol bridge');
