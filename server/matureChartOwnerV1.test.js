@@ -1,6 +1,7 @@
 const assert=require('assert');
 const fs=require('fs');
 const {normalizeTimeframe,priceWheelFactor,boundedLogicalRange,mapApiBars,smaData,emaData}=require('../public/v45-mature-chart-owner-v1.js');
+const quoteBarsTest=require('./routes/quoteBars.js')._test;
 
 assert.strictEqual(normalizeTimeframe('1H'),'1h');
 assert.strictEqual(normalizeTimeframe('1D'),'1D');
@@ -21,10 +22,17 @@ assert.strictEqual(bars.length,2);
 assert.strictEqual(smaData(bars,2).length,1);
 assert.strictEqual(emaData(bars,2).length,2);
 
+const tenDaysMs=10*24*60*60*1000;
+assert.strictEqual(quoteBarsTest.LOOKBACK_MULTIPLIER_BY_INTERVAL['1m'],60,'1m raw lookback must span enough off-hours/weekend time to reach the latest regular session');
+const saturday=Date.parse('2026-08-29T17:00:00Z');
+const oneMinuteFrom=quoteBarsTest.alignedLookbackStart(saturday,240,60000,quoteBarsTest.LOOKBACK_MULTIPLIER_BY_INTERVAL['1m']);
+assert.strictEqual(saturday-oneMinuteFrom,tenDaysMs,'240 one-minute bars at multiplier 60 must request a 10-day raw window before regular-session filtering');
+
 const client=fs.readFileSync('public/v45-mature-chart-owner-v1.js','utf8');
 const sync=fs.readFileSync('public/v45-active-symbol-sync-v1.js','utf8');
 const stage45=fs.readFileSync('public/v45-desktop-stage45-v50.js','utf8');
 const server=fs.readFileSync('server/index.js','utf8');
+const quoteBars=fs.readFileSync('server/routes/quoteBars.js','utf8');
 assert(client.includes('window.LightweightCharts.createChart'),'visible chart must be owned by vendored Lightweight Charts');
 assert(client.includes("handleScroll:{mouseWheel:false,pressedMouseMove:true"),'plot drag must be native library panning and wheel must be reserved for scale');
 assert(client.includes("handleScale:{mouseWheel:true"),'plot wheel must use native time-scale zoom');
@@ -46,6 +54,7 @@ assert(sync.includes('reapplyPreferredStyle()'),'timeframe/recovery lifecycle mu
 assert(sync.includes('function installTickCandleBridge()'),'1s chart must repair doji-only legacy tick candles before mature rendering');
 assert(sync.includes("state.timeframe!=='1m'")&&sync.includes('state.rangeGuard=true')&&sync.includes('state.rangeGuard=false'),'1m native pointer drag must temporarily release the live logical-range clamp without becoming a second gesture owner');
 assert(sync.includes("document.addEventListener('pointerdown',beginOneMinuteNativeDrag,true)")&&sync.includes("document.addEventListener('pointerup',releaseOneMinuteNativeDrag,true)"),'1m clamp release must follow the native pointer gesture lifecycle');
+assert(quoteBars.includes('LOOKBACK_MULTIPLIER_BY_INTERVAL')&&quoteBars.includes('"1m": 60'),'1m endpoint must retain the extended off-hours lookback');
 assert(stage45.includes('if(window.__sbcMatureChartOwnerV1)return;'),'legacy Stage45 gestures must retire when mature owner is active');
 assert(server.includes('/vendor/lightweight-charts-4.2.3.js'),'server must serve pinned local chart library');
 assert(server.includes('/v45-active-symbol-sync-v1.js'),'server must serve active-symbol bridge');
