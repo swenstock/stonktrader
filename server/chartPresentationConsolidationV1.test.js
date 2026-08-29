@@ -54,7 +54,7 @@ assert(shell.includes('const panBars=Math.max(0,Math.min(maxOffset,Math.round(Nu
 assert(shell.includes('const data=fullData.slice(Math.max(0,end-visibleCount),end)'), 'renderer must pan by slicing source history, not moving pixels');
 assert(shell.includes('class=\"sbc-plot-body-v1\"')&&shell.includes('transform=\"translate(${dragOffsetX} 0)\"'), 'drag preview must move only the clipped plot body inside fixed axes/frame');
 assert(shell.includes('clipPath id=\"sbcPlotClipV1\"'), 'plot-body drag preview must be clipped to the chart plotting rectangle');
-assert(server.includes('/v45-desktop-stage45-v50.js?v=55'), 'served grab-pan asset must be cache-busted');
+assert(server.includes('/v45-desktop-stage45-v50.js?v=56'), 'served grab-pan asset must be cache-busted');
 assert(!stageC.includes('new MutationObserver'), 'Stage C observer retirement must remain intact');
 console.log('Chart presentation consolidation v1: PASS');
 // Grab-pan acceptance: plot follows pointer continuously, then commits to the historical bar window on release.
