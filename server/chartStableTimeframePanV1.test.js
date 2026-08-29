@@ -16,3 +16,4 @@ assert(quoteBars.includes("if (interval !== '1D') bars = bars.filter(isRegularSe
 assert(quoteBars.includes("const lookbackMultiplier = interval === '1D' ? 1 : 5;"),'intraday lookback must be widened before filtering so enough session bars remain');
 
 console.log('Stable timeframe + pan regression v1: PASS');
+// User-authored CI trigger: preserve drag preview across repaints and keep intraday bars inside regular NYSE session geometry.
