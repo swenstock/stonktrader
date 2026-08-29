@@ -5,6 +5,8 @@ const ui = fs.readFileSync(require.resolve('../public/v45-advanced-orders-v15.js
 const route = fs.readFileSync(require.resolve('./routes/advancedOrdersV15.js'), 'utf8');
 const stage43 = fs.readFileSync(require.resolve('../public/v45-desktop-stage43-v48.js'), 'utf8');
 const stage43Css = fs.readFileSync(require.resolve('../public/v45-desktop-stage43-v48.css'), 'utf8');
+const workstation = fs.readFileSync(require.resolve('../public/v45-chart-workstation-v1.js'), 'utf8');
+const workstationCss = fs.readFileSync(require.resolve('../public/v45-chart-workstation-v1.css'), 'utf8');
 
 assert(ui.includes('data-blotter-tab="queued"'), 'Queue tab missing');
 assert(ui.includes('data-blotter-tab="working"'), 'Working Orders tab missing');
@@ -38,13 +40,17 @@ const syncPriceMatch=stage43.match(/function syncPriceWindow\(ticket\)\{([\s\S]*
 assert(syncPriceMatch, 'Stage 43 price-window sync missing');
 assert(!syncPriceMatch[1].includes('.focus('), 'Passive price-window sync must never steal focus from ticker/order controls');
 assert(stage43.includes('focus({preventScroll:true})'), 'Intentional order-type selection may focus its price field without scrolling the workspace');
-assert(stage43.includes("const timeNames=['TICK','1m','5m','15m','1h','1D']"), 'Chart must define the compact inline timeframe set');
-assert(stage43.includes('data-stage43-time-v49') && stage43.includes('clickNative(toolbar,b.dataset.stage43TimeV49)'), 'Inline timeframe buttons must proxy the native chart actions');
+assert(!stage43.includes("const timeNames=['TICK','1m','5m','15m','1h','1D']"), 'Stage 43 must not recreate the retired duplicate timeframe toolbar');
+assert(!stage43.includes('data-stage43-time-v49') && !stage43.includes('data-stage43-chart-action'), 'Stage 43 must not proxy visible chart controls');
+assert(workstation.includes("['TICK','1m','5m','15m','1h','1D']"), 'Chart Workstation must define the one compact timeframe set');
+assert(workstation.includes('data-cw-time') && workstation.includes('clickTime(b.dataset.cwTime)'), 'Chart Workstation timeframe buttons must invoke native chart timeframe authority');
+assert(workstation.includes("bar.dataset.chartPresentationOwner='workstation-v1'"), 'Chart Workstation must mark itself as the sole visible chart presentation owner');
 assert(stage43.includes('[data-panel="recent"],[data-panel="fills"]'), 'Recent Activity and Fills rows must support order-detail drilldown');
 assert(stage43.includes('ORDER INSTRUCTIONS') && stage43.includes('EXECUTION'), 'Order detail must separate instructions from execution');
 assert(stage43.includes('o.limitPrice') && stage43.includes('o.stopPrice'), 'Advanced order detail must retain Limit/Stop/Stop-Limit instruction prices');
 assert(stage43.includes('o.triggeredAt') && stage43.includes('o.executedPrice'), 'Advanced order detail must expose trigger and fill information');
-assert(stage43Css.includes('.sbc-order-detail-v1') && stage43Css.includes('.stage43-time-strip-v49'), 'Order detail modal and compact chart toolbar styles must be present');
+assert(stage43Css.includes('.sbc-order-detail-v1') && !stage43Css.includes('.stage43-time-strip-v49'), 'Order detail modal must remain while retired Stage43 timeframe styling stays removed');
+assert(workstationCss.includes('.cw-timeframes-v1'), 'The one visible chart toolbar must be styled by Chart Workstation');
 
 // Behavioral regression: executions are represented by the authoritative trades
 // feed in Recent Activity. They must not enter the legacy fuzzy price matcher,

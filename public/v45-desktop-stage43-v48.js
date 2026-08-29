@@ -12,31 +12,10 @@ function chartControls(){
   card.classList.add('stage43-chart-v48');
   $$('.desktop-chart-head-actions-v45',card).forEach(x=>x.remove());
   document.body.classList.remove('desktop-chart-focus-v45');card.classList.remove('desktop-chart-focus-card-v45','chart-tools-open-v45');
-  const toolbar=$('.chart-toolbar',card);
-  if(!toolbar)return;
-  const nativeButtons=$$('button',toolbar);
-  const timeNames=['TICK','1m','5m','15m','1h','1D'];
-  const timeButtons=nativeButtons.filter(b=>timeNames.some(x=>norm(b.textContent)===norm(x)));
-  const typeButtons=$$('button',card).filter(b=>['CANDLES','LINE'].includes(norm(b.textContent)));
-  let dock=$('.stage43-chart-controls-v48',card);
-  if(!dock){
-    dock=document.createElement('div');dock.className='stage43-chart-controls-v48';
-    dock.innerHTML=`<div class="stage43-time-strip-v49">${timeNames.map(x=>`<button type="button" data-stage43-time-v49="${x}">${x==='TICK'?'1s':x}</button>`).join('')}</div><details class="stage43-chart-tools-v48"><summary>CHART TOOLS <span>⌄</span></summary><div class="stage43-tools-menu-v48"><section><small>DISPLAY</small><button type="button" data-stage43-chart-action="CANDLES">CANDLES</button><button type="button" data-stage43-chart-action="LINE">LINE</button></section><section><small>INDICATORS</small><button type="button" data-stage43-chart-action="VOL">VOLUME</button><button type="button" data-stage43-chart-action="MA">MA</button><button type="button" data-stage43-chart-action="EMA">EMA</button></section><section><small>VIEW</small><button type="button" data-stage43-chart-action="GRID">GRID</button><button type="button" data-stage43-chart-action="CROSSHAIR">CROSSHAIR</button></section></div></details>`;
-    toolbar.before(dock);
-    $$('[data-stage43-time-v49]',dock).forEach(b=>b.onclick=()=>{clickNative(toolbar,b.dataset.stage43TimeV49);setTimeout(syncChartControls,20);});
-    $$('[data-stage43-chart-action]',dock).forEach(b=>b.onclick=()=>{const label=b.dataset.stage43ChartAction;if(!clickNative(card,label)&&label==='VOL')clickNative(card,'VOLUME');setTimeout(syncChartControls,20)});
-  }
-  toolbar.classList.add('stage43-native-chart-toolbar-v48');
-  typeButtons.forEach(b=>b.classList.add('stage43-native-chart-type-v48'));
-  const pop=$('.desktop-chart-tools-popover-v45',card);if(pop)pop.classList.add('stage43-old-tools-retired-v48');
+  // Chart Workstation V1 is the sole visible chart-control owner. Stage 43 no longer
+  // creates a proxy timeframe/tools toolbar or hides native controls on its behalf.
+  $('.stage43-chart-controls-v48',card)?.classList.add('stage43-chart-controls-retired-v49');
   deDupeChartLabels(card);
-  syncChartControls();
-}
-function syncChartControls(){
-  const card=$('#view-portfolio .chart-trade-card'),dock=$('.stage43-chart-controls-v48',card),toolbar=$('.chart-toolbar',card);if(!card||!dock||!toolbar)return;
-  const timeButtons=$$('button',toolbar).filter(b=>['TICK','1M','5M','15M','1H','1D'].includes(norm(b.textContent))),active=norm(activeText(timeButtons,''));
-  $$('[data-stage43-time-v49]',dock).forEach(b=>b.classList.toggle('active',norm(b.dataset.stage43TimeV49)===active));
-  $$('[data-stage43-chart-action]',dock).forEach(b=>{const wanted=b.dataset.stage43ChartAction;const native=$$('button',card).find(x=>norm(x.textContent)===(wanted==='VOL'?'VOL':wanted)&&!x.closest('.stage43-chart-controls-v48'));b.classList.toggle('active',!!native&&(native.classList.contains('active')||native.getAttribute('aria-pressed')==='true'));});
 }
 function deDupeChartLabels(card){
   const candidates=$$('small,span,div',card).filter(x=>x.children.length===0);

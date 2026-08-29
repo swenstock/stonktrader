@@ -18,7 +18,7 @@ function flushPromises() {
   assert.strictEqual((html.match(/<\/html>/g) || []).length, 1, 'shell must remain structurally intact');
   assert.strictEqual((html.split(REAL_BARS_PATCH_MARKER).length - 1), 1, 'real-bars block must be inserted exactly once');
   assert.strictEqual((html.split('const real=ensureRealBars(sym,tf);').length - 1), 1, 'generateOHLC integration must exist exactly once');
-  assert(html.includes("if(real&&real.length)return real;\n  const n=timeframeBars(tf);"), 'real bars must precede the untouched synthetic fallback');
+  assert(html.includes("if(real&&real.length)return real.slice(-timeframeBars(tf));\n  const n=timeframeBars(tf);"), 'real bars must remain authoritative while obeying the visible presentation window before synthetic fallback');
 
   const idempotent = applyRealChartDataPatch(exactV45Shell);
   assert.strictEqual(

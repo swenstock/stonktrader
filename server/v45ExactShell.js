@@ -95,6 +95,24 @@ function applyLegacyOrdersSurfaceRetirementPatch(html) {
   return Buffer.from(source,'utf8');
 }
 
+const CHART_PRESENTATION_TUNING_MARKER = '/* SBC CHART PRESENTATION TUNING V1 */';
+function applyChartPresentationTuning(html) {
+  let source = Buffer.isBuffer(html) ? html.toString("utf8") : String(html);
+  if (source.includes(CHART_PRESENTATION_TUNING_MARKER)) return Buffer.from(source, "utf8");
+  const replacements = [
+    ["function timeframeBars(tf){\n  return tf==='tick'?70:tf==='1m'?60:tf==='5m'?60:tf==='15m'?52:tf==='1h'?48:40;\n}", "/* SBC CHART PRESENTATION TUNING V1 */\nfunction timeframeBars(tf){\n  return tf==='tick'?46:tf==='1m'?44:tf==='5m'?42:tf==='15m'?40:tf==='1h'?36:32;\n}"],
+    ["if(real&&real.length)return real;", "if(real&&real.length)return real.slice(-timeframeBars(tf));"],
+    ["const volH=chartPrefs.volume?72:0;", "const volH=chartPrefs.volume?50:0;"],
+    ["const candleW=Math.max(2,Math.min(8,xStep*.62));", "const candleW=Math.max(3,Math.min(11,xStep*.72));"],
+    ["stroke-width=\"1\"", "stroke-width=\"1.15\""],
+  ];
+  for (const [from,to] of replacements) {
+    if (!source.includes(from)) throw new Error(`Exact V45 chart presentation tuning compatibility failure: ${from}`);
+    source = source.replace(from,to);
+  }
+  return Buffer.from(source,"utf8");
+}
+
 const QUICK_TRADE_ORDER_ANCHOR = "function quickTradeOrder(side){";
 const QUICK_TRADE_SUBMIT_ANCHOR = "function submitPortfolioOrder(){";
 const QUICK_TRADE_EXECUTE_ANCHOR = "function executeOrder(p,order){";
@@ -216,7 +234,7 @@ function buildExactV45Shell() {
   if (html.length !== EXPECTED_BYTES || sha256 !== EXPECTED_SHA256) {
     throw new Error(`Exact V45 integrity failure: ${html.length} bytes ${sha256}`);
   }
-  return applyLegacyOrdersSurfaceRetirementPatch(applyRealQuickTradePatch(applyRealChartDataPatch(html)));
+  return applyChartPresentationTuning(applyLegacyOrdersSurfaceRetirementPatch(applyRealQuickTradePatch(applyRealChartDataPatch(html))));
 }
 
 const exactV45Shell = buildExactV45Shell();
@@ -230,4 +248,6 @@ module.exports = {
   REAL_BARS_PATCH_MARKER,
   applyLegacyOrdersSurfaceRetirementPatch,
   LEGACY_ORDERS_SURFACE_PATCH_MARKER,
+  applyChartPresentationTuning,
+  CHART_PRESENTATION_TUNING_MARKER,
 };

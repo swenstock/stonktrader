@@ -1,12 +1,12 @@
 {
   "name": "stonk-paper-trading",
   "version": "1.0.0",
-  "description": "Multi-user paper trading contest platform — real accounts, simulated/live-ready quotes, positions, leaderboard, and contest lifecycle.",
+  "description": "Multi-user paper trading contest platform \u2014 real accounts, simulated/live-ready quotes, positions, leaderboard, and contest lifecycle.",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
-    "test": "npm run test:advanced-order-receipt-positions-v1 && npm run test:stage-c-ui-cleanup-v1 && npm run test:stage-c-recent-activity-authority && npm run test:receipt-basket-cleanup-v5 && npm run test:basket-real-execution-stage-b && npm run test:entry-eligibility-truth-v1 && npm run test:session-leaderboard-truth-v1 && npm run test:prototype-account-seed-v1 && npm run test:auth-account-provisioning-v1 && npm run test:backend-authority-v1 && npm run test:workspace-stage-b2 && npm run test:workspace-stage-b1 && npm run test:workspace-stage-b && npm run test:workspace-stage-a && npm run test:orders-activity-panel && npm run test:backend-lockdown && npm run test:ticket-exchange-stage4 && npm run test:badge-quantity-lock && npm run test:ticket-exchange-stage2 && npm run test:ticket-exchange-stage1 && npm run test:payout && npm run test:settlement && npm run test:settlement-db && npm run test:corporate-ladder && npm run test:ticket-burn && npm run test:freeroll-route-funding && npm run test:scheduler-v45 && npm run test:freeroll-reserve && npm run test:rake && npm run test:quotes && npm run test:clock && npm run test:orders-blotter && npm run test:chart-shell-real-bars && npm run test:chart-stage2 && npm run test:chart-stage3 && npm run test:chart-stage4 && npm run test:chart-stage4-drawings && npm run test:chart-stage5 && npm run test:chart-stage6 && npm run test:chart-stage6-overlays && npm run test:chart-stage103-axis-lock",
+    "test": "npm run test:chart-presentation-consolidation-v1 && npm run test:advanced-order-receipt-positions-v1 && npm run test:stage-c-ui-cleanup-v1 && npm run test:stage-c-recent-activity-authority && npm run test:receipt-basket-cleanup-v5 && npm run test:basket-real-execution-stage-b && npm run test:entry-eligibility-truth-v1 && npm run test:session-leaderboard-truth-v1 && npm run test:prototype-account-seed-v1 && npm run test:auth-account-provisioning-v1 && npm run test:backend-authority-v1 && npm run test:workspace-stage-b2 && npm run test:workspace-stage-b1 && npm run test:workspace-stage-b && npm run test:workspace-stage-a && npm run test:orders-activity-panel && npm run test:backend-lockdown && npm run test:ticket-exchange-stage4 && npm run test:badge-quantity-lock && npm run test:ticket-exchange-stage2 && npm run test:ticket-exchange-stage1 && npm run test:payout && npm run test:settlement && npm run test:settlement-db && npm run test:corporate-ladder && npm run test:ticket-burn && npm run test:freeroll-route-funding && npm run test:scheduler-v45 && npm run test:freeroll-reserve && npm run test:rake && npm run test:quotes && npm run test:clock && npm run test:orders-blotter && npm run test:chart-shell-real-bars && npm run test:chart-stage2 && npm run test:chart-stage3 && npm run test:chart-stage4 && npm run test:chart-stage4-drawings && npm run test:chart-stage5 && npm run test:chart-stage6 && npm run test:chart-stage6-overlays && npm run test:chart-stage103-axis-lock",
     "test:payout": "node server/payoutEngineV2.test.js",
     "test:settlement": "node server/satelliteSettlementPlanV45.test.js",
     "test:settlement-db": "node server/satelliteSettlementExecutorV45.test.js",
@@ -47,7 +47,8 @@
     "test:receipt-basket-cleanup-v5": "node server/receiptBasketDeadCodeCleanupV5.test.js",
     "test:stage-c-recent-activity-authority": "node server/stageCRecentActivityAuthority.test.js",
     "test:stage-c-ui-cleanup-v1": "node server/stageCUiCleanupV1.test.js",
-    "test:advanced-order-receipt-positions-v1": "node server/advancedOrderReceiptPositionsV1.test.js"
+    "test:advanced-order-receipt-positions-v1": "node server/advancedOrderReceiptPositionsV1.test.js",
+    "test:chart-presentation-consolidation-v1": "node server/chartPresentationConsolidationV1.test.js"
   },
   "engines": {
     "node": ">=22.5.0"
