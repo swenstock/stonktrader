@@ -1,0 +1,65 @@
+name: Claude Handoff Package
+
+on:
+  push:
+    branches:
+      - claude-handoff-112ddd
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Write Claude handoff
+        run: |
+          cat > CLAUDE_HANDOFF_112ddd.md <<'EOF'
+          # Stonk Broker Challenge — Claude Handoff
+
+          Exact production-target source checkpoint: `112ddd2bf01648b324fd9eeb91123b0536d89a9b`
+
+          ## Read this first
+          This ZIP is the exact SBC repository source at the checkpoint above, plus this handoff note. Do not resurrect superseded pricing/economics, fake portfolio state, old chart gesture owners, or retired chart implementations.
+
+          ## Current chart state
+          The mature desktop chart is owned by vendored TradingView Lightweight Charts 4.2.3. Pan/grab, wheel time-density zoom, price-axis scaling, timeframe switching, truthful fallback, stable simulated candles, and Candles/Line style persistence are now working materially better in live QA.
+
+          PR sequence leading here: #170 mature chart owner; #171 truthful fallback; #172 bounded workspace/harness work; #173/#174 timeframe host survival/recovery; #175 stable/cached simulated bars; #176 short-timeframe candle bodies + style ownership; #177 visible style buttons; #178 style persistence across timeframe reloads; #179 preserve chart viewport across post-trade portfolio rehydration.
+
+          ## Latest live-QA issue addressed in #179
+          After a successful Quick Buy receipt, portfolio rehydration re-published the same active symbol and the chart snapped back to default viewport framing. #179 suppresses redundant same-symbol workspace/chart-selector events and snapshots/restores the mature logical viewport around same-symbol canonical setter calls. Explicit chart-owner recovery events remain allowed.
+
+          ## Frozen architecture
+          - Backend authority remains `SBCBackendAuthorityV1`.
+          - Real My Contests come from `/api/portfolios` with exact backend `portfolioId`.
+          - `#tradeSymbol` remains the canonical order-symbol seam.
+          - Preserve Quick Trade, advanced order lifecycle/queue, Basket, Sell All, receipts, positions/avg cost/P&L, Orders & Activity, drilldown, hydration, and current layout.
+          - No fake Level II/DOM/news.
+          - Visible timeframes remain TICK/1s, 1m, 5m, 15m, 1h, 1D.
+          - Tutorial QA hard pause remains.
+          - Economics are frozen and untouched.
+
+          ## Acceptance priorities from live QA
+          1. Chart drag follows pointer continuously with no mouse inertia/snap.
+          2. Plot wheel controls time density; right price axis remains independent.
+          3. Timeframe changes must not blank the chart or destroy the mature owner.
+          4. Candles/Line style choice must persist across timeframe changes and owner recovery.
+          5. Same-symbol portfolio/trade rehydration must not reset user pan/zoom.
+          6. Trading, receipts, positions, activity, portfolio identity, and backend authority must remain exact.
+
+          ## Test status at #179
+          V45 Rebuild CI passed for PR #179. The separate Mature Chart Browser Acceptance harness has known lifecycle assumptions that have remained noisy/red during this chart migration and is not the sole live acceptance authority. Real production recordings plus the V45 regression suite have been used together.
+
+          ## Suggested next work
+          First verify #179 live with this exact sequence: choose a timeframe/style, manually pan/zoom, execute Quick Buy, dismiss the receipt, confirm the same viewport/style/timeframe remain. If that passes, stop changing the chart owner and move to the next product scope rather than continuing cosmetic chart surgery.
+          EOF
+      - name: Build exact-source ZIP
+        run: |
+          zip -qr SBC_CLAUDE_HANDOFF_112ddd.zip . \
+            -x '.git/*' \
+            -x '.github/workflows/claude-handoff-package.yml'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SBC_CLAUDE_HANDOFF_112ddd
+          path: SBC_CLAUDE_HANDOFF_112ddd.zip
+          if-no-files-found: error
+          retention-days: 7
