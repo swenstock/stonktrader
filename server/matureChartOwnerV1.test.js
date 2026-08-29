@@ -44,6 +44,8 @@ assert(sync.includes('preferredStyle=style;applyPreferredStyle()'),'Candles/Line
 assert(sync.includes('state.chartType=preferredStyle')&&sync.includes("state.candles.applyOptions({visible:preferredStyle==='candles'})")&&sync.includes("state.line.applyOptions({visible:preferredStyle==='line'})"),'preferred style must directly control the mature candlestick and line series');
 assert(sync.includes('reapplyPreferredStyle()'),'timeframe/recovery lifecycle must reapply the preferred chart style');
 assert(sync.includes('function installTickCandleBridge()'),'1s chart must repair doji-only legacy tick candles before mature rendering');
+assert(sync.includes("state.timeframe!=='1m'")&&sync.includes('state.rangeGuard=true')&&sync.includes('state.rangeGuard=false'),'1m native pointer drag must temporarily release the live logical-range clamp without becoming a second gesture owner');
+assert(sync.includes("document.addEventListener('pointerdown',beginOneMinuteNativeDrag,true)")&&sync.includes("document.addEventListener('pointerup',releaseOneMinuteNativeDrag,true)"),'1m clamp release must follow the native pointer gesture lifecycle');
 assert(stage45.includes('if(window.__sbcMatureChartOwnerV1)return;'),'legacy Stage45 gestures must retire when mature owner is active');
 assert(server.includes('/vendor/lightweight-charts-4.2.3.js'),'server must serve pinned local chart library');
 assert(server.includes('/v45-active-symbol-sync-v1.js'),'server must serve active-symbol bridge');
