@@ -4,6 +4,6 @@ const server=fs.readFileSync(path.join(__dirname,'..','server','index.js'),'utf8
 function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
 must(ui.includes("node.nodeType===Node.TEXT_NODE")&&ui.includes('node.remove()'),'cleanup removes raw descriptive text nodes');
 must(ui.includes("const label=$('b',left)")&&ui.includes('node===label'),'cleanup preserves native bold tier/quantity label');
-must(server.includes('v45-my-tickets-cleanup-v37.js?v=38'),'cache-busted My Tickets cleanup is served');
-must(server.includes('myTicketsCleanup: "v38-real-inventory-cache-bust"'),'health reports real My Tickets inventory cleanup');
+must(server.includes('v45-my-tickets-cleanup-v37.js?v=39'),'cache-busted My Tickets cleanup is served');
+must(server.includes('myTicketsCleanup: "v39-backend-truthful-selector"'),'health reports backend-truthful My Tickets inventory cleanup');
 console.log('Stage 26 My Tickets regression checks passed.');
