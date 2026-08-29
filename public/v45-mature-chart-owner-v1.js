@@ -9,6 +9,17 @@ const TF_MAP={TICK:'tick','1S':'tick','1M':'1m','5M':'5m','15M':'15m','1H':'1h',
 const DEFAULT_VISIBLE={tick:46,'1m':44,'5m':42,'15m':40,'1h':36,'1D':32};
 function normalizeTimeframe(tf){return TF_MAP[norm(tf)]||String(tf||'5m');}
 function priceWheelFactor(current,deltaY){return clamp(Number(current||1)*Math.exp(clamp(Number(deltaY)||0,-180,180)*0.0018),.35,3.5);}
+function boundedLogicalRange(range,barCount){
+  const from=Number(range?.from),to=Number(range?.to),count=Math.max(0,Math.floor(Number(barCount)||0));
+  if(!Number.isFinite(from)||!Number.isFinite(to)||to<=from||!count)return range||null;
+  const span=to-from,last=count-1,minVisible=Math.min(count,Math.max(4,Math.min(12,Math.ceil(span*.22))));
+  let nextFrom=from,nextTo=to;
+  const latestAllowedFrom=last-(minVisible-1);
+  if(nextFrom>latestAllowedFrom){const shift=nextFrom-latestAllowedFrom;nextFrom-=shift;nextTo-=shift;}
+  const earliestAllowedTo=minVisible-1;
+  if(nextTo<earliestAllowedTo){const shift=earliestAllowedTo-nextTo;nextFrom+=shift;nextTo+=shift;}
+  return{from:nextFrom,to:nextTo};
+}
 function mapApiBars(bars){
   const seen=new Set();
   return(Array.isArray(bars)?bars:[]).map(b=>{
@@ -18,7 +29,7 @@ function mapApiBars(bars){
 }
 function smaData(bars,period=20){const out=[];let sum=0;for(let i=0;i<bars.length;i++){sum+=bars[i].close;if(i>=period)sum-=bars[i-period].close;if(i>=period-1)out.push({time:bars[i].time,value:sum/period});}return out;}
 function emaData(bars,period=20){if(!bars.length)return[];const out=[],k=2/(period+1);let ema=bars[0].close;for(const b of bars){ema=b.close*k+ema*(1-k);out.push({time:b.time,value:ema});}return out;}
-const exported={normalizeTimeframe,priceWheelFactor,mapApiBars,smaData,emaData};
+const exported={normalizeTimeframe,priceWheelFactor,boundedLogicalRange,mapApiBars,smaData,emaData};
 if(typeof module!=='undefined'&&module.exports)module.exports=exported;
 if(!isBrowser||!window.matchMedia('(min-width:901px)').matches||window.__sbcMatureChartOwnerLoadedV1)return;
 window.__sbcMatureChartOwnerLoadedV1=true;
@@ -28,7 +39,7 @@ const $=(s,r=document)=>r?.querySelector?.(s)||null,$$=(s,r=document)=>r?[...r.q
 const state={
   card:null,viewport:null,host:null,chart:null,candles:null,line:null,volume:null,ma:null,ema:null,
   symbol:'',timeframe:'5m',bars:[],requestSeq:0,loading:false,userMoved:false,priceFactor:1,
-  chartType:'candles',showVolume:true,showMA:false,showEMA:false,refreshTimer:0,showViewOriginal:null
+  chartType:'candles',showVolume:true,showMA:false,showEMA:false,refreshTimer:0,showViewOriginal:null,rangeGuard:false
 };
 function card(){return $('#view-portfolio .chart-trade-card');}
 function nativeSurface(c=card()){
@@ -43,6 +54,11 @@ function findViewport(c=card()){
   let p=s.parentElement;
   while(p&&p!==c&&p!==document.body){const r=p.getBoundingClientRect();if(r.width>420&&r.height>150)return p;p=p.parentElement;}
   return s.parentElement||null;
+}
+function viewportReady(v){
+  if(!v?.getBoundingClientRect)return false;
+  const r=v.getBoundingClientRect(),style=getComputedStyle(v);
+  return style.display!=='none'&&style.visibility!=='hidden'&&r.width>420&&r.height>150;
 }
 function currentSymbol(){const sym=norm(document.getElementById('tradeSymbol')?.value);return validSymbol(sym)?sym:'';}
 function currentTimeframe(){
@@ -98,7 +114,7 @@ function setSeriesData(bars,{reset=false}={}){
     ts.setVisibleLogicalRange({from:Math.max(-6,bars.length-n-.5),to:bars.length-1+6});
     state.userMoved=false;
   }else{
-    ts.setVisibleLogicalRange(prior);
+    ts.setVisibleLogicalRange(boundedLogicalRange(prior,bars.length));
   }
   matureReady(true);return true;
 }
@@ -133,6 +149,13 @@ function setTimeframe(tf){
   state.timeframe=next;state.userMoved=false;state.priceFactor=1;loadBars({reset:true});return true;
 }
 function fit(){if(!state.chart||!state.bars.length)return;state.userMoved=false;state.priceFactor=1;applyPriceFactor();setSeriesData(state.bars,{reset:true});}
+function enforceViewportBounds(range){
+  if(state.rangeGuard||!state.chart||!state.bars.length||!range)return;
+  const bounded=boundedLogicalRange(range,state.bars.length);if(!bounded)return;
+  if(Math.abs(bounded.from-range.from)<.01&&Math.abs(bounded.to-range.to)<.01)return;
+  state.rangeGuard=true;
+  try{state.chart.timeScale().setVisibleLogicalRange(bounded);}finally{state.rangeGuard=false;}
+}
 function createChart(v){
   if(!window.LightweightCharts?.createChart)return false;
   const host=document.createElement('div');host.className='sbc-mature-chart-host-v1';host.hidden=false;host.innerHTML='<div class="sbc-mature-chart-status-v1">Loading chart…</div>';v.appendChild(host);
@@ -155,6 +178,7 @@ function createChart(v){
   const ma=chart.addLineSeries({color:'#f3c748',lineWidth:1,visible:false,priceLineVisible:false,lastValueVisible:false});
   const ema=chart.addLineSeries({color:'#5ec7ff',lineWidth:1,visible:false,priceLineVisible:false,lastValueVisible:false});
   Object.assign(state,{host,chart,candles,line,volume,ma,ema});
+  chart.timeScale().subscribeVisibleLogicalRangeChange(enforceViewportBounds);
   host.addEventListener('pointerdown',e=>{const r=host.getBoundingClientRect();if(e.clientX-r.left<r.width-72)state.userMoved=true;},{capture:true});
   host.addEventListener('wheel',e=>{
     const r=host.getBoundingClientRect(),x=e.clientX-r.left;
@@ -170,8 +194,8 @@ function createChart(v){
   return true;
 }
 function ensureMounted(){
+  const c=card(),v=findViewport(c);if(!c||!v||!viewportReady(v))return false;
   if(state.host&&document.body.contains(state.host)&&state.chart)return true;
-  const c=card(),v=findViewport(c);if(!c||!v)return false;
   if(!window.LightweightCharts?.createChart){console.error('[mature-chart-owner] LightweightCharts bundle missing; retaining SBC chart');return false;}
   state.card=c;state.viewport=v;v.classList.add('stage45-chart-viewport-v50');
   if(!createChart(v))return false;
@@ -182,7 +206,12 @@ function ensureMounted(){
   window.SBCMatureChartV1={setSymbol,setTimeframe,fit,loadBars,state};
   return true;
 }
-function onSymbolChange(e){const symbol=norm(e?.detail?.symbol);if(!validSymbol(symbol))return;ensureMounted();setSymbol(symbol,{source:e.detail?.source||'event',reset:true});}
+function mountAfterLayout(){requestAnimationFrame(()=>requestAnimationFrame(ensureMounted));}
+function onSymbolChange(e){
+  const symbol=norm(e?.detail?.symbol);if(!validSymbol(symbol))return;
+  if(!ensureMounted()){mountAfterLayout();setTimeout(()=>{if(ensureMounted())setSymbol(symbol,{source:e.detail?.source||'event',reset:true});},80);return;}
+  setSymbol(symbol,{source:e.detail?.source||'event',reset:true});
+}
 function onWorkspaceClick(e){
   const b=e.target.closest?.('button');if(!b)return;
   if(b.dataset.cwTime){setTimeout(()=>setTimeframe(b.dataset.cwTime),0);return;}
@@ -198,7 +227,7 @@ function onWorkspaceClick(e){
 }
 function installShowViewHook(){
   const fn=window.showView;if(typeof fn!=='function'||fn.__sbcMatureChartOwnerV1)return false;
-  const wrapped=function(){const out=fn.apply(this,arguments);const view=String(arguments[0]||'');if(view==='portfolio'||view==='trade')setTimeout(ensureMounted,0);return out;};
+  const wrapped=function(){const out=fn.apply(this,arguments);const view=String(arguments[0]||'');if(view==='portfolio'||view==='trade')mountAfterLayout();return out;};
   wrapped.__sbcMatureChartOwnerV1=true;wrapped.__sbcMatureChartOriginal=fn;window.showView=wrapped;state.showViewOriginal=fn;return true;
 }
 function start(){

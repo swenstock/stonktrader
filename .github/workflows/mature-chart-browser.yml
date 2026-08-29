@@ -25,5 +25,20 @@ jobs:
       - run: npm ci
       - name: Install Playwright browser for acceptance only
         run: npm install --no-save @playwright/test@1.55.0 && npx playwright install --with-deps chromium
-      - name: Real chart render and interaction acceptance
-        run: npx playwright test server/matureChartBrowser.spec.js --reporter=line --workers=1
+      - name: Served Portfolio DOM and scripts
+        run: npx playwright test server/matureChartBrowser.spec.js --grep "@shell" --reporter=line --workers=1
+      - name: Native chart surface after symbol selection
+        if: always()
+        run: npx playwright test server/matureChartBrowser.spec.js --grep "@native" --reporter=line --workers=1
+      - name: Real shell mount and lifecycle
+        if: always()
+        run: npx playwright test server/matureChartBrowser.spec.js --grep "@mount" --reporter=line --workers=1
+      - name: Extreme pan and viewport persistence
+        if: always()
+        run: npx playwright test server/matureChartBrowser.spec.js --grep "@pan" --reporter=line --workers=1
+      - name: Time zoom and price-axis independence
+        if: always()
+        run: npx playwright test server/matureChartBrowser.spec.js --grep "@zoom" --reporter=line --workers=1
+      - name: Symbol timeframe and fallback truth
+        if: always()
+        run: npx playwright test server/matureChartBrowser.spec.js --grep "@state" --reporter=line --workers=1
