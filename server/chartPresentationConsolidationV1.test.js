@@ -54,7 +54,11 @@ assert(shell.includes('const panBars=Math.max(0,Math.min(maxOffset,Math.round(Nu
 assert(shell.includes('const data=fullData.slice(Math.max(0,end-visibleCount),end)'), 'renderer must pan by slicing source history, not moving pixels');
 assert(shell.includes('class=\"sbc-plot-body-v1\"')&&shell.includes('transform=\"translate(${dragOffsetX} 0)\"'), 'drag preview must move only the clipped plot body inside fixed axes/frame');
 assert(shell.includes('clipPath id=\"sbcPlotClipV1\"'), 'plot-body drag preview must be clipped to the chart plotting rectangle');
-assert(server.includes('/v45-desktop-stage45-v50.js?v=56'), 'served chart interaction asset must remain present');
+assert(server.includes('/v45-desktop-stage45-v50.js?v=57'), 'served legacy layout asset must be cache-busted while mature owner retires its gestures');
+assert(stage45.includes('if(window.__sbcMatureChartOwnerV1)return;'), 'Stage45 must stand down before attaching legacy gesture handlers when mature chart owner is active');
+assert(server.includes('/vendor/lightweight-charts-4.2.3.js'), 'pinned mature chart bundle must be served locally');
+assert(server.includes('/v45-mature-chart-owner-v1.js?v=1'), 'mature chart owner must be served');
+assert(!server.includes('/v45-embedded-domain-chart-v1.js?v=1'), 'failed embedded-domain chart owner must be retired from the served page');
 assert(!stageC.includes('new MutationObserver'), 'Stage C observer retirement must remain intact');
 console.log('Chart presentation consolidation v1: PASS');
 // Native pan acceptance: fractional pixel position persists after release; wheel zoom is continuous.

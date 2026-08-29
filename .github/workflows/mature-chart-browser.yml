@@ -1,0 +1,29 @@
+name: Mature Chart Browser Acceptance
+on:
+  pull_request:
+    paths:
+      - "public/v45-mature-chart-owner-v1.js"
+      - "public/v45-mature-chart-owner-v1.css"
+      - "public/v45-active-symbol-sync-v1.js"
+      - "public/v45-desktop-stage45-v50.js"
+      - "public/vendor/lightweight-charts-4.2.3.js"
+      - "server/index.js"
+      - "server/matureChartBrowser.spec.js"
+      - "server/matureChartOwnerV1.test.js"
+      - ".github/workflows/mature-chart-browser.yml"
+  workflow_dispatch:
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright browser for acceptance only
+        run: npm install --no-save @playwright/test@1.55.0 && npx playwright install --with-deps chromium
+      - name: Real chart render and interaction acceptance
+        run: npx playwright test server/matureChartBrowser.spec.js --reporter=line --workers=1
