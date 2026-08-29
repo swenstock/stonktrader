@@ -1,0 +1,36 @@
+name: Chart Grab Pan Publisher
+on:
+  push:
+    branches: [chart-grab-pan-v1]
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - name: Cache-bust grab-pan asset
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('server/index.js')
+          s=p.read_text()
+          old='/v45-desktop-stage45-v50.js?v=53'
+          assert old in s
+          s=s.replace(old,'/v45-desktop-stage45-v50.js?v=54',1)
+          s=s.replace('chartInteractions: "v49-scale-zoom-pan"','chartInteractions: "v54-continuous-grab-pan"',1)
+          p.write_text(s)
+          PY
+      - name: Validate focused chart behavior
+        run: node server/chartPresentationConsolidationV1.test.js
+      - name: Commit exact patch and remove publisher
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/chart-grab-pan-publisher.yml
+          git add server/index.js public/v45-desktop-stage45-v50.js server/chartPresentationConsolidationV1.test.js
+          git commit -m "Make chart grab-pan track the pointer"
+          git push
