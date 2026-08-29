@@ -60,9 +60,9 @@ const HOW_DETAILS=[
     ['THE LADDER','Runner → Clerk → Trader → Jr. StonkBroker. Tickets get you in; Badges get you promoted.']
   ],
   [
-    ['REACH THE MAIN EVENT','Win a qualifying ticket or buy one from another player on the exchange.'],
+    ['CLIMB THE LADDER','Use earned or purchased tickets to compete through Runner → Clerk → Trader → Jr. StonkBroker.'],
     ['FINAL OBJECTIVE','Collect 20 Jr. Broker Badges and get promoted to an Activated StonkBroker.'],
-    ['THE PRIZE','When the StonkBroker prize is locked, the winner takes the activated StonkBroker.']
+    ['THE PRIZE','Collect 20 Jr. Broker Badges and get promoted to an Activated StonkBroker.']
   ]
 ];
 function enrichHow(){
