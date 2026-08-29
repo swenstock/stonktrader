@@ -39,6 +39,10 @@ function wireBasketLive(){
   $$('[data-bb19-range]').forEach(r=>{if(r.dataset.bb39Live)return;r.dataset.bb39Live='1';const commit=r.oninput;r.oninput=()=>updateBasketPreview();r.onchange=e=>{if(typeof commit==='function')commit.call(r,e);};});
   updateBasketPreview();
 }
+function installEmptyBookCompatibility(){
+  const current=window.ticketMarket;if(typeof current!=='function'||current.__sbcEmptyBookCompat)return;
+  const wrapped=function(){const market=current.apply(this,arguments)||{};const hasBids=Array.isArray(market.bids)&&market.bids.length>0,hasAsks=Array.isArray(market.asks)&&market.asks.length>0;if(hasBids&&hasAsks)return market;let fallback=null;try{fallback=TICKET_MARKETS?.[activeTicketMarket]||null}catch(_){}const bids=hasBids?market.bids:(Array.isArray(fallback?.bids)&&fallback.bids.length?fallback.bids:[0]);const asks=hasAsks?market.asks:(Array.isArray(fallback?.asks)&&fallback.asks.length?fallback.asks:[0]);const last=Number.isFinite(Number(market.last))?Number(market.last):Number(fallback?.last||0);return{...market,bids,asks,last};};wrapped.__sbcEmptyBookCompat=true;window.ticketMarket=wrapped;
+}
 function ensureSettlement(){
   if(!window.__sbcTicketNativeHooksV41&&!document.querySelector('script[data-sbc-ticket-native-v41]')){const s=document.createElement('script');s.src='/v45-ticket-native-hooks-v41.js?v=49';s.dataset.sbcTicketNativeV41='1';document.head.appendChild(s);}
   if(!window.__sbcTestStonkFaucetV1&&!document.querySelector('script[data-sbc-test-stonk-faucet-v1]')){const s=document.createElement('script');s.src='/v45-test-stonk-faucet-v1.js?v=1';s.dataset.sbcTestStonkFaucetV1='1';document.head.appendChild(s);}
@@ -48,13 +52,13 @@ function ensureSettlement(){
   if(!document.querySelector('link[data-sbc-trader-confirm-v42]')){const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-trader-action-confirm-v42.css?v=42';l.dataset.sbcTraderConfirmV42='1';document.head.appendChild(l);}
   if(!window.__sbcTraderActionConfirmV42&&!document.querySelector('script[data-sbc-trader-confirm-v42]')){const s=document.createElement('script');s.src='/v45-trader-action-confirm-v42.js?v=42';s.dataset.sbcTraderConfirmV42='1';document.head.appendChild(s);}
 }
-function installEmptyBookCompatibility(){if(window.__sbcEmptyBookCompatV1)return;const original=window.ticketMarket;if(typeof original!=='function')return;const wrapped=function(){const m=original.apply(this,arguments)||{};if(Array.isArray(m.bids)&&Array.isArray(m.asks)&&(!m.bids.length||!m.asks.length)){let fallback=null;try{fallback=TICKET_MARKETS?.[activeTicketMarket]||null}catch(_){}if(fallback){return{...m,bids:m.bids.length?m.bids:[...(fallback.bids||[])],asks:m.asks.length?m.asks:[...(fallback.asks||[])],last:Number(m.last||fallback.last||0)}}}return m;};wrapped.__sbcEmptyBookCompatV1=true;window.ticketMarket=wrapped;window.__sbcEmptyBookCompatV1=true;}
 function clean(){
+  installEmptyBookCompatibility();
   const v=$('#view-exchange');if(v){const h=$$('h1,h2,h3',v).find(x=>(x.textContent||'').trim().toUpperCase()==='MY TICKETS');const box=h?.parentElement;if(box)$$('.inv.big-inv',box).forEach(stripDescription);}
   wireBasketLive();
 }
 window.addEventListener('click',normalizeExchangePost,true);
-function run(){ensureSettlement();installEmptyBookCompatibility();clean();}
+function run(){ensureSettlement();clean();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
 let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(run,60)}).observe(document.documentElement,{childList:true,subtree:true});
 setTimeout(run,250);setTimeout(run,900);setTimeout(run,1800);
