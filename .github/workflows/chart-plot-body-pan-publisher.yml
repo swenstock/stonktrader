@@ -1,0 +1,68 @@
+name: Chart Plot Body Pan Publisher
+on:
+  push:
+    branches: [chart-grab-pan-v1]
+    paths: ['.github/workflows/chart-plot-body-pan-publisher.yml']
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chart-grab-pan-v1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply fixed-frame plot pan
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('public/v45-desktop-stage45-v50.js')
+          s=p.read_text()
+          old="function clearDragPreview(){if(!st.surface)return;st.surface.style.transform='';st.surface.style.transition='';}\nfunction previewDrag(px){if(!st.surface)return;st.dragPx=px;st.surface.style.transformOrigin='50% 50%';st.surface.style.transition='none';st.surface.style.transform=`translate3d(${px}px,0,0)`;}"
+          new="function clearDragPreview(){st.dragPx=0;}\nfunction previewDrag(px){st.dragPx=px;repaint();}"
+          if old not in s: raise SystemExit('Stage45 preview block mismatch')
+          s=s.replace(old,new)
+          p.write_text(s)
+
+          p=Path('server/v45ExactShell.js')
+          s=p.read_text()
+          old='["  const data=fullData.slice(Math.max(0,end-visibleCount),end);", "  const data=fullData.slice(Math.max(0,end-visibleCount),end);"],'
+          # no-op anchor is not present; append replacements after the existing data-window replacement
+          anchor='["  const data=generateOHLC(sym,chartPrefs.timeframe);", "  const fullData=generateOHLC(sym,chartPrefs.timeframe);\\n  const viewportState=window.SBCChartViewportV50?.state||{};\\n  const timeZoom=Math.max(.5,Math.min(3,Number(viewportState.x||1)));\\n  const baseVisible=timeframeBars(chartPrefs.timeframe);\\n  const visibleCount=Math.max(10,Math.min(fullData.length,Math.round(baseVisible/timeZoom)));\\n  const maxOffset=Math.max(0,fullData.length-visibleCount);\\n  const panBars=Math.max(0,Math.min(maxOffset,Math.round(Number(viewportState.pan||0))));\\n  const end=Math.max(visibleCount,fullData.length-panBars);\\n  const data=fullData.slice(Math.max(0,end-visibleCount),end);"],'
+          if anchor not in s: raise SystemExit('renderer data-window anchor mismatch')
+          insert=anchor+'\n    ["  const xStep=(w-padL-padR)/data.length;", "  const xStep=(w-padL-padR)/data.length;\\n  const dragOffsetX=Number(viewportState.dragPx||0);"],\n    ["    ${grid}\\n    ${priceVisual}\\n    ${overlays}\\n    ${crosshair}\\n    ${chartPrefs.volume?`<line class=\\\"chart-grid-line\\\" x1=\\\"${padL}\\\" y1=\\\"${h-padB-volH-5}\\\" x2=\\\"${w-padR}\\\" y2=\\\"${h-padB-volH-5}\\\"/>${volumes}`:\'\'}", "    <defs><clipPath id=\\\"sbcPlotClipV1\\\"><rect x=\\\"${padL}\\\" y=\\\"${padT}\\\" width=\\\"${w-padL-padR}\\\" height=\\\"${h-padT-padB}\\\"/></clipPath></defs>\\n    ${grid}\\n    <g class=\\\"sbc-plot-body-v1\\\" clip-path=\\\"url(#sbcPlotClipV1)\\\" transform=\\\"translate(${dragOffsetX} 0)\\\">\\n      ${priceVisual}\\n      ${overlays}\\n      ${crosshair}\\n      ${chartPrefs.volume?`${volumes}`:\'\'}\\n    </g>\\n    ${chartPrefs.volume?`<line class=\\\"chart-grid-line\\\" x1=\\\"${padL}\\\" y1=\\\"${h-padB-volH-5}\\\" x2=\\\"${w-padR}\\\" y2=\\\"${h-padB-volH-5}\\\"/>`:\'\'}"],'
+          s=s.replace(anchor,insert)
+          p.write_text(s)
+
+          p=Path('server/index.js')
+          s=p.read_text()
+          if '/v45-desktop-stage45-v50.js?v=54' not in s: raise SystemExit('server cache anchor mismatch')
+          s=s.replace('/v45-desktop-stage45-v50.js?v=54','/v45-desktop-stage45-v50.js?v=55')
+          p.write_text(s)
+
+          p=Path('server/chartPresentationConsolidationV1.test.js')
+          s=p.read_text()
+          s=s.replace("assert(stage45.includes('function previewDrag(px)')&&stage45.includes('translate3d(${px}px,0,0)'), 'plot must visibly track the pointer continuously while grabbed');", "assert(stage45.includes('function previewDrag(px){st.dragPx=px;repaint();}'), 'plot drag preview must rerender from drag state instead of translating the whole chart surface');")
+          s=s.replace("assert(server.includes('/v45-desktop-stage43-v48.js?v=49')&&server.includes('/v45-desktop-stage45-v50.js?v=54')&&server.includes('/v45-desktop-stage46-v51-pre.js?v=71'), 'direct chart presentation assets must be cache-busted');", "assert(server.includes('/v45-desktop-stage43-v48.js?v=49')&&server.includes('/v45-desktop-stage45-v50.js?v=55')&&server.includes('/v45-desktop-stage46-v51-pre.js?v=71'), 'direct chart presentation assets must be cache-busted');")
+          marker="assert(shell.includes('const data=fullData.slice(Math.max(0,end-visibleCount),end)'), 'renderer must pan by slicing source history, not moving pixels');"
+          if marker not in s: raise SystemExit('test marker mismatch')
+          s=s.replace(marker, marker+"\nassert(shell.includes('class=\\\"sbc-plot-body-v1\\\"')&&shell.includes('transform=\\\"translate(${dragOffsetX} 0)\\\"'), 'drag preview must move only the clipped plot body inside fixed axes/frame');\nassert(shell.includes('clipPath id=\\\"sbcPlotClipV1\\\"'), 'plot-body drag preview must be clipped to the chart plotting rectangle');")
+          p.write_text(s)
+          PY
+      - name: Focused behavior tests
+        run: |
+          node server/chartPresentationConsolidationV1.test.js
+          node server/v45ExactShellRealBars.test.js
+          node --check public/v45-desktop-stage45-v50.js
+          node --check server/v45ExactShell.js
+      - name: Commit patch and remove publisher
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .github/workflows/chart-plot-body-pan-publisher.yml
+          git add public/v45-desktop-stage45-v50.js server/v45ExactShell.js server/index.js server/chartPresentationConsolidationV1.test.js
+          git commit -m 'Pan only the chart plot body inside fixed axes'
+          git push origin HEAD:chart-grab-pan-v1
