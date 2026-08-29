@@ -9,6 +9,13 @@ const money=n=>`$${Number(n||0).toLocaleString(undefined,{minimumFractionDigits:
 const when=v=>{if(!v)return'';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});};
 const qtyText=o=>o?.quantity!=null?Number(o.quantity).toLocaleString(undefined,{maximumFractionDigits:4}):o?.percent!=null?`${Number(o.percent)}% SIZE`:'—';
 const orderPrice=o=>{const t=String(o?.orderType||'market');if(t==='limit')return `LMT ${money(o.limitPrice)}`;if(t==='stop')return `STP ${money(o.stopPrice)}`;if(t==='stop_limit')return `STP ${money(o.stopPrice)} / LMT ${money(o.limitPrice)}`;return 'MKT @ OPEN';};
+function ensureExchangeQaHelpers(){
+  const specs=[
+    ['__sbcTestStonkFaucetV1','data-sbc-test-stonk-direct','/v45-test-stonk-faucet-v1.js?v=2'],
+    ['__sbcExchangeOwnOrdersV1','data-sbc-exchange-own-orders','/v45-exchange-own-orders-v1.js?v=1']
+  ];
+  for(const [flag,attr,src] of specs){if(window[flag]||document.querySelector(`script[${attr}]`))continue;const s=document.createElement('script');s.src=src;s.setAttribute(attr,'1');document.head.appendChild(s);}
+}
 function recentRow(e){const side=String(e.side||'buy').toLowerCase()==='sell'?'sell':'buy',label=side.toUpperCase();return `<article class="blotter-row-v15 ${side}" ${e.cancelled?`data-stage-c-cancelled="${esc(e.id)}"`:''}><b class="blotter-side-v15">${label}</b><strong>${esc(e.symbol||'—')}</strong><span>${esc(e.qty||'—')}</span><span>${esc(e.price||'—')}</span><span><em>${esc(e.status||'')}</em>${e.at?`<small>${esc(when(e.at))}</small>`:''}</span><span class="blotter-actions-v15"></span></article>`;}
 function renderRecentWithCancelled(){
   const api=window.SBCAdvancedOrdersV15,root=$('#view-portfolio .orders-activity-blotter-v15 .blotter-root-v15'),body=$('[data-panel="recent"] .blotter-body-v15',root);
@@ -79,7 +86,7 @@ function wrapFetch(){
   };
   wrapped.__stageCUiCleanupV1=true;window.fetch=wrapped;
 }
-function run(){wrapFetch();renderRecentWithCancelled();schedulePortfolioSync(false);}
+function run(){ensureExchangeQaHelpers();wrapFetch();renderRecentWithCancelled();schedulePortfolioSync(false);}
 window.addEventListener('sbc:orders-change',()=>setTimeout(refreshCanonicalActivity,0));
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
 setTimeout(run,300);setTimeout(run,1200);
