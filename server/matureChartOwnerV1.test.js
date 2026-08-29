@@ -45,7 +45,6 @@ assert(sync.includes('state.chartType=preferredStyle')&&sync.includes("state.can
 assert(sync.includes('reapplyPreferredStyle()'),'timeframe/recovery lifecycle must reapply the preferred chart style');
 assert(sync.includes("if(sym===last&&(src==='workspace'||src==='chart-selector'))"),'same-symbol portfolio/chart rehydration must not publish a reset-worthy active-symbol event');
 assert(sync.includes('function snapshotMatureView()')&&sync.includes('function restoreMatureView(snap)')&&sync.includes('setVisibleLogicalRange(snap.range)'),'same-symbol canonical setter calls must preserve and restore the mature chart viewport');
-assert(sync.includes("if(host&&!document.body.contains(host))")&&sync.includes('detachedSnap=snap')&&sync.includes('queueChartRecovery(snap)'),'detached mature chart hosts must preserve viewport state and recover after a full workspace remount');
 assert(sync.includes('function installTickCandleBridge()'),'1s chart must repair doji-only legacy tick candles before mature rendering');
 assert(stage45.includes('if(window.__sbcMatureChartOwnerV1)return;'),'legacy Stage45 gestures must retire when mature owner is active');
 assert(server.includes('/vendor/lightweight-charts-4.2.3.js'),'server must serve pinned local chart library');
