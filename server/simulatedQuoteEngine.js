@@ -74,7 +74,10 @@ function getSimulatedBars(meta, interval, from, to, seed = DEFAULT_SEED) {
     const start = new Date(t);
     const end = new Date(Math.min(t + step, to.getTime()));
     const open = simulatedPrice(meta.symbol, meta.base, start, seed);
-    const closeAt = new Date(Math.max(start.getTime(), end.getTime() - 1));
+    // Complete bars close on the next interval boundary. Using end-1 kept 1m
+    // opens/closes inside the same minute noise bucket and produced doji-like
+    // vertical sticks instead of useful candle bodies.
+    const closeAt = end;
     const close = simulatedPrice(meta.symbol, meta.base, closeAt, seed);
     const mid = simulatedPrice(meta.symbol, meta.base, new Date((start.getTime() + end.getTime()) / 2), seed);
     const wiggle = 0.001 + unitNoise(meta.symbol, t, seed) * 0.0015;
