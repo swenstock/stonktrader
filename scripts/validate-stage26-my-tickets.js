@@ -15,7 +15,7 @@ must(faucet.includes("fetch('/api/dev/fund'")&&faucet.includes('amount=250000')&
 must(faucet.includes("fetch('/api/dev/order-book'")&&faucet.includes("id='seedTestOrderBook'")&&faucet.includes("textContent='+ TEST ORDER BOOK'"),'TEST order-book control calls the backend QA depth seeder');
 must(!/localStorage\.setItem\([^\n]*stonk/i.test(faucet),'TEST STONK faucet does not fabricate a browser-local balance');
 must(stageC.includes('/v45-test-stonk-faucet-v1.js?v=2')&&stageC.includes('/v45-exchange-own-orders-v1.js?v=4'),'final direct UI owner bootstraps TEST STONK and stable own-order manager');
-must(own.includes("fetch('/api/ticket-market/mine'")&&own.includes('YOUR OFFER')&&own.includes('YOUR BID')&&own.includes('sbc-own-book-row'),'own active backend ticket orders are designated in their books');
+must(own.includes("api('/api/ticket-market/mine')")&&own.includes('YOUR OFFER')&&own.includes('YOUR BID')&&own.includes('sbc-own-book-row'),'own active backend ticket orders are designated from backend My Orders data');
 must(!own.includes('MutationObserver'),'own-order helper does not use mutation-observer reinsertion loops');
 must(own.includes('MANAGE ORDER')&&own.includes('CHANGE PRICE')&&own.includes('CANCEL ORDER'),'clicking an own order exposes explicit manage controls');
 must(own.includes("method:'PATCH'")&&own.includes("method:'DELETE'")&&own.includes('/api/ticket-market/offers/')&&own.includes('/api/ticket-market/bids/'),'own-order change and cancel use real backend ticket-market endpoints');
