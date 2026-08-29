@@ -25,25 +25,34 @@ async function waitForServer(){
   }
   throw new Error('SBC test server did not become ready');
 }
-async function openWorkspace(page){
-  let failSymbol='';
-  const chartErrors=[];
-  page.on('pageerror',e=>{if(/mature-chart|lightweight/i.test(String(e)))chartErrors.push(String(e));});
-  page.on('console',m=>{if(m.type()==='error'&&/mature-chart|lightweight/i.test(m.text()))chartErrors.push(m.text());});
+async function installBarsRoute(page,controller={failSymbol:''}){
   await page.route('**/api/quotes/bars**',async route=>{
     const u=new URL(route.request().url());
     const symbol=(u.searchParams.get('symbol')||'AAPL').toUpperCase();
     const interval=u.searchParams.get('interval')||'5m';
-    const bars=symbol===failSymbol?[]:barsFor(symbol,interval);
+    const bars=symbol===controller.failSymbol?[]:barsFor(symbol,interval);
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({bars})});
   });
+  return controller;
+}
+async function openShell(page){
+  await installBarsRoute(page);
+  await page.setViewportSize({width:1440,height:1000});
+  await page.goto(BASE,{waitUntil:'domcontentloaded'});
+}
+async function openWorkspace(page){
+  const controller={failSymbol:''};
+  const chartErrors=[];
+  page.on('pageerror',e=>{if(/mature-chart|lightweight/i.test(String(e)))chartErrors.push(String(e));});
+  page.on('console',m=>{if(m.type()==='error'&&/mature-chart|lightweight/i.test(m.text()))chartErrors.push(m.text());});
+  await installBarsRoute(page,controller);
   await page.setViewportSize({width:1440,height:1000});
   await page.goto(BASE,{waitUntil:'domcontentloaded'});
   await page.evaluate(()=>window.showView?.('portfolio'));
   await page.evaluate(()=>window.selectChartSymbol?.('AAPL','browser-acceptance'));
   await expect.poll(()=>page.evaluate(()=>!!document.querySelector('.sbc-mature-chart-host-v1.is-ready'))).toBe(true);
   await expect.poll(()=>page.evaluate(()=>window.SBCMatureChartV1?.state?.bars?.length||0)).toBeGreaterThan(100);
-  return{chartErrors,setFailSymbol:s=>{failSymbol=s;}};
+  return{chartErrors,setFailSymbol:s=>{controller.failSymbol=s;}};
 }
 async function geometry(page){
   return page.evaluate(()=>{
@@ -72,6 +81,57 @@ test.beforeAll(async()=>{
   await waitForServer();
 });
 test.afterAll(async()=>{if(server&&!server.killed)server.kill('SIGTERM');});
+
+test('@shell served SBC Portfolio DOM and desktop chart scripts are present and laid out',async({page})=>{
+  await openShell(page);
+  const state=await page.evaluate(()=>{
+    window.showView?.('portfolio');
+    const view=document.getElementById('view-portfolio');
+    const card=document.querySelector('#view-portfolio .chart-trade-card');
+    const chart=document.getElementById('symbolChart');
+    const vr=view?.getBoundingClientRect(),cr=card?.getBoundingClientRect(),sr=chart?.getBoundingClientRect();
+    return{
+      showView:typeof window.showView,
+      selectChartSymbol:typeof window.selectChartSymbol,
+      lightweight:!!window.LightweightCharts?.createChart,
+      matureFlag:!!window.__sbcMatureChartOwnerV1,
+      viewActive:view?.classList.contains('active')||false,
+      viewDisplay:view?getComputedStyle(view).display:null,
+      cardFound:!!card,
+      chartFound:!!chart,
+      viewSize:vr?{w:vr.width,h:vr.height}:null,
+      cardSize:cr?{w:cr.width,h:cr.height}:null,
+      chartSize:sr?{w:sr.width,h:sr.height}:null,
+    };
+  });
+  expect(state.showView).toBe('function');
+  expect(state.selectChartSymbol).toBe('function');
+  expect(state.lightweight).toBe(true);
+  expect(state.matureFlag).toBe(true);
+  expect(state.viewActive).toBe(true);
+  expect(state.viewDisplay).not.toBe('none');
+  expect(state.cardFound).toBe(true);
+  expect(state.chartFound).toBe(true);
+  expect(state.cardSize.w).toBeGreaterThan(420);
+  expect(state.chartSize.w).toBeGreaterThan(420);
+  expect(state.chartSize.h).toBeGreaterThan(150);
+});
+
+test('@native real legacy chart produces a native surface after canonical symbol selection',async({page})=>{
+  await openShell(page);
+  await page.evaluate(()=>{window.showView('portfolio');window.selectChartSymbol('AAPL','native-diagnostic');});
+  await expect.poll(()=>page.evaluate(()=>document.getElementById('tradeSymbol')?.value)).toBe('AAPL');
+  await expect.poll(()=>page.evaluate(()=>document.querySelectorAll('#symbolChart canvas,#symbolChart svg').length)).toBeGreaterThan(0);
+  const native=await page.evaluate(()=>{
+    const surface=document.querySelector('#symbolChart canvas,#symbolChart svg');
+    const r=surface?.getBoundingClientRect();
+    return{found:!!surface,w:r?.width||0,h:r?.height||0,html:document.getElementById('symbolChart')?.innerHTML.length||0};
+  });
+  expect(native.found).toBe(true);
+  expect(native.w).toBeGreaterThan(420);
+  expect(native.h).toBeGreaterThan(150);
+  expect(native.html).toBeGreaterThan(1000);
+});
 
 test('@mount real SBC shell mounts one visible mature owner after Portfolio lays out',async({page},testInfo)=>{
   const {chartErrors}=await openWorkspace(page);
