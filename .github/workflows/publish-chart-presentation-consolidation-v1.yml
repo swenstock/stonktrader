@@ -1,0 +1,43 @@
+name: Publish Chart Presentation Consolidation V1
+
+on:
+  push:
+    branches: [v45-rebuild]
+    paths:
+      - '.github/workflows/publish-chart-presentation-consolidation-v1.yml'
+      - '.handoff/chart-presentation-consolidation-v1.patch.gz.b64'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v45-rebuild
+          fetch-depth: 0
+      - name: Preserve tested patch
+        run: cp .handoff/chart-presentation-consolidation-v1.patch.gz.b64 /tmp/chart.patch.b64
+      - name: Apply to exact current main and publish one commit
+        run: |
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "6bf4d5cf2bda85a10452e09de62af74d49351be8"
+          git checkout -B chart-presentation-consolidation-v1 origin/main
+          base64 -d /tmp/chart.patch.b64 | gzip -dc > /tmp/chart.patch
+          echo "05a483a9e9a41dbbd54a2b06a1072f0aacd127b37df80e6b6e50d0ca8d02b2d6  /tmp/chart.patch" | sha256sum -c -
+          git apply --check /tmp/chart.patch
+          git apply /tmp/chart.patch
+          node --check public/v45-desktop-stage43-v48.js
+          node --check public/v45-desktop-stage45-v50.js
+          node --check public/v45-chart-workstation-v1.js
+          node --check public/v45-desktop-stage46-v51-pre.js
+          node --check server/v45ExactShell.js
+          node --check server/index.js
+          node server/chartPresentationConsolidationV1.test.js
+          git config user.name "swenstock"
+          git config user.email "swenstock@gmail.com"
+          git add public/v45-desktop-stage43-v48.js public/v45-desktop-stage43-v48.css public/v45-desktop-stage45-v50.js public/v45-chart-workstation-v1.js public/v45-chart-workstation-v1.css public/v45-desktop-stage46-v51-pre.js server/v45ExactShell.js server/v45ExactShellRealBars.test.js server/index.js package.json server/chartPresentationConsolidationV1.test.js
+          git commit -m "Consolidate chart presentation ownership and readability"
+          git push --force origin HEAD:chart-presentation-consolidation-v1
