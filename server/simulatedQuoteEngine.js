@@ -3,6 +3,10 @@
 // This lets Test Clock scenarios be reproduced exactly.
 
 const DEFAULT_SEED = 1337;
+const ET_HM_FORMATTER = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/New_York', hour12: false,
+  hour: '2-digit', minute: '2-digit'
+});
 
 function hash32(text, seed = DEFAULT_SEED) {
   let h = seed >>> 0;
@@ -22,10 +26,7 @@ function unitNoise(symbol, bucket, seed = DEFAULT_SEED) {
 function sessionProgress(date) {
   // Caller provides a real Date instant. We intentionally use ET calendar
   // parts so the price path lines up with the SBC market sessions.
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York', hour12: false,
-    hour: '2-digit', minute: '2-digit'
-  }).formatToParts(date);
+  const parts = ET_HM_FORMATTER.formatToParts(date);
   const p = Object.fromEntries(parts.map(x => [x.type, x.value]));
   const minutes = Number(p.hour) * 60 + Number(p.minute);
   return Math.max(0, Math.min(390, minutes - 570)) / 390;
