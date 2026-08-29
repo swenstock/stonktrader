@@ -1,11 +1,15 @@
 const fs=require('fs'),path=require('path');
 const ui=fs.readFileSync(path.join(__dirname,'..','public','v45-my-tickets-cleanup-v37.js'),'utf8');
+const faucet=fs.readFileSync(path.join(__dirname,'..','public','v45-test-stonk-faucet-v1.js'),'utf8');
 const server=fs.readFileSync(path.join(__dirname,'..','server','index.js'),'utf8');
 function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
 must(ui.includes("node.nodeType===Node.TEXT_NODE")&&ui.includes('node.remove()'),'cleanup removes raw descriptive text nodes');
 must(ui.includes("const label=$('b',left)")&&ui.includes('node===label'),'cleanup preserves native bold tier/quantity label');
 must(ui.includes('installEmptyBookCompatibility')&&ui.includes('hasBids')&&ui.includes('hasAsks')&&ui.includes("fallback?.bids")&&ui.includes("fallback?.asks")&&ui.includes("[0]"),'empty real ticket books cannot crash the frozen renderer on bids[0]/asks[0] formatting');
 must(ui.includes('/v45-ticket-native-hooks-v41.js?v=49'),'runtime-owner hook is cache-busted by My Tickets fallback loader');
+must(ui.includes('/v45-test-stonk-faucet-v1.js?v=1'),'TEST STONK faucet is loaded with Exchange QA tools');
+must(faucet.includes("fetch('/api/dev/fund'")&&faucet.includes('amount=250000')&&faucet.includes("localStorage.getItem('token')")&&faucet.includes("id='fundTestStonk'")&&faucet.includes("textContent='+ TEST STONK'"),'TEST STONK control credits 250,000 through authenticated backend custodian faucet');
+must(!/localStorage\.setItem\([^\n]*stonk/i.test(faucet),'TEST STONK faucet does not fabricate a browser-local balance');
 must(server.includes('v45-my-tickets-cleanup-v37.js?v=41'),'cache-busted My Tickets cleanup is served');
 must(server.includes('myTicketsCleanup: "v41-runtime-owner-cache-boundary"'),'health reports runtime-owner cache boundary');
 console.log('Stage 26 My Tickets regression checks passed.');
