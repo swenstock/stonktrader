@@ -21,9 +21,10 @@ function inPriceAxis(e,v){const r=v.getBoundingClientRect(),zone=clamp(r.width*.
 function barStepPx(v){const r=v.getBoundingClientRect();return clamp(r.width/Math.max(18,44/Math.max(.35,st.x)),5,28);}
 function controls(card){$('.stage44-chart-help-v49',card)?.classList.add('stage45-retire-v50');$('.stage45-scale-v50',card)?.remove();document.getElementById('advChartTrigger')?.remove();if(!card.dataset.stage45TfReset){card.dataset.stage45TfReset='1';card.addEventListener('click',e=>{if(e.target.closest('.chart-toolbar button')){resetPrice(false);resetTime(false);}},true);}}
 function bind(card){
- let s=surface(card);if(!s)return;let v=viewport(s);if(v&&!v.dataset.stage46Isolated){v=isolateViewport(s);s=surface(card);}if(!s||!v)return;
+ let s=surface(card);if(!s)return;let v=viewport(s);if(!window.__sbcMatureChartOwnerV1&&v&&!v.dataset.stage46Isolated){v=isolateViewport(s);s=surface(card);}if(!s||!v)return;
  if(st.surface!==s){st.surface=s;st.view=v;apply();}
  if(v.dataset.stage45Bound)return;v.dataset.stage45Bound='1';v.classList.add('stage45-chart-viewport-v50');
+ if(window.__sbcMatureChartOwnerV1)return;
  v.addEventListener('wheel',e=>{e.preventDefault();e.stopPropagation();if(inPriceAxis(e,v)){price(e.deltaY<0?.08:-.08);return;}const factor=Math.exp(-e.deltaY*.0025);st.x=clamp(st.x*factor,.35,4);apply();repaint();},{passive:false});
  v.addEventListener('pointerdown',e=>{if(inPriceAxis(e,v)){e.preventDefault();e.stopPropagation();st.axisDrag=true;st.startY=e.clientY;st.startScale=st.y;v.setPointerCapture?.(e.pointerId);v.classList.add('is-price-scaling-v50');return;}e.preventDefault();e.stopPropagation();st.drag=true;st.startX=e.clientX;st.startPan=st.pan;st.startResidual=st.dragPx;v.setPointerCapture?.(e.pointerId);v.classList.add('is-panning-v50')});
  v.addEventListener('pointermove',e=>{if(st.axisDrag){e.preventDefault();e.stopPropagation();const factor=Math.exp((st.startY-e.clientY)/220);st.y=clamp(Math.round(st.startScale*factor*100)/100,.5,3);repaint();return;}if(st.drag){e.preventDefault();e.stopPropagation();previewDrag(st.startResidual+e.clientX-st.startX);return;}v.classList.toggle('over-price-axis-v50',inPriceAxis(e,v));});
