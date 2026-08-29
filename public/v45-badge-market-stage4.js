@@ -1,13 +1,12 @@
 (()=>{
 'use strict';
-if(window.__sbcBadgeMarketStage4)return;
-window.__sbcBadgeMarketStage4=true;
+if(window.__sbcBadgeMarketStage4)return;window.__sbcBadgeMarketStage4=true;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 let badgeMode=false,book=null,capturedAuth='';
 const nativeFetch=window.fetch.bind(window);
 function headerValue(headers,name){try{if(headers instanceof Headers)return headers.get(name)||'';if(Array.isArray(headers)){const x=headers.find(([k])=>String(k).toLowerCase()===name.toLowerCase());return x?.[1]||''}if(headers&&typeof headers==='object'){const k=Object.keys(headers).find(k=>k.toLowerCase()===name.toLowerCase());return k?headers[k]:''}}catch(_){}return''}
 window.fetch=async function(input,init){const ah=headerValue(init?.headers,'authorization')||headerValue(input?.headers,'authorization');if(ah)capturedAuth=ah;return nativeFetch(input,init)};
-function auth(){if(capturedAuth)return capturedAuth;try{for(let i=0;i<localStorage.length;i++){const raw=localStorage.getItem(localStorage.key(i));if(!raw)continue;const vals=[raw];try{const j=JSON.parse(raw);if(j&&typeof j==='object')vals.push(j.token,j.accessToken,j.access_token,j.jwt,j.authToken)}catch(_){}for(const v of vals){if(typeof v==='string'&&v.split('.').length===3&&v.length>40)return`Bearer ${v.replace(/^Bearer\s+/i,'')}`}}}catch(_){}return''}
+function auth(){try{const t=String(localStorage.getItem('token')||'').replace(/^Bearer\s+/i,'').trim();if(t)return`Bearer ${t}`}catch(_){}return capturedAuth||''}
 async function api(path,opts={}){const headers={...(opts.headers||{})},a=auth();if(a)headers.Authorization=a;if(opts.body&&!headers['Content-Type'])headers['Content-Type']='application/json';const r=await nativeFetch(path,{...opts,headers}),d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||`Badge exchange request failed (${r.status})`);return d}
 function fmt(n){return Number(n).toLocaleString(undefined,{maximumFractionDigits:1})}
 function referencePrice(){if(book?.lowestAsk!=null)return Number(book.lowestAsk);const last=book?.recentTrades?.[0]?.price;return last==null?null:Number(last)}
@@ -24,11 +23,11 @@ async function buy(id,price){if(!confirmPrice(price,'buy this Badge'))return;if(
 async function sell(id,price){if(!confirmPrice(price,'sell your Badge'))return;if(!confirm(`Sell 1 Jr. Broker Badge into this ${fmt(price)} STONK bid?`))return;try{await api(`/api/badge-market/bids/${id}/sell`,{method:'POST',body:'{}'});await refresh()}catch(e){alert(e.message)}}
 async function cancelListing(id){if(!confirm('Cancel this Badge ask and release the reserved Badge?'))return;try{await api(`/api/badge-market/listings/${id}`,{method:'DELETE'});await refresh()}catch(e){alert(e.message)}}
 async function cancelBid(id){if(!confirm('Cancel this Badge bid and release the held STONK?'))return;try{await api(`/api/badge-market/bids/${id}`,{method:'DELETE'});await refresh()}catch(e){alert(e.message)}}
-function findSlot(){const v=$('#view-exchange');if(!v)return null;return $$('button,[role="button"],.market-ticket-tab,.ticket-type-tab',v).find(el=>/^MAIN EVENT$/i.test((el.textContent||'').trim())||/MAIN EVENT TICKET/i.test((el.textContent||'').trim()))||$$('*',v).find(el=>el.children.length===0&&/^MAIN EVENT$/i.test((el.textContent||'').trim()))}
-function patchSlot(){const slot=findSlot();if(!slot||slot.dataset.sbcBadgeSlot)return false;slot.dataset.sbcBadgeSlot='1';slot.textContent='JR. BROKER BADGE';slot.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();badgeMode=true;refresh()},true);return true}
-document.addEventListener('click',e=>{const t=e.target?.closest?.('[data-badge-buy],[data-badge-sell],[data-badge-cancel-listing],[data-badge-cancel-bid]');if(t){e.preventDefault();e.stopPropagation();if(t.dataset.badgeCancelListing)return cancelListing(Number(t.dataset.badgeCancelListing));if(t.dataset.badgeCancelBid)return cancelBid(Number(t.dataset.badgeCancelBid));const id=Number(t.dataset.badgeBuy||t.dataset.badgeSell),price=Number(t.dataset.price);return t.dataset.badgeBuy?buy(id,price):sell(id,price)}const txt=(e.target?.textContent||'').trim().toUpperCase();if(badgeMode&&['RUNNER','CLERK','TRADER','JR. STONKBROKER','JUNIOR'].some(x=>txt===x||txt.includes(`${x} TICKET`))){badgeMode=false;const c=$('#sbcBadgeStage4Controls');if(c)c.hidden=true}},true);
-function boot(){patchSlot();}
+function activateBadgeTab(e){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation?.();badgeMode=true;document.querySelectorAll('#ticketTypeSelector button').forEach(b=>b.classList.remove('active'));e.currentTarget.classList.add('active');refresh()}
+function ensureBadgeSlot(){const selector=$('#ticketTypeSelector');if(!selector)return false;let slot=$('#sbcBadgeMarketTab',selector);if(slot)return true;slot=document.createElement('button');slot.id='sbcBadgeMarketTab';slot.type='button';slot.className='ticket-filter-btn';slot.dataset.sbcBadgeSlot='1';slot.innerHTML=`${visual()}<span><b>JR. BROKER BADGE</b><small>TRADE IN STONK</small></span>`;slot.addEventListener('click',activateBadgeTab,true);selector.appendChild(slot);return true}
+document.addEventListener('click',e=>{const t=e.target?.closest?.('[data-badge-buy],[data-badge-sell],[data-badge-cancel-listing],[data-badge-cancel-bid]');if(t){e.preventDefault();e.stopPropagation();if(t.dataset.badgeCancelListing)return cancelListing(Number(t.dataset.badgeCancelListing));if(t.dataset.badgeCancelBid)return cancelBid(Number(t.dataset.badgeCancelBid));const id=Number(t.dataset.badgeBuy||t.dataset.badgeSell),price=Number(t.dataset.price);return t.dataset.badgeBuy?buy(id,price):sell(id,price)}const tab=e.target?.closest?.('#ticketTypeSelector button');if(tab&&tab.id!=='sbcBadgeMarketTab'&&badgeMode){badgeMode=false;const c=$('#sbcBadgeStage4Controls');if(c)c.hidden=true}},true);
+function boot(){ensureBadgeSlot();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-new MutationObserver(()=>patchSlot()).observe(document.documentElement,{childList:true,subtree:true});
-window.__SBC_BADGE_MARKET_STAGE4_TEST={warningFor:(price,b)=>{const old=book;book=b;const out=warningFor(price);book=old;return out},setBook:b=>{book=b},get badgeMode(){return badgeMode}};
+new MutationObserver(()=>ensureBadgeSlot()).observe(document.documentElement,{childList:true,subtree:true});
+window.__SBC_BADGE_MARKET_STAGE4_TEST={warningFor:(price,b)=>{const old=book;book=b;const out=warningFor(price);book=old;return out},setBook:b=>{book=b},ensureBadgeSlot,get badgeMode(){return badgeMode}};
 })();
