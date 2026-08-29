@@ -1,4 +1,4 @@
-name: Export SBC Source 9182db8
+name: Export SBC Source 6bf4d5c
 
 on:
   push:
@@ -13,14 +13,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-      - name: Fetch exact deployed commit
-        run: git fetch --depth=1 origin 9182db8ee7e0a43e20c9baaaa53d47883f2f87dd
+      - name: Fetch exact current commit
+        run: git fetch --depth=1 origin 6bf4d5cf2bda85a10452e09de62af74d49351be8
       - name: Create exact source archive
-        run: git archive --format=zip --output=STONKTRADER_FULL_SOURCE_9182db8.zip 9182db8ee7e0a43e20c9baaaa53d47883f2f87dd
+        run: git archive --format=zip --output=STONKTRADER_FULL_SOURCE_6bf4d5c.zip 6bf4d5cf2bda85a10452e09de62af74d49351be8
       - name: Upload exact source archive
         uses: actions/upload-artifact@v4
         with:
-          name: STONKTRADER_FULL_SOURCE_9182db8
-          path: STONKTRADER_FULL_SOURCE_9182db8.zip
+          name: STONKTRADER_FULL_SOURCE_6bf4d5c
+          path: STONKTRADER_FULL_SOURCE_6bf4d5c.zip
           if-no-files-found: error
           retention-days: 1
