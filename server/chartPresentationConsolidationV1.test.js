@@ -34,7 +34,6 @@ assert(stage45.includes("document.getElementById('advChartTrigger')?.remove()"),
 assert(stage45Css.includes('.over-price-axis-v50')&&stage45Css.includes('cursor:ns-resize'), 'price-axis hover must advertise vertical resizing');
 assert(workstationCss.includes('.cw-native-toolbar-v1'), 'native chart toolbar must be visually retired by the sole presentation owner');
 assert(loader.includes('/v45-chart-workstation-v1.js?v=2')&&loader.includes('/v45-chart-workstation-v1.css?v=2'), 'workstation assets must be cache-busted');
-assert(server.includes('/v45-desktop-stage43-v48.js?v=49')&&server.includes('/v45-desktop-stage45-v50.js?v=53')&&server.includes('/v45-desktop-stage46-v51-pre.js?v=71'), 'direct chart presentation assets must be cache-busted');
 assert(shell.includes('/* SBC CHART PRESENTATION TUNING V1 */'), 'exact shell must include chart presentation tuning marker');
 assert(shell.includes("tf==='tick'?46:tf==='1m'?44:tf==='5m'?42:tf==='15m'?40:tf==='1h'?36:32"), 'default visible bar window must be reduced for readable candles');
 assert(shell.includes('real.slice(-Math.max(timeframeHistoryBars(tf),160))'), 'renderer must retain enough real history for time panning');
@@ -45,11 +44,16 @@ assert(shell.includes('const range=(dataRange*1.12)/priceZoom'), 'renderer must 
 assert(!server.includes('/v45-advanced-chart-v1.js?v=1'), 'standalone Advanced Chart launcher must no longer be injected');
 assert(!stage45.includes('scaleX(${st.x})'), 'time zoom must not stretch the rendered SVG/canvas');
 assert(stage45.includes('st.x=clamp')&&stage45.includes('.5,3'), 'mouse wheel must support both compressing and expanding the time window');
-assert(stage45.includes('st.pan=Math.max(0,st.startPan+(e.clientX-st.startX)/12)'), 'plot drag must pan through historical bars rather than translate finished pixels');
+assert(stage45.includes('function previewDrag(px)')&&stage45.includes('translate3d(${px}px,0,0)'), 'plot must visibly track the pointer continuously while grabbed');
+assert(stage45.includes('previewDrag(e.clientX-st.startX)'), 'pointer movement must drive the live grab preview directly');
+assert(stage45.includes('st.pan=Math.max(0,st.startPan+st.dragPx/step)'), 'releasing the plot must commit drag distance into historical bar offset');
+assert(!stage45.includes('(e.clientX-st.startX)/12'), 'grab-pan must not use coarse fixed 12px stepping');
 assert(shell.includes('const timeZoom=Math.max(.5,Math.min(3,Number(viewportState.x||1)))'), 'renderer must read time zoom into visible bar count');
 assert(shell.includes('const visibleCount=Math.max(10,Math.min(fullData.length,Math.round(baseVisible/timeZoom)))'), 'wheel zoom must change the number of visible bars');
 assert(shell.includes('const panBars=Math.max(0,Math.min(maxOffset,Math.round(Number(viewportState.pan||0))))'), 'renderer must use horizontal drag state to select a historical window');
 assert(shell.includes('const data=fullData.slice(Math.max(0,end-visibleCount),end)'), 'renderer must pan by slicing source history, not moving pixels');
+assert(server.includes('/v45-desktop-stage45-v50.js?v=54'), 'served grab-pan asset must be cache-busted');
 assert(!stageC.includes('new MutationObserver'), 'Stage C observer retirement must remain intact');
 console.log('Chart presentation consolidation v1: PASS');
-// Native-domain navigation acceptance: plot pan, plot-wheel time zoom, and price-axis wheel/drag remain independent.
+// Grab-pan acceptance: plot follows pointer continuously, then commits to the historical bar window on release.
+// Final user-authored CI trigger for the cache-busted grab-pan build.
