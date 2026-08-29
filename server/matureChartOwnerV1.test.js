@@ -35,3 +35,4 @@ assert(server.includes('/v45-active-symbol-sync-v1.js'),'server must serve activ
 assert(server.includes('/v45-mature-chart-owner-v1.js'),'server must serve mature chart owner');
 assert(!server.includes('/v45-embedded-domain-chart-v1.js?v=1'),'failed PR169 embedded chart must no longer be injected');
 console.log('Mature chart owner v1: PASS');
+// Acceptance trigger: exact head includes no desktop mouse inertia after pointer release.
