@@ -17,8 +17,9 @@ must(hooks.includes('refreshSelectorInventory')&&hooks.includes('d.inventory?.[t
 must(hooks.includes('clearSignedOutOwnership')&&hooks.includes("target.innerHTML=signed?`YOU OWN <b>${value}</b>`:'SIGN IN'")&&hooks.includes('syncTicketTradeAuthState'),'signed-out Exchange clears stale ownership and disables ticket trade controls');
 must(hooks.includes("junior:'Jr Broker'")&&hooks.includes("u.includes('ENTRY TICKET')")&&hooks.includes("el.textContent='JR BROKER'")&&!hooks.includes("el.textContent='ENTRY TICKET'"),'legacy Entry Ticket is normalized to player-facing Jr Broker');
 must(!hooks.includes('MY-TR-1')&&!hooks.includes('MY-RU-1')&&!hooks.includes('MY-ME-1'),'real offer hook cannot inject prototype MY-* ticket ids');
-must(hooks.includes("['junior','trader','clerk','runner']")&&hooks.includes("fetch('/api/dev/tickets'")&&hooks.includes("id='seedExchangeTickets'")&&hooks.includes("/RUN CLOCK/i"),'TEST CLOCK visibly seeds one real backend ticket per active tier even without fundTest anchor');
-must(hooks.includes("closest?.('#clockBtn')")&&hooks.includes('setTimeout(ensureQaTicketSeed,100)'),'opening TEST CLOCK retries QA ticket control installation at runtime');
+must(hooks.includes("['junior','trader','clerk','runner']")&&hooks.includes("fetch('/api/dev/tickets'")&&hooks.includes("id='seedExchangeTickets'"),'TEST CLOCK can seed one real backend ticket per active tier');
+must(hooks.includes('findTestClockModal')&&hooks.includes('TEST CLOCK\\s*\\+\\s*QUOTE ENGINE')&&hooks.includes('/RUN CLOCK/i'),'QA seeding finds the actual TEST CLOCK modal by visible heading and RUN CLOCK button');
+must(hooks.includes("closest?.('#clockBtn')")&&hooks.includes('setTimeout(ensureQaTicketSeed,300)'),'opening TEST CLOCK retries QA ticket control installation after modal render');
 must(hooks.includes('normalizeSelectorOrder')&&hooks.includes("selector.insertBefore(badge,selector.firstElementChild)")&&hooks.includes('rank={junior:1,trader:2,clerk:3,runner:4}'),'selector order is Badge then Jr Broker, Trader, Clerk, Runner');
 must(loader.includes('/v45-ticket-native-hooks-v41.js?v=49'),'fallback loader points at the runtime-owner hook');
 must(server.includes('/v45-ticket-native-hooks-v41.js?v=49')&&server.includes('/v45-my-tickets-cleanup-v37.js?v=41'),'runtime-owner hook is served directly and parent loader is cache-busted');
