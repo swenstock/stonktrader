@@ -39,6 +39,10 @@ function wireBasketLive(){
   $$('[data-bb19-range]').forEach(r=>{if(r.dataset.bb39Live)return;r.dataset.bb39Live='1';const commit=r.oninput;r.oninput=()=>updateBasketPreview();r.onchange=e=>{if(typeof commit==='function')commit.call(r,e);};});
   updateBasketPreview();
 }
+function installEmptyBookCompatibility(){
+  const current=window.ticketMarket;if(typeof current!=='function'||current.__sbcEmptyBookCompat)return;
+  const wrapped=function(){const market=current.apply(this,arguments)||{};const hasBids=Array.isArray(market.bids)&&market.bids.length>0,hasAsks=Array.isArray(market.asks)&&market.asks.length>0;if(hasBids&&hasAsks)return market;let fallback=null;try{fallback=TICKET_MARKETS?.[activeTicketMarket]||null}catch(_){}const bids=hasBids?market.bids:(Array.isArray(fallback?.bids)&&fallback.bids.length?fallback.bids:[0]);const asks=hasAsks?market.asks:(Array.isArray(fallback?.asks)&&fallback.asks.length?fallback.asks:[0]);const last=Number.isFinite(Number(market.last))?Number(market.last):Number(fallback?.last||0);return{...market,bids,asks,last};};wrapped.__sbcEmptyBookCompat=true;window.ticketMarket=wrapped;
+}
 function ensureSettlement(){
   if(!window.__sbcTicketNativeHooksV41&&!document.querySelector('script[data-sbc-ticket-native-v41]')){const s=document.createElement('script');s.src='/v45-ticket-native-hooks-v41.js?v=49';s.dataset.sbcTicketNativeV41='1';document.head.appendChild(s);}
   if(!document.querySelector('link[data-sbc-ticket-settlement-v38]')){const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-ticket-settlement-v38.css?v=38';l.dataset.sbcTicketSettlementV38='1';document.head.appendChild(l);}
@@ -48,6 +52,7 @@ function ensureSettlement(){
   if(!window.__sbcTraderActionConfirmV42&&!document.querySelector('script[data-sbc-trader-confirm-v42]')){const s=document.createElement('script');s.src='/v45-trader-action-confirm-v42.js?v=42';s.dataset.sbcTraderConfirmV42='1';document.head.appendChild(s);}
 }
 function clean(){
+  installEmptyBookCompatibility();
   const v=$('#view-exchange');if(v){const h=$$('h1,h2,h3',v).find(x=>(x.textContent||'').trim().toUpperCase()==='MY TICKETS');const box=h?.parentElement;if(box)$$('.inv.big-inv',box).forEach(stripDescription);}
   wireBasketLive();
 }
