@@ -14,11 +14,13 @@ function barsFor(symbol,interval){
   return rows;
 }
 
-test('mature chart renders, pans, zooms, preserves viewport, and follows canonical symbol',async({page})=>{
-  const errors=[];page.on('pageerror',e=>errors.push(String(e)));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
+test('mature chart renders, pans, zooms, preserves viewport, follows canonical symbol, and exposes native fallback on data failure',async({page})=>{
+  const errors=[];let failSymbol='';
+  page.on('pageerror',e=>errors.push(String(e)));page.on('console',m=>{if(m.type()==='error')errors.push(m.text());});
   await page.route('**/api/quotes/bars**',async route=>{
     const u=new URL(route.request().url()),symbol=(u.searchParams.get('symbol')||'AAPL').toUpperCase(),interval=u.searchParams.get('interval')||'5m';
-    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({bars:barsFor(symbol,interval)})});
+    const bars=symbol===failSymbol?[]:barsFor(symbol,interval);
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({bars})});
   });
   await page.setViewportSize({width:1280,height:820});
   await page.setContent(`<!doctype html><html><head><base href="http://sbc.test/"><style>body{margin:0;background:#071019}.symbol-chart{position:relative;width:920px;height:520px}.chart-trade-card{width:920px}.native-chart{width:920px;height:520px}</style></head><body>
@@ -79,5 +81,23 @@ test('mature chart renders, pans, zooms, preserves viewport, and follows canonic
   await expect.poll(()=>page.evaluate(()=>window.SBCMatureChartV1.state.timeframe)).toBe('15m');
   await expect.poll(()=>page.evaluate(()=>window.SBCMatureChartV1.state.bars.length)).toBeGreaterThan(50);
   expect(await page.evaluate(()=>!!document.querySelector('.sbc-mature-chart-host-v1.is-ready'))).toBe(true);
+
+  failSymbol='NVDA';
+  await page.evaluate(()=>window.selectChartSymbol('NVDA','portfolio'));
+  await expect.poll(()=>page.evaluate(()=>!!document.querySelector('.sbc-mature-chart-host-v1.is-ready'))).toBe(false);
+  const fallback=await page.evaluate(()=>{
+    const host=document.querySelector('.sbc-mature-chart-host-v1');
+    const native=document.querySelector('.native-chart');
+    const hs=getComputedStyle(host),ns=getComputedStyle(native);
+    return{hostVisibility:hs.visibility,hostPointerEvents:hs.pointerEvents,nativeOpacity:ns.opacity,nativePointerEvents:ns.pointerEvents};
+  });
+  expect(fallback.hostVisibility).toBe('hidden');
+  expect(fallback.hostPointerEvents).toBe('none');
+  expect(Number(fallback.nativeOpacity)).toBeGreaterThan(.9);
+  expect(fallback.nativePointerEvents).not.toBe('none');
+
+  failSymbol='';
+  await page.evaluate(()=>window.selectChartSymbol('AAPL','portfolio'));
+  await expect.poll(()=>page.evaluate(()=>!!document.querySelector('.sbc-mature-chart-host-v1.is-ready'))).toBe(true);
   expect(errors).toEqual([]);
 });
