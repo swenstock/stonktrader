@@ -52,6 +52,8 @@ assert(shell.includes('const timeZoom=Math.max(.5,Math.min(3,Number(viewportStat
 assert(shell.includes('const visibleCount=Math.max(10,Math.min(fullData.length,Math.round(baseVisible/timeZoom)))'), 'wheel zoom must change the number of visible bars');
 assert(shell.includes('const panBars=Math.max(0,Math.min(maxOffset,Math.round(Number(viewportState.pan||0))))'), 'renderer must use horizontal drag state to select a historical window');
 assert(shell.includes('const data=fullData.slice(Math.max(0,end-visibleCount),end)'), 'renderer must pan by slicing source history, not moving pixels');
+assert(server.includes('/v45-desktop-stage45-v50.js?v=54'), 'served grab-pan asset must be cache-busted');
 assert(!stageC.includes('new MutationObserver'), 'Stage C observer retirement must remain intact');
 console.log('Chart presentation consolidation v1: PASS');
 // Grab-pan acceptance: plot follows pointer continuously, then commits to the historical bar window on release.
+// Final user-authored CI trigger for the cache-busted grab-pan build.
