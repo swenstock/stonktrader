@@ -43,6 +43,8 @@ assert(sync.includes('function guardMatureStyleClick(e)'),'mature style controls
 assert(sync.includes('preferredStyle=style;applyPreferredStyle()'),'Candles/Line controls must persist the selected mature chart style');
 assert(sync.includes('state.chartType=preferredStyle')&&sync.includes("state.candles.applyOptions({visible:preferredStyle==='candles'})")&&sync.includes("state.line.applyOptions({visible:preferredStyle==='line'})"),'preferred style must directly control the mature candlestick and line series');
 assert(sync.includes('reapplyPreferredStyle()'),'timeframe/recovery lifecycle must reapply the preferred chart style');
+assert(sync.includes("if(sym===last&&(src==='workspace'||src==='chart-selector'))"),'same-symbol portfolio/chart rehydration must not publish a reset-worthy active-symbol event');
+assert(sync.includes('function snapshotMatureView()')&&sync.includes('function restoreMatureView(snap)')&&sync.includes('setVisibleLogicalRange(snap.range)'),'same-symbol canonical setter calls must preserve and restore the mature chart viewport');
 assert(sync.includes('function installTickCandleBridge()'),'1s chart must repair doji-only legacy tick candles before mature rendering');
 assert(stage45.includes('if(window.__sbcMatureChartOwnerV1)return;'),'legacy Stage45 gestures must retire when mature owner is active');
 assert(server.includes('/vendor/lightweight-charts-4.2.3.js'),'server must serve pinned local chart library');
