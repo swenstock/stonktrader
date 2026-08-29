@@ -19,7 +19,7 @@ function urlOf(input){try{return typeof input==='string'?input:input?.url||''}ca
 function methodOf(input,init){return String(init?.method||input?.method||'GET').toUpperCase()}
 function advancedDetail(b){const type=String(b.orderType||'').replace('_',' ').toUpperCase();if(type==='LIMIT')return`Limit ${money(b.limitPrice)}`;if(type==='STOP')return`Stop ${money(b.stopPrice)}`;if(type==='STOP LIMIT')return`Stop ${money(b.stopPrice)} → Limit ${money(b.limitPrice)}`;return type||'Order accepted';}
 function showTrade(body,out){
-  if(body?.basketOrder)return;
+  if(body?.basketOrder||document.querySelector('.bb19-overlay:not([hidden])'))return;
   const symbol=String(out?.symbol||body?.symbol||'').toUpperCase(),side=String(out?.side||body?.side||'').toUpperCase();
   if(!symbol||!['BUY','SELL'].includes(side))return;
   if(out?.queued){show({eyebrow:'ORDER QUEUED',title:`${side} ${symbol}`,detail:'WAITING FOR MARKET OPEN',subdetail:out.message||'This order will be rechecked at the next eligible market open.',icon:'⏱'});return;}

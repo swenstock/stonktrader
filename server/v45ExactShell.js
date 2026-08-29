@@ -59,6 +59,42 @@ function countOccurrences(haystack, needle) {
   return haystack.split(needle).length - 1;
 }
 
+const LEGACY_ORDERS_SURFACE_PATCH_MARKER = '<!-- SBC MODERN ORDERS SURFACE V1 -->';
+const LEGACY_ORDERS_BLOCK = `    <div class="bottom-trade-grid">
+      <section class="queue-card panel">
+        <div class="card-head"><h2 id="queueTitle">QUEUED ORDERS</h2><span id="queueSubtitle">Orders waiting for session open</span></div>
+        <div id="queuedOrders" class="order-list"></div>
+      </section>
+      <section class="history-card panel">
+        <div class="card-head"><h2>RECENT ACTIVITY</h2><span>Trades and portfolio changes</span></div>
+        <div id="tradeHistory" class="order-list"></div>
+      </section>
+    </div>`;
+const MODERN_ORDERS_BLOCK = `    <!-- SBC MODERN ORDERS SURFACE V1 -->
+    <div class="bottom-trade-grid">
+      <section class="queue-card orders-activity-card panel">
+        <div class="card-head"><h2>ORDERS & ACTIVITY</h2><span>Real queued orders, working orders, fills and cancellations</span></div>
+        <span id="queueTitle" hidden>ORDER QUEUE</span>
+        <span id="queueSubtitle" hidden>Real backend orders</span>
+      </section>
+    </div>`;
+
+function applyLegacyOrdersSurfaceRetirementPatch(html) {
+  let source = Buffer.isBuffer(html) ? html.toString("utf8") : String(html);
+  if (source.includes(LEGACY_ORDERS_SURFACE_PATCH_MARKER)) return Buffer.from(source, "utf8");
+  if (!source.includes(LEGACY_ORDERS_BLOCK)) throw new Error('Exact V45 legacy orders surface patch compatibility failure');
+  source = source.replace(LEGACY_ORDERS_BLOCK, MODERN_ORDERS_BLOCK);
+  const portfolioStart=source.indexOf('function renderPortfolio(){');
+  const portfolioEnd=source.indexOf('function renderHoldings(){',portfolioStart);
+  if(portfolioStart<0||portfolioEnd<0)throw new Error('Exact V45 renderPortfolio patch compatibility failure');
+  let block=source.slice(portfolioStart,portfolioEnd);
+  block=block.replace('  renderQueuedOrders();\n  renderTradeHistory();\n','');
+  if(block.includes('renderQueuedOrders();')||block.includes('renderTradeHistory();'))throw new Error('Exact V45 legacy orders render calls retained');
+  source=source.slice(0,portfolioStart)+block+source.slice(portfolioEnd);
+  if(source.includes('id="queuedOrders"')||source.includes('id="tradeHistory"'))throw new Error('Exact V45 legacy order DOM ids retained');
+  return Buffer.from(source,'utf8');
+}
+
 const QUICK_TRADE_ORDER_ANCHOR = "function quickTradeOrder(side){";
 const QUICK_TRADE_SUBMIT_ANCHOR = "function submitPortfolioOrder(){";
 const QUICK_TRADE_EXECUTE_ANCHOR = "function executeOrder(p,order){";
@@ -180,7 +216,7 @@ function buildExactV45Shell() {
   if (html.length !== EXPECTED_BYTES || sha256 !== EXPECTED_SHA256) {
     throw new Error(`Exact V45 integrity failure: ${html.length} bytes ${sha256}`);
   }
-  return applyRealQuickTradePatch(applyRealChartDataPatch(html));
+  return applyLegacyOrdersSurfaceRetirementPatch(applyRealQuickTradePatch(applyRealChartDataPatch(html)));
 }
 
 const exactV45Shell = buildExactV45Shell();
@@ -192,4 +228,6 @@ module.exports = {
   applyRealChartDataPatch,
   applyRealQuickTradePatch,
   REAL_BARS_PATCH_MARKER,
+  applyLegacyOrdersSurfaceRetirementPatch,
+  LEGACY_ORDERS_SURFACE_PATCH_MARKER,
 };
