@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: handoff-export-pr170
-          fetch-depth: 2
+          fetch-depth: 0
       - name: Build exact source archive
         run: |
           git archive --format=zip --output=stonktrader-main-fe611d3.zip fe611d347a0412ed5f195b3fc475f4bcc61417d6
