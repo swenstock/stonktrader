@@ -45,9 +45,6 @@ jobs:
           t=p.read_text()
           t=t.replace("assert(server.includes('/v45-desktop-stage45-v50.js?v=56'), 'served chart interaction asset must remain present');", "assert(server.includes('/v45-desktop-stage45-v50.js?v=57'), 'served legacy layout asset must be cache-busted while mature owner retires its gestures');\nassert(stage45.includes('if(window.__sbcMatureChartOwnerV1)return;'), 'Stage45 must stand down before attaching legacy gesture handlers when mature chart owner is active');\nassert(server.includes('/vendor/lightweight-charts-4.2.3.js'), 'pinned mature chart bundle must be served locally');\nassert(server.includes('/v45-mature-chart-owner-v1.js?v=1'), 'mature chart owner must be served');\nassert(!server.includes('/v45-embedded-domain-chart-v1.js?v=1'), 'failed embedded-domain chart owner must be retired from the served page');")
           p.write_text(t)
-
-          wf=Path('.github/workflows/mature-chart-browser.yml')
-          wf.write_text('''name: Mature Chart Browser Acceptance\non:\n  pull_request:\n    paths:\n      - "public/v45-mature-chart-owner-v1.js"\n      - "public/v45-mature-chart-owner-v1.css"\n      - "public/v45-active-symbol-sync-v1.js"\n      - "public/v45-desktop-stage45-v50.js"\n      - "public/vendor/lightweight-charts-4.2.3.js"\n      - "server/index.js"\n      - "server/matureChartBrowser.spec.js"\n      - "server/matureChartOwnerV1.test.js"\n      - ".github/workflows/mature-chart-browser.yml"\n  workflow_dispatch:\njobs:\n  browser:\n    runs-on: ubuntu-latest\n    timeout-minutes: 15\n    steps:\n      - uses: actions/checkout@v4\n      - uses: actions/setup-node@v4\n        with:\n          node-version: 22\n          cache: npm\n      - run: npm ci\n      - name: Install Playwright browser for acceptance only\n        run: npm install --no-save @playwright/test@1.55.0 && npx playwright install --with-deps chromium\n      - name: Real chart render and interaction acceptance\n        run: npx playwright test server/matureChartBrowser.spec.js --reporter=line --workers=1\n''')
           PY
       - name: Focused architecture tests
         run: |
@@ -59,6 +56,6 @@ jobs:
           rm .github/workflows/publish-mature-chart-integration-v1.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add server/index.js package.json server/chartPresentationConsolidationV1.test.js .github/workflows/mature-chart-browser.yml .github/workflows/publish-mature-chart-integration-v1.yml
+          git add server/index.js package.json server/chartPresentationConsolidationV1.test.js .github/workflows/publish-mature-chart-integration-v1.yml
           git commit -m 'Wire mature chart owner into desktop workspace'
           git push origin HEAD:mature-chart-owner-v1
