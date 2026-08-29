@@ -23,9 +23,9 @@ function buildViewModel(snapshot){
 
 function historyLabel(row){
   if(!row)return'';
-  if(row.type==='redemption')return`REDEEMED 20 JUNIORS • ACTIVATED BROKER ${String(row.status||'').replaceAll('_',' ').toUpperCase()}`;
+  if(row.type==='redemption')return`REDEEMED 20 JR STONK BROKER BADGES • ACTIVATED BROKER ${String(row.status||'').replaceAll('_',' ').toUpperCase()}`;
   const source=row.source==='minted'?'MINTED':'WON';
-  return`${source} 1 JUNIOR`;
+  return`${source} 1 JR STONK BROKER BADGE`;
 }
 
 window.__SBC_STAGE4_JUNIOR_UI_TEST={buildViewModel,historyLabel};
@@ -102,7 +102,7 @@ function fmtDate(raw){
 }
 
 function renderHistory(vm){
-  if(!vm.history.length)return'<div class="sbc-jr4-empty">No Junior activity yet.</div>';
+  if(!vm.history.length)return'<div class="sbc-jr4-empty">No Jr Stonk Broker Badge activity yet.</div>';
   return vm.history.map(row=>`<div class="sbc-jr4-history-row"><div><b>${esc(historyLabel(row))}</b><span>${esc(fmtDate(row.createdAt))}</span></div><strong class="${row.quantity<0?'out':'in'}">${row.quantity>0?'+':''}${esc(row.quantity)}</strong></div>`).join('');
 }
 
@@ -110,17 +110,17 @@ function render(snapshot,{signedOut=false,error=''}={}){
   const card=ensureCard();
   if(!card)return;
   if(signedOut){
-    card.innerHTML=`<div class="sbc-jr4-head"><div><small>PRIZE COLLECTION</small><h3>JUNIOR STONK BROKERS</h3></div><span>20 = 1 BROKER</span></div><div class="sbc-jr4-signedout">Sign in to track your Juniors, promotion progress, and prize history.</div>`;
+    card.innerHTML=`<div class="sbc-jr4-head"><div><small>PRIZE COLLECTION</small><h3>JR STONK BROKER BADGES</h3></div><span>20 = 1 BROKER</span></div><div class="sbc-jr4-signedout">Sign in to track your Badges, promotion progress, and prize history.</div>`;
     return;
   }
-  if(error){card.innerHTML=`<div class="sbc-jr4-head"><div><small>PRIZE COLLECTION</small><h3>JUNIOR STONK BROKERS</h3></div><span>20 = 1 BROKER</span></div><div class="sbc-jr4-signedout">${esc(error)}</div>`;return}
+  if(error){card.innerHTML=`<div class="sbc-jr4-head"><div><small>PRIZE COLLECTION</small><h3>JR STONK BROKER BADGES</h3></div><span>20 = 1 BROKER</span></div><div class="sbc-jr4-signedout">${esc(error)}</div>`;return}
   const vm=buildViewModel(snapshot);
   latest=vm;
   card.innerHTML=`
-    <div class="sbc-jr4-head"><div><small>PRIZE COLLECTION</small><h3>JUNIOR STONK BROKERS</h3></div><span>COLLECT 20 → GET PROMOTED</span></div>
+    <div class="sbc-jr4-head"><div><small>PRIZE COLLECTION</small><h3>JR STONK BROKER BADGES</h3></div><span>COLLECT 20 → GET PROMOTED</span></div>
     <div class="sbc-jr4-grid">
-      <div class="sbc-jr4-count"><small>YOU OWN</small><b>${vm.count}</b><span>JUNIORS</span></div>
-      <div class="sbc-jr4-progress"><div class="sbc-jr4-progress-top"><small>NEXT PROMOTION</small><b>${vm.progressLabel}</b></div><div class="sbc-jr4-track"><i style="width:${vm.progressPercent}%"></i></div><p>Collect Jr. StonkBrokers. Collect 20. Get promoted to an Activated StonkBroker.</p></div>
+      <div class="sbc-jr4-count"><small>YOU OWN</small><b>${vm.count}</b><span>BADGES</span></div>
+      <div class="sbc-jr4-progress"><div class="sbc-jr4-progress-top"><small>NEXT PROMOTION</small><b>${vm.progressLabel}</b></div><div class="sbc-jr4-track"><i style="width:${vm.progressPercent}%"></i></div><p>Collect Jr Stonk Broker Badges. Collect 20. Get promoted to an Activated StonkBroker.</p></div>
       <div class="sbc-jr4-action"><button id="sbcJr4Redeem" ${vm.redeemable?'':'disabled'}>${vm.redeemable?'GET PROMOTED':'KEEP COLLECTING'}</button><small>${vm.redeemable?`${vm.fullRedemptionsAvailable} promotion${vm.fullRedemptionsAvailable===1?'':'s'} ready`:`${vm.redeemCount-vm.progress} more to promotion`}</small></div>
     </div>
     <button class="sbc-jr4-history-toggle" id="sbcJr4HistoryToggle">TRANSACTION HISTORY <span>+</span></button>
