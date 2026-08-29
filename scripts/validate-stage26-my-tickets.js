@@ -6,10 +6,12 @@ const dialog=fs.readFileSync(path.join(__dirname,'..','public','v45-exchange-dia
 const routing=fs.readFileSync(path.join(__dirname,'..','public','v45-exchange-routing-fill-v1.js'),'utf8');
 const integrity=fs.readFileSync(path.join(__dirname,'..','public','v45-exchange-tier-integrity-v1.js'),'utf8');
 const activity=fs.readFileSync(path.join(__dirname,'..','public','v45-exchange-my-activity-v1.js'),'utf8');
+const layout=fs.readFileSync(path.join(__dirname,'..','public','v45-exchange-layout-sales-v1.js'),'utf8');
 const stageC=fs.readFileSync(path.join(__dirname,'..','public','v45-stage-c-ui-cleanup-v1.js'),'utf8');
 const dev=fs.readFileSync(path.join(__dirname,'..','server','routes','dev.js'),'utf8');
 const ticketMarket=fs.readFileSync(path.join(__dirname,'..','server','routes','ticketMarket.js'),'utf8');
 const badgeRoutes=fs.readFileSync(path.join(__dirname,'..','server','routes','badgeMarketV45.js'),'utf8');
+const schema=fs.readFileSync(path.join(__dirname,'..','server','schemaV45.js'),'utf8');
 const server=fs.readFileSync(path.join(__dirname,'..','server','index.js'),'utf8');
 function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
 must(ui.includes("node.nodeType===Node.TEXT_NODE")&&ui.includes('node.remove()'),'cleanup removes raw descriptive text nodes');
@@ -20,17 +22,23 @@ must(ui.includes('/v45-test-stonk-faucet-v1.js?v=1'),'TEST STONK faucet remains 
 must(faucet.includes("fetch('/api/dev/fund'")&&faucet.includes('amount=250000')&&faucet.includes("localStorage.getItem('token')")&&faucet.includes("id='fundTestStonk'")&&faucet.includes("textContent='+ TEST STONK'"),'TEST STONK control credits 250,000 through authenticated backend custodian faucet');
 must(faucet.includes("fetch('/api/dev/order-book'")&&faucet.includes("id='seedTestOrderBook'")&&faucet.includes("textContent='+ TEST ORDER BOOK'"),'TEST order-book control calls the backend QA depth seeder');
 must(!/localStorage\.setItem\([^\n]*stonk/i.test(faucet),'TEST STONK faucet does not fabricate a browser-local balance');
-must(stageC.includes('/v45-exchange-dialog-v1.js?v=2')&&stageC.includes('/v45-test-stonk-faucet-v1.js?v=2')&&stageC.includes('/v45-exchange-own-orders-v1.js?v=8'),'final direct UI owner boots cache-busted Exchange dialogs before QA and own-order helpers');
+must(stageC.includes('/v45-exchange-dialog-v1.js?v=3')&&stageC.includes('/v45-test-stonk-faucet-v1.js?v=2')&&stageC.includes('/v45-exchange-own-orders-v1.js?v=8'),'final direct UI owner boots cache-busted Exchange dialogs before QA and own-order helpers');
 must(dialog.includes("id='sbcExchangeDialogV1'")||dialog.includes("root.id='sbcExchangeDialogV1'"),'Exchange uses an in-app dark dialog instead of browser-native message chrome');
 must(dialog.includes('function notice(')&&dialog.includes('function confirmAction(')&&dialog.includes('function promptPrice('),'Exchange dialog layer supports notice, confirm, and price-edit prompt flows');
 must(dialog.includes("[data-tm36-edit]")&&dialog.includes("[data-tm36-cancel]")&&dialog.includes("stopImmediatePropagation"),'legacy My Orders adjust/cancel clicks are intercepted before native prompt/confirm handlers');
 must(dialog.includes('__sbcExchangeDialogBridge')&&dialog.includes('window.alert=bridged')&&dialog.includes('testClockModal'),'Exchange/Test Clock alerts are routed through the in-app dialog layer');
 must(dialog.includes('/v45-exchange-routing-fill-v1.js?v=1')&&dialog.includes('/v45-exchange-tier-integrity-v1.js?v=1'),'dialog bootstrap loads routing/fill and tier-integrity guards');
 must(dialog.includes('/v45-exchange-my-activity-v1.js?v=1')&&dialog.includes('data-sbc-exchange-my-activity'),'dialog bootstrap loads the Exchange My Activity blotter');
+must(dialog.includes('/v45-exchange-layout-sales-v1.js?v=1')&&dialog.includes('data-sbc-exchange-layout-sales'),'dialog bootstrap loads the Exchange bottom-layout/recent-sales guard');
 must(activity.includes('MY ACTIVITY')&&activity.includes("['all','working','filled','cancelled']"),'My Activity exposes ALL/WORKING/FILLED/CANCELLED filters');
 must(activity.includes("api('/api/ticket-market/mine')")&&activity.includes("api('/api/badge-market/mine')"),'My Activity combines backend ticket and Badge order history');
 must(activity.includes('data-activity-change')&&activity.includes('data-activity-cancel')&&activity.includes("method:'PATCH'")&&activity.includes("method:'DELETE'"),'working My Activity rows support price change and cancellation');
 must(activity.includes('ORDER ID')&&activity.includes('TICKET ID')&&activity.includes('CREATED')&&activity.includes('FILLED')&&activity.includes('CANCELLED'),'activity drill-down exposes order identity and lifecycle timestamps');
+must(layout.includes('sbcExchangePersonalStrip')&&layout.includes('STONK BALANCE')&&layout.includes("findPanel('MY TICKETS')"),'bottom personal strip places STONK balance beside My Activity and My Tickets');
+must(layout.includes("findPanel('RECENT SALES')")&&layout.includes('sbcExchangeRealRecentSales')&&layout.includes('/api/ticket-market/recent/${type}'),'legacy fake Recent Sales is hidden and replaced with backend ticket executions inside the book');
+must(layout.includes("active?.id==='sbcBadgeMarketTab'")&&layout.includes("display',on?'flex':'none','important'")&&layout.includes('#sbcBadgeMint,#sbcBadgeList,#sbcBadgeBid'),'Badge trade controls are hard-scoped to the active Badge tab');
+must(ticketMarket.includes("router.get('/recent/:ticketType'")&&ticketMarket.includes("l.status='sold'")&&ticketMarket.includes("b.status='filled'")&&ticketMarket.includes('executedAt'),'ticket recent-sales feed unions real sold offers and filled bids');
+must(schema.includes("addColumn('ticket_listings', 'cancelled_at TEXT')")&&ticketMarket.includes("status='cancelled', cancelled_at=?"),'ticket offer cancellations now retain cancellation timestamps for My Activity');
 must(badgeRoutes.includes("router.get('/mine', requireAuth")&&badgeRoutes.includes('badge_listings')&&badgeRoutes.includes('badge_bids'),'Badge market exposes authenticated personal working/filled/cancelled activity');
 must(badgeRoutes.includes("router.patch('/listings/:id'")&&badgeRoutes.includes("router.patch('/bids/:id'")&&badgeRoutes.includes('badge_bid_hold_increase')&&badgeRoutes.includes('badge_bid_hold_release'),'Badge working offers and funded bids can be repriced without breaking held STONK accounting');
 must(routing.includes("const LABEL={junior:'Jr Broker',trader:'Trader',clerk:'Clerk',runner:'Runner'}")&&routing.includes('exactTicket(type)')&&routing.includes('selectorButton(type)'),'My Tickets routing resolves exact backend ticket and matching selector tier');
