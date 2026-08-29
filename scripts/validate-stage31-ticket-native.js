@@ -18,8 +18,11 @@ must(hooks.includes('clearSignedOutOwnership')&&hooks.includes("target.innerHTML
 must(hooks.includes("junior:'Jr Broker'")&&hooks.includes("u.includes('ENTRY TICKET')")&&hooks.includes("el.textContent='JR BROKER'")&&!hooks.includes("el.textContent='ENTRY TICKET'"),'legacy Entry Ticket is normalized to player-facing Jr Broker');
 must(!hooks.includes('MY-TR-1')&&!hooks.includes('MY-RU-1')&&!hooks.includes('MY-ME-1'),'real offer hook cannot inject prototype MY-* ticket ids');
 must(hooks.includes("['junior','trader','clerk','runner']")&&hooks.includes("fetch('/api/dev/tickets'")&&hooks.includes("id='seedExchangeTickets'"),'TEST CLOCK can seed one real backend ticket per active tier');
-must(hooks.includes('findTestClockModal')&&hooks.includes('TEST CLOCK\\s*\\+\\s*QUOTE ENGINE')&&hooks.includes('/RUN CLOCK/i'),'QA seeding finds the actual TEST CLOCK modal by visible heading and RUN CLOCK button');
-must(hooks.includes("closest?.('#clockBtn')")&&hooks.includes('setTimeout(ensureQaTicketSeed,300)'),'opening TEST CLOCK retries QA ticket control installation after modal render');
+must(hooks.includes("document.getElementById('testClockModal')")&&hooks.includes("document.getElementById('testClockRunBtn')")&&hooks.includes('window.openTestClock'),'QA seeding binds to the exact production TEST CLOCK modal, RUN button, and open lifecycle');
+must(!hooks.includes("closest?.('#clockBtn')"),'QA seeding no longer depends on nonexistent #clockBtn');
+must(hooks.includes('renderAuthoritativeMyTickets')&&hooks.includes("types=['junior','trader','clerk','runner']")&&hooks.includes("if(!owned.length)continue")&&hooks.includes("box.querySelectorAll('.inv.big-inv').forEach(row=>row.remove())"),'My Tickets replaces static shell rows with backend-owned active tiers only');
+must(hooks.includes('installOwnedTicketSellGuard')&&hooks.includes('Number.isInteger(n)&&n>0')&&hooks.includes('realTicketForType(type)'),'legacy seller actions cannot pass fake nonnumeric ticket ids into the sell modal');
+must(!/Main Event/i.test(hooks.match(/async function renderAuthoritativeMyTickets[\s\S]*?function installOwnedTicketSellGuard/)?.[0]||''),'authoritative My Tickets renderer contains no Main Event row');
 must(hooks.includes('normalizeSelectorOrder')&&hooks.includes("selector.insertBefore(badge,selector.firstElementChild)")&&hooks.includes('rank={junior:1,trader:2,clerk:3,runner:4}'),'selector order is Badge then Jr Broker, Trader, Clerk, Runner');
 must(loader.includes('/v45-ticket-native-hooks-v41.js?v=49'),'fallback loader points at the runtime-owner hook');
 must(server.includes('/v45-ticket-native-hooks-v41.js?v=49')&&server.includes('/v45-my-tickets-cleanup-v37.js?v=41'),'runtime-owner hook is served directly and parent loader is cache-busted');
