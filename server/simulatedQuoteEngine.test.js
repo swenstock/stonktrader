@@ -31,4 +31,12 @@ for (const bar of bars1) {
   assert.ok(bar.volume > 0);
 }
 
+const oneMinute = getSimulatedBars(META, '1m', t1, new Date(t1.getTime() + 20 * 60000));
+assert.strictEqual(oneMinute.length, 20);
+const bodyBars = oneMinute.filter(bar => bar.open !== bar.close);
+assert.ok(bodyBars.length >= 12, '1m history should contain real candle bodies rather than mostly doji sticks');
+for (let i = 1; i < oneMinute.length; i++) {
+  assert.strictEqual(oneMinute[i - 1].close, oneMinute[i].open, 'completed 1m candles must join continuously at interval boundaries');
+}
+
 console.log('simulatedQuoteEngine tests passed');
