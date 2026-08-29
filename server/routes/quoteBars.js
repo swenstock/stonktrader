@@ -9,6 +9,7 @@ const { getSimulatedBars } = require("../simulatedQuoteEngine");
 const VALID_INTERVALS = ["1m", "5m", "15m", "1h", "1D"];
 const BAR_COUNT_BY_INTERVAL = { "1m": 240, "5m": 288, "15m": 384, "1h": 336, "1D": 260 };
 const STEP_MS = { "1m": 60000, "5m": 300000, "15m": 900000, "1h": 3600000, "1D": 86400000 };
+const LOOKBACK_MULTIPLIER_BY_INTERVAL = { "1m": 60, "5m": 5, "15m": 5, "1h": 5, "1D": 1 };
 const ET_SESSION_FORMATTER = new Intl.DateTimeFormat('en-US', {
   timeZone: 'America/New_York',
   weekday: 'short',
@@ -58,7 +59,7 @@ router.get("/", (req, res) => {
 
   const count = BAR_COUNT_BY_INTERVAL[interval];
   const stepMs = STEP_MS[interval];
-  const lookbackMultiplier = interval === '1D' ? 1 : 5;
+  const lookbackMultiplier = LOOKBACK_MULTIPLIER_BY_INTERVAL[interval];
   const from = new Date(alignedLookbackStart(nowMs, count, stepMs, lookbackMultiplier));
   const to = new Date(nowMs);
 
@@ -74,4 +75,4 @@ router.get("/", (req, res) => {
 });
 
 module.exports = router;
-module.exports._test = { etSessionParts, isRegularSessionBar, alignedLookbackStart, minuteCacheKey };
+module.exports._test = { etSessionParts, isRegularSessionBar, alignedLookbackStart, minuteCacheKey, LOOKBACK_MULTIPLIER_BY_INTERVAL };
