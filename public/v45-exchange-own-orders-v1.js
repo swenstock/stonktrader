@@ -1,0 +1,17 @@
+(()=>{
+'use strict';
+if(window.__sbcExchangeOwnOrdersV1)return;window.__sbcExchangeOwnOrdersV1=true;
+function token(){try{return String(localStorage.getItem('token')||'').replace(/^Bearer\s+/i,'').trim()}catch(_){return''}}
+function tier(){const text=String(document.querySelector('#ticketTypeSelector .active')?.textContent||document.getElementById('marketTicketTitle')?.textContent||'RUNNER').toUpperCase();if(/JR\.?\s*(STONK\s*)?BROKER|JUNIOR|ENTRY TICKET/.test(text))return'junior';if(text.includes('TRADER'))return'trader';if(text.includes('CLERK'))return'clerk';return'runner'}
+function price(o){return Number(o?.askPrice??o?.bidPrice??o?.price??0)}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+async function mine(){const t=token();if(!t)return{bids:[],offers:[]};const r=await fetch('/api/ticket-market/mine',{headers:{Authorization:`Bearer ${t}`}}),d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Unable to load your ticket orders.');return d}
+function ownRow(o,side){const p=price(o),label=side==='offer'?'YOUR ASK':'YOUR BID';return `<div class="book-row sbc-own-book-row"><div class="book-ticket-meta"><div><strong>${label}</strong><small>Active backend order #${esc(o.id)}</small></div></div><div class="book-price ${side==='offer'?'ask':'bid'}">${p.toLocaleString()} STONK</div><button disabled title="You cannot trade against your own order">${label}</button></div>`}
+async function decorate(){const view=document.getElementById('view-exchange');if(!view)return;const ask=document.getElementById('askBook'),bid=document.getElementById('bidBook');ask?.querySelectorAll('.sbc-own-book-row').forEach(x=>x.remove());bid?.querySelectorAll('.sbc-own-book-row').forEach(x=>x.remove());if(!token())return;let d;try{d=await mine()}catch(_){return}const type=tier(),offers=(d.offers||[]).filter(o=>o.status==='active'&&o.ticketType===type),bids=(d.bids||[]).filter(o=>o.status==='active'&&o.ticketType===type);offers.slice().reverse().forEach(o=>ask?.insertAdjacentHTML('afterbegin',ownRow(o,'offer')));bids.slice().reverse().forEach(o=>bid?.insertAdjacentHTML('afterbegin',ownRow(o,'bid')))}
+function install(){const current=window.renderTicketMarket;if(typeof current==='function'&&!current.__sbcOwnOrdersVisible){const wrapped=function(){const result=current.apply(this,arguments);return Promise.resolve(result).then(async value=>{await decorate();return value})};wrapped.__sbcOwnOrdersVisible=true;window.renderTicketMarket=wrapped;}decorate().catch(()=>{})}
+let t;const observer=new MutationObserver(muts=>{if(!muts.some(m=>m.target?.closest?.('#tm36Mine')||[...m.addedNodes].some(n=>n.nodeType===1&&(n.id==='tm36Mine'||n.querySelector?.('#tm36Mine')))))return;clearTimeout(t);t=setTimeout(()=>decorate().catch(()=>{}),40)});
+function run(){install();const view=document.getElementById('view-exchange');if(view&&!view.dataset.sbcOwnOrdersObserved){view.dataset.sbcOwnOrdersObserved='1';observer.observe(view,{childList:true,subtree:true})}}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();setTimeout(run,250);setTimeout(run,900);
+document.addEventListener('click',e=>{if(e.target?.closest?.('#ticketTypeSelector button'))setTimeout(()=>decorate().catch(()=>{}),180)},true);
+window.__SBC_EXCHANGE_OWN_ORDERS_V1={decorate,tier};
+})();
