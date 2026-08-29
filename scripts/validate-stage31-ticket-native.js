@@ -1,11 +1,18 @@
 const fs=require('fs'),path=require('path');
 const hooks=fs.readFileSync(path.join(__dirname,'..','public','v45-ticket-native-hooks-v41.js'),'utf8');
 const loader=fs.readFileSync(path.join(__dirname,'..','public','v45-my-tickets-cleanup-v37.js'),'utf8');
+const retirement=fs.readFileSync(path.join(__dirname,'..','public','v45-main-event-retirement-v1.js'),'utf8');
+const junior=fs.readFileSync(path.join(__dirname,'..','public','v45-stage4-junior-ui.js'),'utf8');
 function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
-must(hooks.includes("localStorage.getItem('token')")&&hooks.includes("Authorization:`Bearer ${token"),'fresh-session Exchange auth reuses the canonical SBC token');
+must(hooks.includes("localStorage.getItem('token')")&&hooks.includes('Authorization:`Bearer ${t}`'),'fresh-session Exchange auth reuses the canonical SBC token');
 must(hooks.includes('window.updateBidOrderSummary')&&hooks.includes('price>=1&&price<terms.ask'),'bid UI preserves any-positive-resting-bid validation');
 must(hooks.includes('bidOrder.bestBid=0')&&hooks.includes('bidOrder.bestBid=terms.best'),'native highest-bid guard remains safely relaxed/restored for UI validation');
 must(!hooks.includes('sbcTicketMarketOrdersV36')&&!hooks.includes('sbcTicketSettlementV38'),'native hooks no longer maintain fake local order or STONK settlement state');
 must(!hooks.includes('insertPrice(')&&!hooks.includes('removePrice(')&&!hooks.includes('ensureFill('),'native hooks no longer mutate simulated ticket depth or balances');
-must(loader.includes('/v45-ticket-native-hooks-v41.js?v=43'),'real-authority native hook is cache-busted');
-console.log('Stage 31/32 ticket exchange auth + single-authority lifecycle checks passed.');
+must(hooks.includes("fetch('/api/tickets'")&&hooks.includes("x.status==='unredeemed'")&&hooks.includes('window.openOwnedTicketSell')&&hooks.includes('ticketOrder.listingId=info.id'),'POST OFFER resolves a real unredeemed backend ticket before the native modal opens');
+must(!hooks.includes('MY-TR-1')&&!hooks.includes('MY-RU-1')&&!hooks.includes('MY-ME-1'),'real offer hook cannot inject prototype MY-* ticket ids');
+must(loader.includes('/v45-ticket-native-hooks-v41.js?v=44'),'real-ticket native hook is cache-busted');
+must(!/CORPORATE LADDER/i.test(retirement),'Main Event retirement does not invent replacement ladder branding');
+must(retirement.includes('#sbcJuniorCollectionV4')&&retirement.includes('[id*="badge" i]'),'Main Event retirement explicitly protects established Junior/Badge UI');
+must(junior.includes('JUNIOR STONK BROKERS')&&junior.includes('20 = 1 BROKER'),'established Junior StonkBroker collection remains intact');
+console.log('Stage 31/32 ticket exchange auth + real-ticket authority + frozen-design checks passed.');
