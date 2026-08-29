@@ -52,3 +52,4 @@ assert(shell.includes('const panBars=Math.max(0,Math.min(maxOffset,Math.round(Nu
 assert(shell.includes('const data=fullData.slice(Math.max(0,end-visibleCount),end)'), 'renderer must pan by slicing source history, not moving pixels');
 assert(!stageC.includes('new MutationObserver'), 'Stage C observer retirement must remain intact');
 console.log('Chart presentation consolidation v1: PASS');
+// Native-domain navigation acceptance: plot pan, plot-wheel time zoom, and price-axis wheel/drag remain independent.
