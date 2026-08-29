@@ -1,0 +1,22 @@
+name: Export PR170 Handoff Source
+on:
+  push:
+    branches: [handoff-export-pr170]
+    paths: ['.github/workflows/export-pr170-handoff.yml']
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: handoff-export-pr170
+      - name: Build exact source archive
+        run: |
+          git archive --format=zip --output=stonktrader-main-fe611d3.zip fe611d347a0412ed5f195b3fc475f4bcc61417d6
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stonktrader-main-fe611d3
+          path: stonktrader-main-fe611d3.zip
+          retention-days: 1
