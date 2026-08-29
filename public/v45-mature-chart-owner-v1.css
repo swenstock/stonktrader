@@ -1,5 +1,6 @@
 @media(min-width:901px){
-#view-portfolio .sbc-mature-chart-host-v1{position:absolute;inset:0;z-index:30;min-width:0;min-height:0;background:#0b1017;overflow:hidden;touch-action:none}
+#view-portfolio .sbc-mature-chart-host-v1{position:absolute;inset:0;z-index:30;min-width:0;min-height:0;background:#0b1017;overflow:hidden;touch-action:none;visibility:hidden;pointer-events:none}
+#view-portfolio .sbc-mature-chart-host-v1.is-ready{visibility:visible;pointer-events:auto}
 #view-portfolio .sbc-mature-chart-host-v1[hidden]{display:none!important}
 #view-portfolio .sbc-mature-chart-status-v1{position:absolute;left:14px;bottom:10px;z-index:2;padding:4px 7px;border:1px solid #263744;border-radius:5px;background:rgba(8,14,21,.86);color:#7f95a4;font-size:8px;font-weight:800;pointer-events:none}
 #view-portfolio .sbc-mature-chart-host-v1.is-ready .sbc-mature-chart-status-v1{display:none}
