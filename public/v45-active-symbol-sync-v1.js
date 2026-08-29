@@ -4,7 +4,7 @@ if(typeof window==='undefined'||window.__sbcActiveSymbolSyncV1)return;window.__s
 const norm=s=>String(s||'').trim().toUpperCase();
 const valid=s=>/^[A-Z][A-Z0-9.\-]{0,9}$/.test(s);
 const TF_MAP={'1S':'tick','1M':'1m','5M':'5m','15M':'15m','1H':'1h','1D':'1D'};
-let last='';
+let last='',recoverQueued=false;
 function emit(symbol,source){
   const sym=norm(symbol);if(!valid(sym))return false;
   last=sym;
@@ -54,15 +54,30 @@ function guardMatureTimeframeClick(e){
   markTimeframeActive(button);
   window.SBCMatureChartV1.setTimeframe(tf);
 }
+function recoverChartOwnership(){
+  const viewport=document.querySelector('#view-portfolio .stage45-chart-viewport-v50.sbc-mature-chart-active-v1');
+  if(!viewport)return;
+  const readyHost=viewport.querySelector('.sbc-mature-chart-host-v1.is-ready');
+  if(readyHost&&document.body.contains(readyHost))return;
+  viewport.classList.remove('sbc-mature-chart-active-v1');
+  if(recoverQueued)return;recoverQueued=true;
+  requestAnimationFrame(()=>{
+    recoverQueued=false;
+    const sym=norm(document.getElementById('tradeSymbol')?.value||last);
+    if(valid(sym))emit(sym,'chart-owner-recover');
+  });
+}
 function start(){
   installSetterBridge();
   document.addEventListener('change',onChange,false);
   document.addEventListener('click',guardMatureTimeframeClick,true);
+  new MutationObserver(recoverChartOwnership).observe(document.body,{childList:true,subtree:true});
   setTimeout(installSetterBridge,0);
   setTimeout(installSetterBridge,500);
+  setTimeout(recoverChartOwnership,700);
   const initial=norm(document.getElementById('tradeSymbol')?.value);
   if(valid(initial))emit(initial,'initial');
 }
-window.SBCActiveSymbolV1={emit,get current(){return last;},installSetterBridge};
+window.SBCActiveSymbolV1={emit,get current(){return last;},installSetterBridge,recoverChartOwnership};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
