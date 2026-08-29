@@ -34,6 +34,6 @@ document.addEventListener('click',e=>{const t=e.target?.closest?.('[data-badge-b
 function boot(){ensureBadgeSlot();syncModeToActiveTab()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 let moTimer;new MutationObserver(()=>{clearTimeout(moTimer);moTimer=setTimeout(()=>{ensureBadgeSlot();syncModeToActiveTab()},40)}).observe(document.documentElement,{childList:true,subtree:true});
-window.addEventListener('storage',()=>{if(badgeMode)render();else hideControls()});
+if(typeof window.addEventListener==='function')window.addEventListener('storage',()=>{if(badgeMode)render();else hideControls()});
 window.__SBC_BADGE_MARKET_STAGE4_TEST={warningFor:(price,b)=>{const old=book;book=b;const out=warningFor(price);book=old;return out},setBook:b=>{book=b},ensureBadgeSlot,deactivateBadgeMode,get badgeMode(){return badgeMode}};
 })();
