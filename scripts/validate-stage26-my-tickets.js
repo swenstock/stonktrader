@@ -14,9 +14,11 @@ must(ui.includes('/v45-test-stonk-faucet-v1.js?v=1'),'TEST STONK faucet remains 
 must(faucet.includes("fetch('/api/dev/fund'")&&faucet.includes('amount=250000')&&faucet.includes("localStorage.getItem('token')")&&faucet.includes("id='fundTestStonk'")&&faucet.includes("textContent='+ TEST STONK'"),'TEST STONK control credits 250,000 through authenticated backend custodian faucet');
 must(faucet.includes("fetch('/api/dev/order-book'")&&faucet.includes("id='seedTestOrderBook'")&&faucet.includes("textContent='+ TEST ORDER BOOK'"),'TEST order-book control calls the backend QA depth seeder');
 must(!/localStorage\.setItem\([^\n]*stonk/i.test(faucet),'TEST STONK faucet does not fabricate a browser-local balance');
-must(stageC.includes('/v45-test-stonk-faucet-v1.js?v=2')&&stageC.includes('/v45-exchange-own-orders-v1.js?v=1'),'final direct UI owner bootstraps TEST STONK and own-order helpers');
+must(stageC.includes('/v45-test-stonk-faucet-v1.js?v=2')&&stageC.includes('/v45-exchange-own-orders-v1.js?v=2'),'final direct UI owner bootstraps fresh TEST STONK and sorted own-order helpers');
 must(own.includes("fetch('/api/ticket-market/mine'")&&own.includes('YOUR ASK')&&own.includes('YOUR BID')&&own.includes('sbc-own-book-row'),'own active backend ticket orders are rendered visibly in their books');
 must(own.includes('button disabled')&&own.includes('You cannot trade against your own order'),'visible own orders cannot be self-traded');
+must(own.includes("border:2px solid ${accent}")&&own.includes("box-shadow:0 0 0 1px ${accent} inset"),'user-owned bid and ask rows receive a strong visual highlight');
+must(own.includes('function sortBook(book,ascending)')&&own.includes('rowPrice(a)-rowPrice(b)')&&own.includes('rowPrice(b)-rowPrice(a)')&&own.includes('sortBook(ask,true)')&&own.includes('sortBook(bid,false)'),'visible offers sort low-to-high and bids high-to-low after own rows are inserted');
 must(own.includes("replace(/JR\\.?\\s*STONKBROKER/gi,'JR BROKER')")&&own.includes("replace(/JUNIOR\\s+STONK\\s*BROKER/gi,'JR BROKER')"),'visible junior tier market labels normalize to JR BROKER');
 must(own.includes("classList.add('tm36-book-scroll')")&&own.includes("overflowY='auto'")&&own.includes("['askBook','bidBook']"),'bid and offer books are vertically scrollable');
 must(dev.includes("router.post('/order-book', requireAuth")&&dev.includes("QA_BOOK_DEPTH = 8")&&dev.includes("qa-market-maker@sbc.test")&&dev.includes("['runner','clerk','trader','junior']"),'TEST_MODE backend seeds 8x8 counterparty depth for all four ticket tiers');
