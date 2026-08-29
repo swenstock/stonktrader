@@ -1,0 +1,26 @@
+name: Export Claude Handoff Source
+on:
+  push:
+    branches: [claude-handoff-export-2026-08-29]
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 2994cc3ab1c4863171e2fd9db60fed5f41748ce3
+          fetch-depth: 1
+      - name: Build source archive
+        run: |
+          rm -rf /tmp/stonktrader-main-2994cc3
+          mkdir -p /tmp/stonktrader-main-2994cc3
+          rsync -a --exclude='.git' ./ /tmp/stonktrader-main-2994cc3/
+          cd /tmp
+          zip -qr stonktrader-main-2994cc3.zip stonktrader-main-2994cc3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stonktrader-main-2994cc3
+          path: /tmp/stonktrader-main-2994cc3.zip
+          retention-days: 1
