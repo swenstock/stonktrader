@@ -100,8 +100,10 @@ function applyChartPresentationTuning(html) {
   let source = Buffer.isBuffer(html) ? html.toString("utf8") : String(html);
   if (source.includes(CHART_PRESENTATION_TUNING_MARKER)) return Buffer.from(source, "utf8");
   const replacements = [
-    ["function timeframeBars(tf){\n  return tf==='tick'?70:tf==='1m'?60:tf==='5m'?60:tf==='15m'?52:tf==='1h'?48:40;\n}", "/* SBC CHART PRESENTATION TUNING V1 */\nfunction timeframeBars(tf){\n  return tf==='tick'?46:tf==='1m'?44:tf==='5m'?42:tf==='15m'?40:tf==='1h'?36:32;\n}"],
-    ["if(real&&real.length)return real;", "if(real&&real.length)return real.slice(-timeframeBars(tf));"],
+    ["function timeframeBars(tf){\n  return tf==='tick'?70:tf==='1m'?60:tf==='5m'?60:tf==='15m'?52:tf==='1h'?48:40;\n}", "/* SBC CHART PRESENTATION TUNING V1 */\nfunction timeframeBars(tf){\n  return tf==='tick'?46:tf==='1m'?44:tf==='5m'?42:tf==='15m'?40:tf==='1h'?36:32;\n}\nfunction timeframeHistoryBars(tf){ return timeframeBars(tf)*5; }"],
+    ["if(real&&real.length)return real;", "if(real&&real.length)return real.slice(-Math.max(timeframeHistoryBars(tf),160));"],
+    ["  const n=timeframeBars(tf);", "  const n=timeframeHistoryBars(tf);"],
+    ["  const data=generateOHLC(sym,chartPrefs.timeframe);", "  const fullData=generateOHLC(sym,chartPrefs.timeframe);\n  const viewportState=window.SBCChartViewportV50?.state||{};\n  const timeZoom=Math.max(.5,Math.min(3,Number(viewportState.x||1)));\n  const baseVisible=timeframeBars(chartPrefs.timeframe);\n  const visibleCount=Math.max(10,Math.min(fullData.length,Math.round(baseVisible/timeZoom)));\n  const maxOffset=Math.max(0,fullData.length-visibleCount);\n  const panBars=Math.max(0,Math.min(maxOffset,Math.round(Number(viewportState.pan||0))));\n  const end=Math.max(visibleCount,fullData.length-panBars);\n  const data=fullData.slice(Math.max(0,end-visibleCount),end);"],
     ["const volH=chartPrefs.volume?72:0;", "const volH=chartPrefs.volume?50:0;"],
     ["const candleW=Math.max(2,Math.min(8,xStep*.62));", "const candleW=Math.max(3,Math.min(11,xStep*.72));"],
     ["stroke-width=\"1\"", "stroke-width=\"1.15\""],
