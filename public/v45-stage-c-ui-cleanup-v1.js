@@ -58,19 +58,9 @@ async function syncActiveBackendPortfolio(force=false){
   }catch(_){}finally{portfolioSyncBusy=false;}
 }
 function schedulePortfolioSync(force=false){if(force)forcePortfolioSync=true;clearTimeout(portfolioSyncTimer);portfolioSyncTimer=setTimeout(()=>syncActiveBackendPortfolio(forcePortfolioSync).finally(()=>{forcePortfolioSync=false;}),90);}
-function cleanupLegacyActivity(){
-  const blotter=$('#view-portfolio .orders-activity-blotter-v15');if(!blotter)return;
-  $$('.desktop-orders-empty-v45',blotter).forEach(x=>x.remove());
-  ['#queuedOrders','#tradeHistory','#workingOrdersV45','.desktop-orders-tabs-v45','.orders-activity-tabs'].forEach(sel=>{$$(sel,blotter).forEach(x=>{x.hidden=true;x.setAttribute('aria-hidden','true');x.style.setProperty('display','none','important');});});
-  const legacyEmpty=/\bNo activity yet\b|\bNo recent activity yet\b|Your trade decisions will appear here|Completed buys, sells and triggered orders will appear here/i;
-  $$('*',blotter).forEach(x=>{if(x.closest('.blotter-root-v15'))return;const text=clean(x.textContent);if(text&&text.length<180&&legacyEmpty.test(text)){x.hidden=true;x.setAttribute('aria-hidden','true');x.style.setProperty('display','none','important');}});
-  $$('.blotter-body-v15',blotter).forEach(body=>{if(body.querySelector('.blotter-row-v15'))$$('.blotter-empty-v15',body).forEach(x=>x.remove());});
-  renderRecentWithCancelled();
-}
-function suppressBasketDuplicateConfirm(){const basket=$('.bb19-overlay:not([hidden])'),confirm=$('#ta42Confirm');if(!basket||!confirm)return;if(/TRADE COMPLETE/i.test(clean(confirm.textContent)))confirm.remove();}
 async function refreshCanonicalActivity(){
   const api=window.SBCAdvancedOrdersV15;if(!api?.refresh||!api?.renderBlotter)return;
-  try{await api.refresh(true);api.renderBlotter();cleanupLegacyActivity();renderRecentWithCancelled();await syncActiveBackendPortfolio(forcePortfolioSync);forcePortfolioSync=false;}catch(_){}
+  try{await api.refresh(true);api.renderBlotter();renderRecentWithCancelled();await syncActiveBackendPortfolio(forcePortfolioSync);forcePortfolioSync=false;}catch(_){}
 }
 function scheduleRefresh(forcePortfolio=false){if(forcePortfolio)forcePortfolioSync=true;clearTimeout(refreshTimer);refreshTimer=setTimeout(refreshCanonicalActivity,80);setTimeout(refreshCanonicalActivity,420);}
 function urlOf(input){try{return typeof input==='string'?input:input?.url||'';}catch(_){return'';}}
@@ -89,8 +79,7 @@ function wrapFetch(){
   };
   wrapped.__stageCUiCleanupV1=true;window.fetch=wrapped;
 }
-function run(){wrapFetch();cleanupLegacyActivity();suppressBasketDuplicateConfirm();renderRecentWithCancelled();schedulePortfolioSync(false);}
-new MutationObserver(()=>{cleanupLegacyActivity();suppressBasketDuplicateConfirm();renderRecentWithCancelled();schedulePortfolioSync(false);}).observe(document.documentElement,{childList:true,subtree:true});
+function run(){wrapFetch();renderRecentWithCancelled();schedulePortfolioSync(false);}
 window.addEventListener('sbc:orders-change',()=>setTimeout(refreshCanonicalActivity,0));
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
 setTimeout(run,300);setTimeout(run,1200);
