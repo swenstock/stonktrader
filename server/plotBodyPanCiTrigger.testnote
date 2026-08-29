@@ -1,1 +1,0 @@
-Fixed-frame plot pan acceptance: dragging must move only the clipped candle/volume plot body while axes, grid, labels, toolbar, and chart frame remain stationary.
