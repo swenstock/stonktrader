@@ -55,6 +55,11 @@ function findViewport(c=card()){
   while(p&&p!==c&&p!==document.body){const r=p.getBoundingClientRect();if(r.width>420&&r.height>150)return p;p=p.parentElement;}
   return s.parentElement||null;
 }
+function viewportReady(v){
+  if(!v?.getBoundingClientRect)return false;
+  const r=v.getBoundingClientRect(),style=getComputedStyle(v);
+  return style.display!=='none'&&style.visibility!=='hidden'&&r.width>420&&r.height>150;
+}
 function currentSymbol(){const sym=norm(document.getElementById('tradeSymbol')?.value);return validSymbol(sym)?sym:'';}
 function currentTimeframe(){
   const bar=$('.chart-workstation-v1',card());
@@ -189,8 +194,8 @@ function createChart(v){
   return true;
 }
 function ensureMounted(){
+  const c=card(),v=findViewport(c);if(!c||!v||!viewportReady(v))return false;
   if(state.host&&document.body.contains(state.host)&&state.chart)return true;
-  const c=card(),v=findViewport(c);if(!c||!v)return false;
   if(!window.LightweightCharts?.createChart){console.error('[mature-chart-owner] LightweightCharts bundle missing; retaining SBC chart');return false;}
   state.card=c;state.viewport=v;v.classList.add('stage45-chart-viewport-v50');
   if(!createChart(v))return false;
@@ -201,7 +206,12 @@ function ensureMounted(){
   window.SBCMatureChartV1={setSymbol,setTimeframe,fit,loadBars,state};
   return true;
 }
-function onSymbolChange(e){const symbol=norm(e?.detail?.symbol);if(!validSymbol(symbol))return;ensureMounted();setSymbol(symbol,{source:e.detail?.source||'event',reset:true});}
+function mountAfterLayout(){requestAnimationFrame(()=>requestAnimationFrame(ensureMounted));}
+function onSymbolChange(e){
+  const symbol=norm(e?.detail?.symbol);if(!validSymbol(symbol))return;
+  if(!ensureMounted()){mountAfterLayout();setTimeout(()=>{if(ensureMounted())setSymbol(symbol,{source:e.detail?.source||'event',reset:true});},80);return;}
+  setSymbol(symbol,{source:e.detail?.source||'event',reset:true});
+}
 function onWorkspaceClick(e){
   const b=e.target.closest?.('button');if(!b)return;
   if(b.dataset.cwTime){setTimeout(()=>setTimeframe(b.dataset.cwTime),0);return;}
@@ -217,7 +227,7 @@ function onWorkspaceClick(e){
 }
 function installShowViewHook(){
   const fn=window.showView;if(typeof fn!=='function'||fn.__sbcMatureChartOwnerV1)return false;
-  const wrapped=function(){const out=fn.apply(this,arguments);const view=String(arguments[0]||'');if(view==='portfolio'||view==='trade')setTimeout(ensureMounted,0);return out;};
+  const wrapped=function(){const out=fn.apply(this,arguments);const view=String(arguments[0]||'');if(view==='portfolio'||view==='trade')mountAfterLayout();return out;};
   wrapped.__sbcMatureChartOwnerV1=true;wrapped.__sbcMatureChartOriginal=fn;window.showView=wrapped;state.showViewOriginal=fn;return true;
 }
 function start(){
