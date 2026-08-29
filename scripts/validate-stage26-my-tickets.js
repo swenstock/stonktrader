@@ -3,6 +3,7 @@ const ui=fs.readFileSync(path.join(__dirname,'..','public','v45-my-tickets-clean
 const faucet=fs.readFileSync(path.join(__dirname,'..','public','v45-test-stonk-faucet-v1.js'),'utf8');
 const own=fs.readFileSync(path.join(__dirname,'..','public','v45-exchange-own-orders-v1.js'),'utf8');
 const stageC=fs.readFileSync(path.join(__dirname,'..','public','v45-stage-c-ui-cleanup-v1.js'),'utf8');
+const dev=fs.readFileSync(path.join(__dirname,'..','server','routes','dev.js'),'utf8');
 const server=fs.readFileSync(path.join(__dirname,'..','server','index.js'),'utf8');
 function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
 must(ui.includes("node.nodeType===Node.TEXT_NODE")&&ui.includes('node.remove()'),'cleanup removes raw descriptive text nodes');
@@ -11,10 +12,15 @@ must(ui.includes('installEmptyBookCompatibility')&&ui.includes('hasBids')&&ui.in
 must(ui.includes('/v45-ticket-native-hooks-v41.js?v=49'),'runtime-owner hook is cache-busted by My Tickets fallback loader');
 must(ui.includes('/v45-test-stonk-faucet-v1.js?v=1'),'TEST STONK faucet remains available through Exchange QA tools');
 must(faucet.includes("fetch('/api/dev/fund'")&&faucet.includes('amount=250000')&&faucet.includes("localStorage.getItem('token')")&&faucet.includes("id='fundTestStonk'")&&faucet.includes("textContent='+ TEST STONK'"),'TEST STONK control credits 250,000 through authenticated backend custodian faucet');
+must(faucet.includes("fetch('/api/dev/order-book'")&&faucet.includes("id='seedTestOrderBook'")&&faucet.includes("textContent='+ TEST ORDER BOOK'"),'TEST order-book control calls the backend QA depth seeder');
 must(!/localStorage\.setItem\([^\n]*stonk/i.test(faucet),'TEST STONK faucet does not fabricate a browser-local balance');
-must(stageC.includes('/v45-test-stonk-faucet-v1.js?v=2')&&stageC.includes('/v45-exchange-own-orders-v1.js?v=1'),'final direct UI owner bootstraps fresh TEST STONK and own-order helpers');
+must(stageC.includes('/v45-test-stonk-faucet-v1.js?v=2')&&stageC.includes('/v45-exchange-own-orders-v1.js?v=1'),'final direct UI owner bootstraps TEST STONK and own-order helpers');
 must(own.includes("fetch('/api/ticket-market/mine'")&&own.includes('YOUR ASK')&&own.includes('YOUR BID')&&own.includes('sbc-own-book-row'),'own active backend ticket orders are rendered visibly in their books');
 must(own.includes('button disabled')&&own.includes('You cannot trade against your own order'),'visible own orders cannot be self-traded');
+must(own.includes("replace(/JR\\.?\\s*STONKBROKER/gi,'JR BROKER')")&&own.includes("replace(/JUNIOR\\s+STONK\\s*BROKER/gi,'JR BROKER')"),'visible junior tier market labels normalize to JR BROKER');
+must(own.includes("classList.add('tm36-book-scroll')")&&own.includes("overflowY='auto'")&&own.includes("['askBook','bidBook']"),'bid and offer books are vertically scrollable');
+must(dev.includes("router.post('/order-book', requireAuth")&&dev.includes("QA_BOOK_DEPTH = 8")&&dev.includes("qa-market-maker@sbc.test")&&dev.includes("['runner','clerk','trader','junior']"),'TEST_MODE backend seeds 8x8 counterparty depth for all four ticket tiers');
+must(dev.includes("issueTicket({ accountId, ticketType")&&dev.includes("INSERT INTO ticket_listings")&&dev.includes("INSERT INTO ticket_bids"),'QA order-book depth uses real backend tickets listings and bids');
 must(server.includes('v45-my-tickets-cleanup-v37.js?v=41'),'cache-busted My Tickets cleanup is served');
 must(server.includes('myTicketsCleanup: "v41-runtime-owner-cache-boundary"'),'health reports runtime-owner cache boundary');
 console.log('Stage 26 My Tickets regression checks passed.');
