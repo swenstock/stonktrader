@@ -12,7 +12,7 @@ const orderPrice=o=>{const t=String(o?.orderType||'market');if(t==='limit')retur
 function ensureExchangeQaHelpers(){
   const specs=[
     ['__sbcTestStonkFaucetV1','data-sbc-test-stonk-direct','/v45-test-stonk-faucet-v1.js?v=2'],
-    ['__sbcExchangeOwnOrdersV1','data-sbc-exchange-own-orders','/v45-exchange-own-orders-v1.js?v=2']
+    ['__sbcExchangeOwnOrdersV1','data-sbc-exchange-own-orders','/v45-exchange-own-orders-v1.js?v=3']
   ];
   for(const [flag,attr,src] of specs){if(window[flag]||document.querySelector(`script[${attr}]`))continue;const s=document.createElement('script');s.src=src;s.setAttribute(attr,'1');document.head.appendChild(s);}
 }
