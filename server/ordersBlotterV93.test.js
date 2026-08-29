@@ -38,7 +38,8 @@ const syncPriceMatch=stage43.match(/function syncPriceWindow\(ticket\)\{([\s\S]*
 assert(syncPriceMatch, 'Stage 43 price-window sync missing');
 assert(!syncPriceMatch[1].includes('.focus('), 'Passive price-window sync must never steal focus from ticker/order controls');
 assert(stage43.includes('focus({preventScroll:true})'), 'Intentional order-type selection may focus its price field without scrolling the workspace');
-assert(stage43.includes('data-stage43-time-v49="TICK"') && stage43.includes('data-stage43-time-v49="5m"') && stage43.includes('data-stage43-time-v49="1D"'), 'Chart must expose compact inline timeframe controls backed by native chart actions');
+assert(stage43.includes("const timeNames=['TICK','1m','5m','15m','1h','1D']"), 'Chart must define the compact inline timeframe set');
+assert(stage43.includes('data-stage43-time-v49') && stage43.includes('clickNative(toolbar,b.dataset.stage43TimeV49)'), 'Inline timeframe buttons must proxy the native chart actions');
 assert(stage43.includes('[data-panel="recent"],[data-panel="fills"]'), 'Recent Activity and Fills rows must support order-detail drilldown');
 assert(stage43.includes('ORDER INSTRUCTIONS') && stage43.includes('EXECUTION'), 'Order detail must separate instructions from execution');
 assert(stage43.includes('o.limitPrice') && stage43.includes('o.stopPrice'), 'Advanced order detail must retain Limit/Stop/Stop-Limit instruction prices');
