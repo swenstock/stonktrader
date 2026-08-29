@@ -7,6 +7,7 @@
 #view-portfolio .stage45-scale-v50 button:hover{border-color:#4dbbf2;background:#0b2b3b;color:#fff}
 #view-portfolio .stage45-chart-viewport-v50{position:relative!important;overflow:hidden!important;cursor:grab!important;touch-action:none!important;overscroll-behavior:contain!important;width:100%!important;max-width:none!important}
 #view-portfolio .stage45-chart-viewport-v50.is-panning-v50{cursor:grabbing!important}
+#view-portfolio .stage45-chart-viewport-v50.over-price-axis-v50,#view-portfolio .stage45-chart-viewport-v50.is-price-scaling-v50{cursor:ns-resize!important}
 #view-portfolio .stage45-wide-chart-card-v50{width:100%!important;max-width:none!important;justify-self:stretch!important;margin-left:auto!important;margin-right:auto!important;box-sizing:border-box!important}
 #view-portfolio .stage45-wide-chart-card-v50.stage43-chart-order-v48{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr)!important;gap:18px!important}
 #view-portfolio .stage45-wide-chart-card-v50.stage43-chart-order-v48>.card-head{grid-column:1/-1!important}
