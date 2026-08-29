@@ -20,3 +20,20 @@ new MutationObserver(()=>{install();}).observe(document.documentElement,{childLi
 install();setTimeout(install,250);setTimeout(install,1000);
 window.SBCTradeReceiptV1={show,close};
 })();
+
+(()=>{
+'use strict';
+if(window.__sbcPostTradeMatureChartGuardV1)return;window.__sbcPostTradeMatureChartGuardV1=true;
+function matureReady(){const host=document.querySelector('.sbc-mature-chart-host-v1.is-ready');return !!(host&&host.isConnected);}
+function installLegacyRedrawGuard(){
+  const current=window.renderSymbolChart;
+  if(typeof current!=='function'||current.__postTradeMatureChartGuardV1)return false;
+  const wrapped=function(){if(matureReady())return false;return current.apply(this,arguments);};
+  wrapped.__postTradeMatureChartGuardV1=true;
+  wrapped.__legacyRenderSymbolChart=current;
+  window.renderSymbolChart=wrapped;
+  return true;
+}
+installLegacyRedrawGuard();setTimeout(installLegacyRedrawGuard,0);setTimeout(installLegacyRedrawGuard,250);setTimeout(installLegacyRedrawGuard,1000);
+window.SBCPostTradeMatureChartGuardV1={matureReady,installLegacyRedrawGuard};
+})();
