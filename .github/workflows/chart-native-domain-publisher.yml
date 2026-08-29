@@ -1,0 +1,73 @@
+name: Chart Native Domain Publisher
+on:
+  push:
+    branches: [chart-native-domain-navigation-v1]
+    paths: [.github/workflows/chart-native-domain-publisher.yml]
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chart-native-domain-navigation-v1
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply native domain navigation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('server/v45ExactShell.js')
+          s=p.read_text()
+          a='["function timeframeBars(tf){\\n  return tf===\'tick\'?70:tf===\'1m\'?60:tf===\'5m\'?60:tf===\'15m\'?52:tf===\'1h\'?48:40;\\n}", "/* SBC CHART PRESENTATION TUNING V1 */\\nfunction timeframeBars(tf){\\n  return tf===\'tick\'?46:tf===\'1m\'?44:tf===\'5m\'?42:tf===\'15m\'?40:tf===\'1h\'?36:32;\\n}"],'
+          b='["function timeframeBars(tf){\\n  return tf===\'tick\'?70:tf===\'1m\'?60:tf===\'5m\'?60:tf===\'15m\'?52:tf===\'1h\'?48:40;\\n}", "/* SBC CHART PRESENTATION TUNING V1 */\\nfunction timeframeBars(tf){\\n  return tf===\'tick\'?46:tf===\'1m\'?44:tf===\'5m\'?42:tf===\'15m\'?40:tf===\'1h\'?36:32;\\n}\\nfunction timeframeHistoryBars(tf){ return timeframeBars(tf)*5; }"],'
+          assert a in s
+          s=s.replace(a,b,1)
+          a='["if(real&&real.length)return real;", "if(real&&real.length)return real.slice(-timeframeBars(tf));"],'
+          b='["if(real&&real.length)return real;", "if(real&&real.length)return real.slice(-Math.max(timeframeHistoryBars(tf),160));"],\n    ["  const n=timeframeBars(tf);", "  const n=timeframeHistoryBars(tf);"],'
+          assert a in s
+          s=s.replace(a,b,1)
+          a='    ["const volH=chartPrefs.volume?72:0;", "const volH=chartPrefs.volume?50:0;"],'
+          b='    ["  const data=generateOHLC(sym,chartPrefs.timeframe);", "  const fullData=generateOHLC(sym,chartPrefs.timeframe);\\n  const viewportState=window.SBCChartViewportV50?.state||{};\\n  const timeZoom=Math.max(.5,Math.min(3,Number(viewportState.x||1)));\\n  const baseVisible=timeframeBars(chartPrefs.timeframe);\\n  const visibleCount=Math.max(10,Math.min(fullData.length,Math.round(baseVisible/timeZoom)));\\n  const maxOffset=Math.max(0,fullData.length-visibleCount);\\n  const panBars=Math.max(0,Math.min(maxOffset,Math.round(Number(viewportState.pan||0))));\\n  const end=Math.max(visibleCount,fullData.length-panBars);\\n  const data=fullData.slice(Math.max(0,end-visibleCount),end);"],\n'+a
+          assert a in s
+          s=s.replace(a,b,1)
+          p.write_text(s)
+
+          p=Path('server/index.js'); s=p.read_text(); assert '/v45-desktop-stage45-v50.js?v=52' in s; p.write_text(s.replace('/v45-desktop-stage45-v50.js?v=52','/v45-desktop-stage45-v50.js?v=53',1))
+
+          p=Path('server/chartPresentationConsolidationV1.test.js'); s=p.read_text()
+          s=s.replace("assert(stage45.includes('window.SBCChartViewportV50={fit,price,time,apply,resetPrice,repaintPrice,state:st}'), 'Stage45 must expose chart viewport capabilities');","assert(stage45.includes('window.SBCChartViewportV50={fit,price,time,apply,resetPrice,resetTime,repaintPrice:repaint,repaint,state:st}'), 'Stage45 must expose chart viewport capabilities');")
+          s=s.replace("assert(stage45.includes('repaintPrice')&&stage45.includes('window.renderSymbolChart'), 'price-axis interaction must rerender the chart domain');","assert(stage45.includes('repaint')&&stage45.includes('window.renderSymbolChart'), 'axis interaction must rerender the chart domain');")
+          s=s.replace("assert(stage45.includes(\"e.target.closest('.chart-toolbar button')\")&&stage45.includes('resetPrice(false)'), 'timeframe changes must return price range to clean autoscale before native rerender');","assert(stage45.includes(\"e.target.closest('.chart-toolbar button')\")&&stage45.includes('resetPrice(false)')&&stage45.includes('resetTime(false)'), 'timeframe changes must reset both time window and price autoscale before native rerender');")
+          s=s.replace("assert(server.includes('/v45-desktop-stage43-v48.js?v=49')&&server.includes('/v45-desktop-stage45-v50.js?v=52')&&server.includes('/v45-desktop-stage46-v51-pre.js?v=71'), 'direct chart presentation assets must be cache-busted');","assert(server.includes('/v45-desktop-stage43-v48.js?v=49')&&server.includes('/v45-desktop-stage45-v50.js?v=53')&&server.includes('/v45-desktop-stage46-v51-pre.js?v=71'), 'direct chart presentation assets must be cache-busted');")
+          s=s.replace("assert(shell.includes('real.slice(-timeframeBars(tf))'), 'real bars must obey the same visible lookback window');","assert(shell.includes('real.slice(-Math.max(timeframeHistoryBars(tf),160))'), 'renderer must retain enough real history for time panning');")
+          anchor="assert(!stageC.includes('new MutationObserver'), 'Stage C observer retirement must remain intact');"
+          extra="""assert(!stage45.includes('scaleX(${st.x})'), 'time zoom must not stretch the rendered SVG/canvas');
+          assert(stage45.includes('st.x=clamp')&&stage45.includes('.5,3'), 'mouse wheel must support both compressing and expanding the time window');
+          assert(stage45.includes('st.pan=Math.max(0,st.startPan+(e.clientX-st.startX)/12)'), 'plot drag must pan through historical bars rather than translate finished pixels');
+          assert(shell.includes('const timeZoom=Math.max(.5,Math.min(3,Number(viewportState.x||1)))'), 'renderer must read time zoom into visible bar count');
+          assert(shell.includes('const visibleCount=Math.max(10,Math.min(fullData.length,Math.round(baseVisible/timeZoom)))'), 'wheel zoom must change the number of visible bars');
+          assert(shell.includes('const panBars=Math.max(0,Math.min(maxOffset,Math.round(Number(viewportState.pan||0))))'), 'renderer must use horizontal drag state to select a historical window');
+          assert(shell.includes('const data=fullData.slice(Math.max(0,end-visibleCount),end)'), 'renderer must pan by slicing source history, not moving pixels');
+          """+anchor
+          assert anchor in s
+          s=s.replace(anchor,extra,1)
+          p.write_text(s)
+          PY
+      - name: Validate focused chart behavior
+        run: |
+          node --check public/v45-desktop-stage45-v50.js
+          node server/chartPresentationConsolidationV1.test.js
+          node server/advancedChartStage6.test.js
+          node server/advancedChartStage103AxisLock.test.js
+      - name: Commit exact patch and remove publisher
+        run: |
+          git rm .github/workflows/chart-native-domain-publisher.yml
+          git add public/v45-desktop-stage45-v50.js server/v45ExactShell.js server/index.js server/chartPresentationConsolidationV1.test.js
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m "Use native chart domains for pan and zoom"
+          git push origin HEAD:chart-native-domain-navigation-v1
