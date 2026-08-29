@@ -8,7 +8,7 @@ const repaintStart=stage45.indexOf('function repaint(){');
 const repaintEnd=stage45.indexOf('function resetPrice',repaintStart);
 const repaintBlock=stage45.slice(repaintStart,repaintEnd);
 assert(!repaintBlock.includes('clearDragPreview()'),'repaint must not clear active drag preview state and snap the plot back');
-assert(stage45.includes('st.pan=Math.max(0,st.startPan+st.dragPx/step)'),'pointer release must commit drag offset into historical pan');
+assert(stage45.includes('const combined=st.startPan*step+st.dragPx')&&stage45.includes('st.dragPx=combined-st.pan*step'),'pointer release must commit whole bars while preserving fractional drag position');
 
 assert(quoteBars.includes("minutes >= 570 && minutes < 960"),'intraday bars must be limited to the 09:30-16:00 ET regular session');
 assert(quoteBars.includes("weekday !== 'Sat' && weekday !== 'Sun'"),'intraday bars must exclude weekends');
