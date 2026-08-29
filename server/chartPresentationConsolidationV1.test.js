@@ -44,7 +44,7 @@ assert(shell.includes('const range=(dataRange*1.12)/priceZoom'), 'renderer must 
 assert(!server.includes('/v45-advanced-chart-v1.js?v=1'), 'standalone Advanced Chart launcher must no longer be injected');
 assert(!stage45.includes('scaleX(${st.x})'), 'time zoom must not stretch the rendered SVG/canvas');
 assert(stage45.includes('st.x=clamp')&&stage45.includes('.5,3'), 'mouse wheel must support both compressing and expanding the time window');
-assert(stage45.includes('function previewDrag(px)')&&stage45.includes('translate3d(${px}px,0,0)'), 'plot must visibly track the pointer continuously while grabbed');
+assert(stage45.includes('function previewDrag(px){st.dragPx=px;repaint();}'), 'plot drag preview must rerender from drag state instead of translating the whole chart surface');
 assert(stage45.includes('previewDrag(e.clientX-st.startX)'), 'pointer movement must drive the live grab preview directly');
 assert(stage45.includes('st.pan=Math.max(0,st.startPan+st.dragPx/step)'), 'releasing the plot must commit drag distance into historical bar offset');
 assert(!stage45.includes('(e.clientX-st.startX)/12'), 'grab-pan must not use coarse fixed 12px stepping');
@@ -52,7 +52,9 @@ assert(shell.includes('const timeZoom=Math.max(.5,Math.min(3,Number(viewportStat
 assert(shell.includes('const visibleCount=Math.max(10,Math.min(fullData.length,Math.round(baseVisible/timeZoom)))'), 'wheel zoom must change the number of visible bars');
 assert(shell.includes('const panBars=Math.max(0,Math.min(maxOffset,Math.round(Number(viewportState.pan||0))))'), 'renderer must use horizontal drag state to select a historical window');
 assert(shell.includes('const data=fullData.slice(Math.max(0,end-visibleCount),end)'), 'renderer must pan by slicing source history, not moving pixels');
-assert(server.includes('/v45-desktop-stage45-v50.js?v=54'), 'served grab-pan asset must be cache-busted');
+assert(shell.includes('class=\"sbc-plot-body-v1\"')&&shell.includes('transform=\"translate(${dragOffsetX} 0)\"'), 'drag preview must move only the clipped plot body inside fixed axes/frame');
+assert(shell.includes('clipPath id=\"sbcPlotClipV1\"'), 'plot-body drag preview must be clipped to the chart plotting rectangle');
+assert(server.includes('/v45-desktop-stage45-v50.js?v=55'), 'served grab-pan asset must be cache-busted');
 assert(!stageC.includes('new MutationObserver'), 'Stage C observer retirement must remain intact');
 console.log('Chart presentation consolidation v1: PASS');
 // Grab-pan acceptance: plot follows pointer continuously, then commits to the historical bar window on release.

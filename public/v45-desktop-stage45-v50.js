@@ -9,8 +9,8 @@ function surface(card){return $$('.symbol-chart canvas,.symbol-chart svg,.chart-
 function viewport(s){let p=s?.parentElement;while(p&&p!==document.body){const r=p.getBoundingClientRect();if(r.width>420&&r.height>150)return p;p=p.parentElement}return s?.parentElement||null}
 function isolateViewport(s){const v=viewport(s);if(!v||v.dataset.stage46Isolated)return v;const clone=v.cloneNode(true);clone.dataset.stage46Isolated='1';v.replaceWith(clone);return clone;}
 function apply(){const r=$('.stage45-readout-v50',root());if(r)r.textContent=`${Math.round(st.x*100)}% TIME • ${Math.round(st.y*100)}% PRICE`;}
-function clearDragPreview(){if(!st.surface)return;st.surface.style.transform='';st.surface.style.transition='';}
-function previewDrag(px){if(!st.surface)return;st.dragPx=px;st.surface.style.transformOrigin='50% 50%';st.surface.style.transition='none';st.surface.style.transform=`translate3d(${px}px,0,0)`;}
+function clearDragPreview(){st.dragPx=0;}
+function previewDrag(px){st.dragPx=px;repaint();}
 function repaint(){if(st.raf)return;st.raf=requestAnimationFrame(()=>{st.raf=0;if(typeof window.renderSymbolChart==='function')window.renderSymbolChart();const c=root(),next=c&&surface(c);if(next){st.surface=next;clearDragPreview();apply();}})}
 function resetPrice(repaintNow=true){st.y=1;if(repaintNow)repaint();}
 function resetTime(repaintNow=true){st.x=1;st.pan=0;st.wheel=0;st.dragPx=0;clearDragPreview();if(repaintNow)repaint();}
