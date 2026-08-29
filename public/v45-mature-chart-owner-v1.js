@@ -146,7 +146,7 @@ function createChart(v){
     crosshair:{mode:0,vertLine:{color:'rgba(181,196,207,.42)',width:1,style:3,labelBackgroundColor:'#18242e'},horzLine:{color:'rgba(181,196,207,.42)',width:1,style:3,labelBackgroundColor:'#18242e'}},
     handleScroll:{mouseWheel:false,pressedMouseMove:true,horzTouchDrag:true,vertTouchDrag:false},
     handleScale:{mouseWheel:true,pinch:true,axisPressedMouseMove:{time:true,price:true},axisDoubleClickReset:{time:true,price:true}},
-    kineticScroll:{mouse:true,touch:true}
+    kineticScroll:{mouse:false,touch:true}
   });
   const candles=chart.addCandlestickSeries({upColor:'#2ee6a6',downColor:'#ff5d5d',wickUpColor:'#2ee6a6',wickDownColor:'#ff5d5d',borderVisible:false,priceLineVisible:true,lastValueVisible:true});
   const line=chart.addLineSeries({color:'#ffc928',lineWidth:2,visible:false,priceLineVisible:true,lastValueVisible:true});

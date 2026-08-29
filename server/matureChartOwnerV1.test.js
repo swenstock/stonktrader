@@ -21,6 +21,7 @@ const server=fs.readFileSync('server/index.js','utf8');
 assert(client.includes('window.LightweightCharts.createChart'),'visible chart must be owned by vendored Lightweight Charts');
 assert(client.includes("handleScroll:{mouseWheel:false,pressedMouseMove:true"),'plot drag must be native library panning and wheel must be reserved for scale');
 assert(client.includes("handleScale:{mouseWheel:true"),'plot wheel must use native time-scale zoom');
+assert(client.includes("kineticScroll:{mouse:false,touch:true}"),'desktop mouse pan must stop exactly on release with no inertial drift');
 assert(client.includes("if(x>=r.width-72)"),'right price-axis wheel must have an independent interaction zone');
 assert(client.includes('ts.getVisibleLogicalRange()')&&client.includes('ts.setVisibleLogicalRange(prior)'),'data refresh must preserve a manually moved viewport');
 assert(client.includes("window.addEventListener('sbc:active-symbol-change'"),'chart must subscribe to canonical symbol events');
