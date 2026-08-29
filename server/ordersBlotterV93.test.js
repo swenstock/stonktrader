@@ -4,6 +4,7 @@ const assert = require('assert');
 const ui = fs.readFileSync(require.resolve('../public/v45-advanced-orders-v15.js'), 'utf8');
 const route = fs.readFileSync(require.resolve('./routes/advancedOrdersV15.js'), 'utf8');
 const stage43 = fs.readFileSync(require.resolve('../public/v45-desktop-stage43-v48.js'), 'utf8');
+const stage43Css = fs.readFileSync(require.resolve('../public/v45-desktop-stage43-v48.css'), 'utf8');
 
 assert(ui.includes('data-blotter-tab="queued"'), 'Queue tab missing');
 assert(ui.includes('data-blotter-tab="working"'), 'Working Orders tab missing');
@@ -37,6 +38,12 @@ const syncPriceMatch=stage43.match(/function syncPriceWindow\(ticket\)\{([\s\S]*
 assert(syncPriceMatch, 'Stage 43 price-window sync missing');
 assert(!syncPriceMatch[1].includes('.focus('), 'Passive price-window sync must never steal focus from ticker/order controls');
 assert(stage43.includes('focus({preventScroll:true})'), 'Intentional order-type selection may focus its price field without scrolling the workspace');
+assert(stage43.includes('data-stage43-time-v49="TICK"') && stage43.includes('data-stage43-time-v49="5m"') && stage43.includes('data-stage43-time-v49="1D"'), 'Chart must expose compact inline timeframe controls backed by native chart actions');
+assert(stage43.includes('[data-panel="recent"],[data-panel="fills"]'), 'Recent Activity and Fills rows must support order-detail drilldown');
+assert(stage43.includes('ORDER INSTRUCTIONS') && stage43.includes('EXECUTION'), 'Order detail must separate instructions from execution');
+assert(stage43.includes('o.limitPrice') && stage43.includes('o.stopPrice'), 'Advanced order detail must retain Limit/Stop/Stop-Limit instruction prices');
+assert(stage43.includes('o.triggeredAt') && stage43.includes('o.executedPrice'), 'Advanced order detail must expose trigger and fill information');
+assert(stage43Css.includes('.sbc-order-detail-v1') && stage43Css.includes('.stage43-time-strip-v49'), 'Order detail modal and compact chart toolbar styles must be present');
 
 // Behavioral regression: executions are represented by the authoritative trades
 // feed in Recent Activity. They must not enter the legacy fuzzy price matcher,
