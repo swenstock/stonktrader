@@ -15,6 +15,6 @@ must(js.includes("add('QUEUED'")&&js.includes("add('CANCELLED'"),'queued activit
 must(js.includes("#view-portfolio #queuedOrders button")&&js.includes("data-orders-tab-v45=\"recent\""),'queued activity is scoped to the portfolio order UI');
 must(!js.includes('MutationObserver')&&!js.includes('setInterval('),'queued activity adds no polling or document-wide mutation observer');
 must(pre.includes('/v45-desktop-stability-v1.css?v=2')&&pre.includes('/v45-queued-activity-v1.js?v=1'),'desktop preloader serves fresh stability assets');
-must(server.includes('/v45-desktop-stage46-v51-pre.js?v=70'),'served shell cache-busts the updated desktop preloader');
+must(server.includes('/v45-desktop-stage46-v51-pre.js?v=71'),'served shell cache-busts the updated desktop preloader');
 must(server.includes('portfolioStability: "v1-fixed-top-row-large-chart"')&&server.includes('queuedActivity: "v1-placement-cancel-history"'),'health exposes the stabilization contract');
 console.log('Portfolio stability validation passed.');
