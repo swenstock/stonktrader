@@ -12,10 +12,11 @@ must(!hooks.includes('sbcTicketMarketOrdersV36')&&!hooks.includes('sbcTicketSett
 must(!hooks.includes('insertPrice(')&&!hooks.includes('removePrice(')&&!hooks.includes('ensureFill('),'native hooks no longer mutate simulated ticket depth or balances');
 must(hooks.includes("fetch('/api/tickets'")&&hooks.includes("x.status==='unredeemed'")&&hooks.includes('window.openOwnedTicketSell')&&hooks.includes('ticketOrder.listingId=info.id'),'POST OFFER resolves a real unredeemed backend ticket before the native modal opens');
 must(hooks.includes('refreshSelectorInventory')&&hooks.includes('d.inventory?.[type]?.owned'),'ticket selector ownership comes from backend inventory instead of shell prototype counts');
+must(hooks.includes("junior:'Jr Broker'")&&hooks.includes("label.textContent='JR. BROKER'"),'junior entry tier is player-facing Jr Broker');
 must(!hooks.includes('MY-TR-1')&&!hooks.includes('MY-RU-1')&&!hooks.includes('MY-ME-1'),'real offer hook cannot inject prototype MY-* ticket ids');
 must(loader.includes('/v45-ticket-native-hooks-v41.js?v=45'),'truthful-inventory native hook is cache-busted');
 must(!/CORPORATE LADDER/i.test(retirement),'Main Event retirement does not invent replacement ladder branding');
 must(retirement.includes('#sbcJuniorCollectionV4')&&retirement.includes('[id*="badge" i]'),'Main Event retirement explicitly protects established Junior/Badge UI');
-must(junior.includes('JUNIOR STONK BROKERS')&&junior.includes('20 = 1 BROKER'),'established Junior StonkBroker collection remains intact');
-must(badge.includes("slot.id='sbcBadgeMarketTab'")&&badge.includes('JR. BROKER BADGE')&&badge.includes("localStorage.getItem('token')"),'Jr. Broker Badge has its own dedicated authenticated market tab');
-console.log('Stage 31/32 ticket exchange auth + real-ticket authority + frozen-design checks passed.');
+must(junior.includes('JR STONK BROKER BADGES')&&junior.includes('20 = 1 BROKER'),'Jr Stonk Broker Badge collection remains intact');
+must(badge.includes("slot.id='sbcBadgeMarketTab'")&&badge.includes('JR STONK BROKER BADGE')&&badge.includes("localStorage.getItem('token')"),'Jr Stonk Broker Badge has its own dedicated authenticated market tab');
+console.log('Stage 31/32 ticket exchange auth + real-ticket authority + terminology checks passed.');
