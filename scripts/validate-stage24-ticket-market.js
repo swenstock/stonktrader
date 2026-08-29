@@ -11,6 +11,6 @@ must(ui.includes("['ticketOrderModal','bidOrderModal','sellChoiceModal']")&&ui.i
 must(css.includes('.tm36-my-tickets')&&css.includes('.tm36-ticket-actions'),'My Tickets spacing/action area is styled');
 must(css.includes('.tm36-book-scroll')&&css.includes('overflow-y:auto'),'bid and ask books keep compact visible depth and scroll internally');
 must(ui.includes('decorateBook(rows)')&&ui.includes('tm36-my-book-row'),'user orders are reflected in the visible book');
-must(server.includes('/v45-ticket-market-v36.js?v=39')&&server.includes('/v45-my-tickets-cleanup-v37.js?v=40')&&server.includes('/v45-main-event-retirement-v1.js?v=3')&&server.includes('/v45-badge-market-stage4.js?v=3')&&server.includes('/v45-ticket-market-v35.css?v=38'),'cleaned exchange state, Badge market, retirement, and CSS assets are cache-busted and served');
+must(server.includes('/v45-ticket-market-v36.js?v=39')&&server.includes('/v45-ticket-native-hooks-v41.js?v=49')&&server.includes('/v45-my-tickets-cleanup-v37.js?v=41')&&server.includes('/v45-main-event-retirement-v1.js?v=3')&&server.includes('/v45-badge-market-stage4.js?v=3')&&server.includes('/v45-ticket-market-v35.css?v=38'),'real-ticket runtime owner and cleaned Exchange assets are cache-busted and served');
 must(server.includes('ticketExchangeControls: "v36-real-ticket-authority"'),'health marker reports real ticket authority');
 console.log('Stage 24 ticket exchange regression checks passed.');

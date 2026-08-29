@@ -5,6 +5,7 @@ const retirement=fs.readFileSync(path.join(__dirname,'..','public','v45-main-eve
 const junior=fs.readFileSync(path.join(__dirname,'..','public','v45-stage4-junior-ui.js'),'utf8');
 const badge=fs.readFileSync(path.join(__dirname,'..','public','v45-badge-market-stage4.js'),'utf8');
 const css=fs.readFileSync(path.join(__dirname,'..','public','v45-ticket-market-v35.css'),'utf8');
+const server=fs.readFileSync(path.join(__dirname,'..','server','index.js'),'utf8');
 function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
 must(hooks.includes("localStorage.getItem('token')")&&hooks.includes('Authorization:`Bearer ${t}`'),'fresh-session Exchange auth reuses the canonical SBC token');
 must(hooks.includes('window.updateBidOrderSummary')&&hooks.includes('price>=1&&price<terms.ask'),'bid UI preserves any-positive-resting-bid validation');
@@ -17,8 +18,10 @@ must(hooks.includes('clearSignedOutOwnership')&&hooks.includes("target.innerHTML
 must(hooks.includes("junior:'Jr Broker'")&&hooks.includes("u.includes('ENTRY TICKET')")&&hooks.includes("el.textContent='JR BROKER'")&&!hooks.includes("el.textContent='ENTRY TICKET'"),'legacy Entry Ticket is normalized to player-facing Jr Broker');
 must(!hooks.includes('MY-TR-1')&&!hooks.includes('MY-RU-1')&&!hooks.includes('MY-ME-1'),'real offer hook cannot inject prototype MY-* ticket ids');
 must(hooks.includes("['junior','trader','clerk','runner']")&&hooks.includes("fetch('/api/dev/tickets'")&&hooks.includes("id='seedExchangeTickets'")&&hooks.includes("/RUN CLOCK/i"),'TEST CLOCK visibly seeds one real backend ticket per active tier even without fundTest anchor');
+must(hooks.includes("closest?.('#clockBtn')")&&hooks.includes('setTimeout(ensureQaTicketSeed,100)'),'opening TEST CLOCK retries QA ticket control installation at runtime');
 must(hooks.includes('normalizeSelectorOrder')&&hooks.includes("selector.insertBefore(badge,selector.firstElementChild)")&&hooks.includes('rank={junior:1,trader:2,clerk:3,runner:4}'),'selector order is Badge then Jr Broker, Trader, Clerk, Runner');
-must(loader.includes('/v45-ticket-native-hooks-v41.js?v=48'),'Jr Broker and QA inventory hook is cache-busted');
+must(loader.includes('/v45-ticket-native-hooks-v41.js?v=49'),'fallback loader points at the runtime-owner hook');
+must(server.includes('/v45-ticket-native-hooks-v41.js?v=49')&&server.includes('/v45-my-tickets-cleanup-v37.js?v=41'),'runtime-owner hook is served directly and parent loader is cache-busted');
 must(css.includes('#ticketTypeSelector')&&css.includes('#sbcBadgeMarketTab')&&css.includes('repeat(4,minmax(0,1fr))'),'five-market selector has a deliberate desktop layout');
 must(css.includes('.sbc-badge-mark')&&css.includes('.sbc-badge-controls'),'Badge uses dedicated stable mark and isolated control styling');
 must(!/CORPORATE LADDER/i.test(retirement),'Main Event retirement does not invent replacement ladder branding');
@@ -26,4 +29,4 @@ must(retirement.includes('#sbcJuniorCollectionV4')&&retirement.includes('[id*="b
 must(junior.includes('JR STONK BROKER BADGES')&&junior.includes('20 = 1 BROKER'),'Jr Stonk Broker Badge collection remains intact');
 must(badge.includes("slot.id='sbcBadgeMarketTab'")&&badge.includes('JR STONK BROKER BADGE')&&badge.includes("localStorage.getItem('token')"),'Jr Stonk Broker Badge has its own dedicated authenticated market tab');
 must(badge.includes("function visual(){return'<span class=\"sbc-badge-mark\"")&&badge.includes('deactivateBadgeMode')&&badge.includes("SIGN IN TO TRADE"),'Badge UI uses self-contained art, deactivates off-tab, and blocks signed-out transaction prompts');
-console.log('Stage 31/32 ticket exchange auth + real-ticket authority + Jr Broker naming + QA seed visibility checks passed.');
+console.log('Stage 31/32 ticket exchange runtime-owner + real-ticket authority checks passed.');
