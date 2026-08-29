@@ -15,5 +15,7 @@ async function handleLegacyCancel(btn){const spec=String(btn.dataset.tm36Cancel|
 function exchangeContext(){const clock=document.getElementById('testClockModal'),view=document.getElementById('view-exchange');return !!(clock?.classList?.contains('open')||view?.offsetParent!==null);}
 const nativeAlert=window.alert?.bind(window);if(nativeAlert&&!window.alert.__sbcExchangeDialogBridge){const bridged=function(message){if(exchangeContext()){notice(String(message||''),{title:/^TEST\b/i.test(String(message||''))?'QA UPDATE':'EXCHANGE UPDATE',eyebrow:'TICKET EXCHANGE'});return;}return nativeAlert(message)};bridged.__sbcExchangeDialogBridge=true;window.alert=bridged;}
 document.addEventListener('click',e=>{const edit=e.target?.closest?.('[data-tm36-edit]'),cancel=e.target?.closest?.('[data-tm36-cancel]');if(!edit&&!cancel)return;if(!e.target?.closest?.('#view-exchange'))return;e.preventDefault();e.stopPropagation();e.stopImmediatePropagation?.();if(edit)handleLegacyEdit(edit);else handleLegacyCancel(cancel);},true);
+function ensureRoutingFill(){if(window.__sbcExchangeRoutingFillV1||document.querySelector('script[data-sbc-exchange-routing-fill]'))return;const s=document.createElement('script');s.src='/v45-exchange-routing-fill-v1.js?v=1';s.setAttribute('data-sbc-exchange-routing-fill','1');document.head.appendChild(s);}
 window.SBCExchangeDialogV1={notice,confirm:confirmAction,promptPrice,close};
+ensureRoutingFill();
 })();
