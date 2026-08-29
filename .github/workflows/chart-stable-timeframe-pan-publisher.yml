@@ -22,6 +22,12 @@ jobs:
           s=s.replace('/v45-desktop-stage45-v50.js?v=55','/v45-desktop-stage45-v50.js?v=56')
           s=s.replace('chartInteractions: "v54-continuous-grab-pan"','chartInteractions: "v56-stable-pan-session-bars"')
           p.write_text(s)
+
+          p=Path('server/chartPresentationConsolidationV1.test.js')
+          s=p.read_text()
+          if "/v45-desktop-stage45-v50.js?v=55" not in s: raise SystemExit('chart test cache anchor missing')
+          s=s.replace('/v45-desktop-stage45-v50.js?v=55','/v45-desktop-stage45-v50.js?v=56')
+          p.write_text(s)
           PY
       - name: Focused tests
         run: |
@@ -34,6 +40,6 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git rm .github/workflows/chart-stable-timeframe-pan-publisher.yml
-          git add server/index.js public/v45-desktop-stage45-v50.js server/routes/quoteBars.js server/chartStableTimeframePanV1.test.js
+          git add server/index.js public/v45-desktop-stage45-v50.js server/routes/quoteBars.js server/chartStableTimeframePanV1.test.js server/chartPresentationConsolidationV1.test.js
           git commit -m 'Stabilize chart pan and timeframe real-bars repaint'
           git push origin HEAD:chart-stable-timeframe-pan-v1
