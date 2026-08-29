@@ -105,6 +105,7 @@ function applyChartPresentationTuning(html) {
     ["const volH=chartPrefs.volume?72:0;", "const volH=chartPrefs.volume?50:0;"],
     ["const candleW=Math.max(2,Math.min(8,xStep*.62));", "const candleW=Math.max(3,Math.min(11,xStep*.72));"],
     ["stroke-width=\"1\"", "stroke-width=\"1.15\""],
+    ["  const hi=Math.max(...data.map(d=>d.h));\n  const lo=Math.min(...data.map(d=>d.l));\n  const range=(hi-lo)||1;", "  const dataHi=Math.max(...data.map(d=>d.h));\n  const dataLo=Math.min(...data.map(d=>d.l));\n  const dataRange=(dataHi-dataLo)||1;\n  const priceZoom=Math.max(.5,Math.min(3,Number(window.SBCChartViewportV50?.state?.y||1)));\n  const priceCenter=(dataHi+dataLo)/2;\n  const range=(dataRange*1.12)/priceZoom;\n  const hi=priceCenter+range/2;\n  const lo=priceCenter-range/2;"],
   ];
   for (const [from,to] of replacements) {
     if (!source.includes(from)) throw new Error(`Exact V45 chart presentation tuning compatibility failure: ${from}`);
