@@ -4,14 +4,14 @@ if(window.__sbcStageCUiCleanupV1)return;window.__sbcStageCUiCleanupV1=true;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 let refreshTimer=null,portfolioSyncTimer=null,lastTradeSignature=null,forcePortfolioSync=false,portfolioSyncBusy=false;
 const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
 const money=n=>`$${Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 const when=v=>{if(!v)return'';const d=new Date(v);return Number.isNaN(d.getTime())?String(v):d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});};
 const qtyText=o=>o?.quantity!=null?Number(o.quantity).toLocaleString(undefined,{maximumFractionDigits:4}):o?.percent!=null?`${Number(o.percent)}% SIZE`:'—';
 const orderPrice=o=>{const t=String(o?.orderType||'market');if(t==='limit')return `LMT ${money(o.limitPrice)}`;if(t==='stop')return `STP ${money(o.stopPrice)}`;if(t==='stop_limit')return `STP ${money(o.stopPrice)} / LMT ${money(o.limitPrice)}`;return 'MKT @ OPEN';};
 function ensureExchangeQaHelpers(){
   const specs=[
-    ['__sbcExchangeDialogV1','data-sbc-exchange-dialog','/v45-exchange-dialog-v1.js?v=1'],
+    ['__sbcExchangeDialogV1','data-sbc-exchange-dialog','/v45-exchange-dialog-v1.js?v=2'],
     ['__sbcTestStonkFaucetV1','data-sbc-test-stonk-direct','/v45-test-stonk-faucet-v1.js?v=2'],
     ['__sbcExchangeOwnOrdersV1','data-sbc-exchange-own-orders','/v45-exchange-own-orders-v1.js?v=8']
   ];
