@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/publish-chart-presentation-consolidation-v1.yml'
       - '.handoff/chart-presentation-consolidation-v1.patch.gz.b64'
+      - '.handoff/chartPresentationConsolidationV1.test.js.b64'
 
 permissions:
   contents: write
@@ -18,8 +19,10 @@ jobs:
         with:
           ref: v45-rebuild
           fetch-depth: 0
-      - name: Preserve tested patch
-        run: cp .handoff/chart-presentation-consolidation-v1.patch.gz.b64 /tmp/chart.patch.b64
+      - name: Preserve tested payloads
+        run: |
+          cp .handoff/chart-presentation-consolidation-v1.patch.gz.b64 /tmp/chart.patch.b64
+          cp .handoff/chartPresentationConsolidationV1.test.js.b64 /tmp/chart-test.b64
       - name: Apply to exact current main and publish one commit
         run: |
           git fetch origin main
@@ -29,6 +32,7 @@ jobs:
           echo "05a483a9e9a41dbbd54a2b06a1072f0aacd127b37df80e6b6e50d0ca8d02b2d6  /tmp/chart.patch" | sha256sum -c -
           git apply --check /tmp/chart.patch
           git apply /tmp/chart.patch
+          base64 -d /tmp/chart-test.b64 > server/chartPresentationConsolidationV1.test.js
           node --check public/v45-desktop-stage43-v48.js
           node --check public/v45-desktop-stage45-v50.js
           node --check public/v45-chart-workstation-v1.js
