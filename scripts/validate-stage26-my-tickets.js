@@ -3,8 +3,11 @@ const ui=fs.readFileSync(path.join(__dirname,'..','public','v45-my-tickets-clean
 const faucet=fs.readFileSync(path.join(__dirname,'..','public','v45-test-stonk-faucet-v1.js'),'utf8');
 const own=fs.readFileSync(path.join(__dirname,'..','public','v45-exchange-own-orders-v1.js'),'utf8');
 const dialog=fs.readFileSync(path.join(__dirname,'..','public','v45-exchange-dialog-v1.js'),'utf8');
+const routing=fs.readFileSync(path.join(__dirname,'..','public','v45-exchange-routing-fill-v1.js'),'utf8');
+const integrity=fs.readFileSync(path.join(__dirname,'..','public','v45-exchange-tier-integrity-v1.js'),'utf8');
 const stageC=fs.readFileSync(path.join(__dirname,'..','public','v45-stage-c-ui-cleanup-v1.js'),'utf8');
 const dev=fs.readFileSync(path.join(__dirname,'..','server','routes','dev.js'),'utf8');
+const ticketMarket=fs.readFileSync(path.join(__dirname,'..','server','routes','ticketMarket.js'),'utf8');
 const server=fs.readFileSync(path.join(__dirname,'..','server','index.js'),'utf8');
 function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
 must(ui.includes("node.nodeType===Node.TEXT_NODE")&&ui.includes('node.remove()'),'cleanup removes raw descriptive text nodes');
@@ -20,6 +23,16 @@ must(dialog.includes("id='sbcExchangeDialogV1'")||dialog.includes("root.id='sbcE
 must(dialog.includes('function notice(')&&dialog.includes('function confirmAction(')&&dialog.includes('function promptPrice('),'Exchange dialog layer supports notice, confirm, and price-edit prompt flows');
 must(dialog.includes("[data-tm36-edit]")&&dialog.includes("[data-tm36-cancel]")&&dialog.includes("stopImmediatePropagation"),'legacy My Orders adjust/cancel clicks are intercepted before native prompt/confirm handlers');
 must(dialog.includes('__sbcExchangeDialogBridge')&&dialog.includes('window.alert=bridged')&&dialog.includes('testClockModal'),'Exchange/Test Clock alerts are routed through the in-app dialog layer');
+must(dialog.includes('/v45-exchange-routing-fill-v1.js?v=1')&&dialog.includes('/v45-exchange-tier-integrity-v1.js?v=1'),'dialog bootstrap loads routing/fill and tier-integrity guards');
+must(routing.includes("const LABEL={junior:'Jr Broker',trader:'Trader',clerk:'Clerk',runner:'Runner'}")&&routing.includes('exactTicket(type)')&&routing.includes('selectorButton(type)'),'My Tickets routing resolves exact backend ticket and matching selector tier');
+must(integrity.includes("junior:{label:'Jr Broker',legacy:'JR. STONKBROKER'}")&&integrity.includes("return'junior'")&&integrity.includes('selectorType()'),'tier-integrity guard has one canonical Jr Broker -> junior identity mapping');
+must(integrity.includes("marker.textContent=' JUNIOR'")&&integrity.includes("display:none!important"),'Jr Broker title carries hidden JUNIOR parser marker so legacy v36 never falls through to Runner');
+must(integrity.includes("activeTicketMarket=CANON[type].legacy")&&integrity.includes('wrapRender()'),'selected tier is synchronized into legacy activeTicketMarket before every ticket-book render');
+must(integrity.includes("replace(/JR\\.?\\s*STONKBROKER/gi,'JR BROKER')"),'legacy visible JR. STONKBROKER wording is normalized without changing backend ticketType');
+must(ticketMarket.includes("const TICKET_TYPES = new Set(['runner','clerk','trader','junior'])")&&ticketMarket.includes("WHERE ticket_bids.status = 'active' AND ticket_bids.ticket_type = ?")&&ticketMarket.includes("WHERE ticket_listings.status = 'active' AND tickets.ticket_type = ?"),'backend order books isolate bids and offers by the requested canonical ticket type');
+must(ticketMarket.includes("router.get('/book/:ticketType'")&&ticketMarket.includes('res.json({\n    ticketType,'),'book endpoint echoes canonical ticketType used for the query');
+must(ticketMarket.includes("router.post('/bids'")&&ticketMarket.includes('ticketType = normalizeType(req.body?.ticketType)'),'bid placement persists canonical ticketType');
+must(ticketMarket.includes('ticket.ticket_type !== bid.ticket_type'),'SELL TO BID rejects a ticket whose tier does not match the bid tier');
 must(own.includes("api('/api/ticket-market/mine')")&&own.includes('YOUR OFFER')&&own.includes('YOUR BID')&&own.includes('sbc-own-book-row'),'own active backend ticket orders are designated from backend My Orders data');
 must(!own.includes('MutationObserver'),'own-order helper does not use mutation-observer reinsertion loops');
 must(own.includes('MANAGE ORDER')&&own.includes('CHANGE PRICE')&&own.includes('CANCEL ORDER'),'clicking an own order exposes explicit manage controls');
