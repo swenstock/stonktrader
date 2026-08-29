@@ -2,7 +2,7 @@
 'use strict';
 if(window.__sbcTraderActionConfirmV42)return;window.__sbcTraderActionConfirmV42=true;
 let timer=null,suppressSuccessAlertUntil=0;
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>`$${Number(n||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
 const qty=n=>Number(n||0).toLocaleString(undefined,{maximumFractionDigits:4});
 function close(){document.getElementById('ta42Confirm')?.remove();clearTimeout(timer);timer=null;}
