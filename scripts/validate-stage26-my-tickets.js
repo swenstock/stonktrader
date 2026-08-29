@@ -14,11 +14,12 @@ must(ui.includes('/v45-test-stonk-faucet-v1.js?v=1'),'TEST STONK faucet remains 
 must(faucet.includes("fetch('/api/dev/fund'")&&faucet.includes('amount=250000')&&faucet.includes("localStorage.getItem('token')")&&faucet.includes("id='fundTestStonk'")&&faucet.includes("textContent='+ TEST STONK'"),'TEST STONK control credits 250,000 through authenticated backend custodian faucet');
 must(faucet.includes("fetch('/api/dev/order-book'")&&faucet.includes("id='seedTestOrderBook'")&&faucet.includes("textContent='+ TEST ORDER BOOK'"),'TEST order-book control calls the backend QA depth seeder');
 must(!/localStorage\.setItem\([^\n]*stonk/i.test(faucet),'TEST STONK faucet does not fabricate a browser-local balance');
-must(stageC.includes('/v45-test-stonk-faucet-v1.js?v=2')&&stageC.includes('/v45-exchange-own-orders-v1.js?v=6'),'final direct UI owner bootstraps TEST STONK and EDIT-labeled own-order manager');
+must(stageC.includes('/v45-test-stonk-faucet-v1.js?v=2')&&stageC.includes('/v45-exchange-own-orders-v1.js?v=7'),'final direct UI owner bootstraps TEST STONK and contrast-fixed EDIT own-order manager');
 must(own.includes("api('/api/ticket-market/mine')")&&own.includes('YOUR OFFER')&&own.includes('YOUR BID')&&own.includes('sbc-own-book-row'),'own active backend ticket orders are designated from backend My Orders data');
 must(!own.includes('MutationObserver'),'own-order helper does not use mutation-observer reinsertion loops');
 must(own.includes('MANAGE ORDER')&&own.includes('CHANGE PRICE')&&own.includes('CANCEL ORDER'),'clicking an own order exposes explicit manage controls');
-must(own.includes('class="sbc-own-manage-btn">EDIT</button>')&&!own.includes('class="sbc-own-manage-btn">MANAGE</button>'),'own order-book action button uses concise EDIT label');
+must(own.includes('class="sbc-own-manage-btn"')&&own.includes('>EDIT</button>')&&!own.includes('>MANAGE</button>'),'own order-book action button uses concise EDIT label');
+must(own.includes('background:#102733!important')&&own.includes('color:#f2fbff!important')&&own.includes('-webkit-text-fill-color:#f2fbff!important')&&own.includes('opacity:1!important'),'EDIT button keeps explicit high-contrast readable text against inherited book-button CSS');
 must(own.includes("method:'PATCH'")&&own.includes("method:'DELETE'")&&own.includes('/api/ticket-market/offers/')&&own.includes('/api/ticket-market/bids/'),'own-order change and cancel use real backend ticket-market endpoints');
 must(own.includes("data-own-side")&&own.includes("data-own-id")&&own.includes("data-own-price")&&own.includes("Click to change price or cancel"),'own book rows carry stable backend management identity');
 must(own.includes("name=isOffer?'Ticket Offered':'Ticket Bid'")&&own.includes('<strong>1 ${name}</strong>')&&!own.includes('<strong>Active order</strong>'),'own rows match public book wording and only differ by ownership designation');
