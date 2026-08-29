@@ -1,5 +1,13 @@
 (()=>{
 'use strict';if(window.__sbcMainEventRetirementV1)return;window.__sbcMainEventRetirementV1=true;
-const walk=()=>{document.querySelectorAll('button,[role="button"],a').forEach(el=>{if(/MAIN EVENT/i.test(el.textContent||'')){if(el.closest('#view-exchange')||el.closest('#view-leaders'))el.style.display='none';}});document.querySelectorAll('#view-leaders article,.event').forEach(el=>{if(/MAIN EVENT/i.test(el.textContent||''))el.style.display='none';});document.querySelectorAll('h1,h2,h3,p,span,b,small,div').forEach(el=>{if(el.children.length)return;const t=(el.textContent||'').trim();if(t==='Main Event is the destination.')el.textContent='Collect Jr. Broker Badges. Get promoted.';if(t==='Earn or buy your way into the Main Event.')el.textContent='Play, trade, or upgrade tickets. Win Badges. Collect 20.';if(t==='MAIN EVENT TICKET — LIVE MARKET')el.textContent='TICKET EXCHANGE — LIVE MARKETS';if(t==='NEXT STONKBROKER MAIN EVENT')el.textContent='CORPORATE LADDER';});};
+const replacements=new Map([
+['Main Event is the destination.','Collect Jr. Broker Badges. Get promoted.'],
+['Earn or buy your way into the Main Event.','Play, trade, or upgrade tickets. Win Badges. Collect 20.'],
+['MAIN EVENT TICKET — LIVE MARKET','TICKET EXCHANGE — LIVE MARKETS'],
+['NEXT STONKBROKER MAIN EVENT','CORPORATE LADDER'],
+['ACTUAL COMMITTED MAIN EVENT RESERVE','ACTUAL COMMITTED PRIZE RESERVE']
+]);
+function retireNode(el){if(!el||el.dataset?.sbcMainEventRetired==='1')return;const text=(el.textContent||'').trim();if(!/MAIN EVENT/i.test(text))return;for(const [from,to] of replacements){if(text===from){el.textContent=to;el.dataset.sbcMainEventRetired='1';return}}const actionable=el.matches?.('button,a,[role="button"],.inv.big-inv,.market-ticket-tab,.ticket-type-tab,article,.event');if(actionable||el.closest?.('#view-exchange,#view-leaders,#view-my')){el.style.display='none';el.dataset.sbcMainEventRetired='1';}}
+const walk=()=>{document.querySelectorAll('button,a,[role="button"],.inv.big-inv,.market-ticket-tab,.ticket-type-tab,article,.event,h1,h2,h3,p,span,b,small,div').forEach(retireNode);};
 const start=()=>{walk();new MutationObserver(walk).observe(document.documentElement,{childList:true,subtree:true});};if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
