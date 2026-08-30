@@ -1,0 +1,33 @@
+name: Trace Stage 6 Item B
+on:
+  push:
+    branches: [stage6-item-b-relocate-ladder]
+permissions:
+  contents: write
+jobs:
+  trace:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage6-item-b-relocate-ladder
+      - name: Trace Collect 10 panel
+        run: |
+          node <<'NODE'
+          const { exactV45Shell } = require('./server/v45ExactShell');
+          const src=exactV45Shell.toString('utf8');
+          for(const needle of ['COLLECT 10','MOVE UP','10 RUNNER TICKETS','10 CLERK TICKETS','10 TRADER TICKETS']){
+            const i=src.indexOf(needle);
+            console.log('\n===',needle,'index',i,'===');
+            if(i>=0)console.log(src.slice(Math.max(0,i-1500),Math.min(src.length,i+3500)));
+          }
+          NODE
+      - name: Remove temporary trace workflow
+        run: |
+          rm .github/workflows/trace-stage6-item-b.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/trace-stage6-item-b.yml
+          git commit -m 'Remove temporary Stage 6 Item B trace workflow'
+          git push origin HEAD:stage6-item-b-relocate-ladder
