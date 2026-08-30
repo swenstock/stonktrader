@@ -89,9 +89,9 @@ assert.strictEqual(vm20.progressLabel, '20 / 20');
 assert.strictEqual(vm20.progressPercent, 100);
 assert.strictEqual(vm20.redeemable, true);
 assert.strictEqual(vm20.fullRedemptionsAvailable, 1);
-assert.strictEqual(ui.historyLabel({ type: 'issuance', source: 'won' }), 'WON 1 JUNIOR');
-assert.strictEqual(ui.historyLabel({ type: 'issuance', source: 'minted' }), 'MINTED 1 JUNIOR');
-assert.strictEqual(ui.historyLabel({ type: 'redemption', status: 'funded_pending_delivery' }), 'REDEEMED 20 JUNIORS • ACTIVATED BROKER FUNDED PENDING DELIVERY');
+assert.strictEqual(ui.historyLabel({ type: 'issuance', source: 'won' }), 'WON 1 JR STONK BROKER BADGE');
+assert.strictEqual(ui.historyLabel({ type: 'issuance', source: 'minted' }), 'MINTED 1 JR STONK BROKER BADGE');
+assert.strictEqual(ui.historyLabel({ type: 'redemption', status: 'funded_pending_delivery' }), 'REDEEMED 20 JR STONK BROKER BADGES • ACTIVATED BROKER FUNDED PENDING DELIVERY');
 
 console.log('Stage 4 Junior collection UI/service: PASS');
 console.log('Progress:', '14 Juniors -> 14 / 20 -> 70% and redeem disabled');
