@@ -22,6 +22,7 @@ function run() {
   addColumn('tickets', "ticket_type TEXT NOT NULL DEFAULT 'main_event'");
   addColumn('tickets', 'applied_to_satellite_id INTEGER');
   addColumn('tickets', 'backing_stonk REAL');
+  addColumn('ticket_listings', 'cancelled_at TEXT');
   addColumn('satellites', 'settlement_version TEXT');
   addColumn('satellites', 'settlement_error TEXT');
   addColumn('satellite_results', 'entry_id INTEGER');

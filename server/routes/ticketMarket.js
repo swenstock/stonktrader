@@ -46,6 +46,8 @@ function serializeOffer(l) {
     isMine: l.is_mine === 1,
     createdAt: l.created_at,
     soldAt: l.sold_at,
+    cancelledAt: l.cancelled_at,
+    platformFee: l.platform_fee_stonk,
   };
 }
 
@@ -61,6 +63,8 @@ function serializeBid(b) {
     isMine: b.is_mine === 1,
     createdAt: b.created_at,
     filledAt: b.filled_at,
+    cancelledAt: b.cancelled_at,
+    platformFee: b.platform_fee_stonk,
   };
 }
 
@@ -88,6 +92,28 @@ function activeBids(ticketType, myAccountId) {
     WHERE ticket_bids.status = 'active' AND ticket_bids.ticket_type = ?
     ORDER BY ticket_bids.bid_price DESC, ticket_bids.id ASC
   `).all(myAccountId, ticketType);
+}
+
+function recentSales(ticketType) {
+  const offers = db.prepare(`
+    SELECT l.id, l.ticket_id ticketId, t.ticket_type ticketType, l.ask_price price,
+      l.platform_fee_stonk platformFee, l.sold_at executedAt, 'offer' source
+    FROM ticket_listings l
+    JOIN tickets t ON t.id = l.ticket_id
+    WHERE l.status='sold' AND t.ticket_type=? AND l.sold_at IS NOT NULL
+    ORDER BY l.sold_at DESC LIMIT 20
+  `).all(ticketType);
+  const bids = db.prepare(`
+    SELECT b.id, b.filled_ticket_id ticketId, b.ticket_type ticketType, b.bid_price price,
+      b.platform_fee_stonk platformFee, b.filled_at executedAt, 'bid' source
+    FROM ticket_bids b
+    WHERE b.status='filled' AND b.ticket_type=? AND b.filled_at IS NOT NULL
+    ORDER BY b.filled_at DESC LIMIT 20
+  `).all(ticketType);
+  return [...offers, ...bids]
+    .sort((a,b)=>new Date(b.executedAt||0)-new Date(a.executedAt||0))
+    .slice(0,20)
+    .map(x=>({ id:Number(x.id), ticketId:x.ticketId==null?null:Number(x.ticketId), ticketType:x.ticketType, price:Number(x.price), platformFee:Number(x.platformFee||0), executedAt:x.executedAt, source:x.source }));
 }
 
 // Backward-compatible legacy endpoint: active OFFERS only.
@@ -122,6 +148,12 @@ router.get('/book/:ticketType', (req, res) => {
     offers,
     exchangeFeePct: EXCHANGE_FEE_PCT,
   });
+});
+
+router.get('/recent/:ticketType', (req, res) => {
+  const ticketType = normalizeType(req.params.ticketType);
+  if (!ticketType) return res.status(400).json({ error: 'Unknown ticket type' });
+  res.json({ ticketType, sales: recentSales(ticketType) });
 });
 
 router.get('/mine', requireAuth, (req, res) => {
@@ -218,7 +250,7 @@ function cancelOffer(req, res) {
   try {
     db.exec('BEGIN');
     db.prepare("UPDATE tickets SET status='unredeemed' WHERE id=?").run(listing.ticket_id);
-    db.prepare("UPDATE ticket_listings SET status='cancelled' WHERE id=?").run(listing.id);
+    db.prepare("UPDATE ticket_listings SET status='cancelled', cancelled_at=? WHERE id=?").run(new Date().toISOString(), listing.id);
     db.exec('COMMIT');
     res.json({ ok: true });
   } catch (err) {
@@ -311,7 +343,7 @@ router.post('/bids/:id/sell', requireAuth, (req, res) => {
     db.exec('BEGIN');
     // If this ticket was also offered, remove that offer atomically first.
     if (ticket.status === 'listed') {
-      db.prepare("UPDATE ticket_listings SET status='cancelled' WHERE ticket_id=? AND status='active'").run(ticket.id);
+      db.prepare("UPDATE ticket_listings SET status='cancelled', cancelled_at=? WHERE ticket_id=? AND status='active'").run(new Date().toISOString(), ticket.id);
     }
     custodian.credit(req.account.id, sellerProceeds, 'ticket_sale_to_bid', { referenceType: 'ticket', referenceId: ticket.id });
     recordPlatformFee(fee, 'ticket_bid', bid.id);
