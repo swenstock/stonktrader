@@ -28,5 +28,5 @@ function enhanceModals(){const heads=$$('h1,h2,h3,strong,b').filter(h=>/^(BUY|SE
 function scheduleRender(){clearTimeout(refreshTimer);refreshTimer=setTimeout(()=>{renderMine().catch(()=>{});enhanceModals();},80);}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&activeMarketModal&&activeMarketModal.offsetParent!==null){e.preventDefault();closeMarketModal(activeMarketModal);}});
 function run(){scheduleRender();}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();new MutationObserver(()=>scheduleRender()).observe(document.documentElement,{childList:true,subtree:true});setTimeout(run,500);setTimeout(run,1600);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();window.addEventListener('sbc:exchange-rendered',scheduleRender);document.addEventListener('click',e=>{if(e.target?.closest?.('#ticketTypeSelector button,.hit-ask,.hit-bid'))setTimeout(scheduleRender,0)},true);setTimeout(run,500);setTimeout(run,1600);
 })();

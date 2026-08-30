@@ -51,6 +51,6 @@ function clean(){
 window.addEventListener('click',normalizeExchangePost,true);
 function run(){clean();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
-let t;new MutationObserver(()=>{clearTimeout(t);t=setTimeout(run,60)}).observe(document.documentElement,{childList:true,subtree:true});
+window.addEventListener('sbc:exchange-rendered',run);
 setTimeout(run,250);setTimeout(run,900);setTimeout(run,1800);
 })();
