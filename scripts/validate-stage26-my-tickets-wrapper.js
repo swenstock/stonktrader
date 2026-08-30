@@ -1,10 +1,8 @@
 const fs=require('fs'),path=require('path'),Module=require('module');
 const target=path.join(__dirname,'validate-stage26-my-tickets.js');
 let src=fs.readFileSync(target,'utf8');
-const stale="must(server.includes('/v45-exchange-dialog-v1.js?v=5')&&server.includes('/v45-exchange-layout-sales-v1.js?v=2'),'server serves cache-busted Exchange dialog and layout helpers');";
-const robust="must(server.includes('/v45-stage-c-ui-cleanup-v1.js?v=1')&&stageC.includes('/v45-exchange-dialog-v1.js?v=5')&&dialog.includes('/v45-exchange-layout-sales-v1.js?v=2'),'served shell bootstrap chain reaches Exchange dialog and layout helpers');";
-if(!src.includes(stale))throw new Error('Stage 26 bootstrap assertion changed; review wrapper before proceeding.');
-src=src.replace(stale,robust);
+const staticBootstrap="must(server.includes('/v45-exchange-dialog-v1.js?v=5')&&server.includes('/v45-exchange-layout-sales-v1.js?v=2'),'server serves cache-busted Exchange dialog and layout helpers');";
+if(!src.includes(staticBootstrap))throw new Error('Stage 26 static bootstrap assertion changed; review wrapper before proceeding.');
 const m=new Module(target,module);
 m.filename=target;
 m.paths=module.paths;
