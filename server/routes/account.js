@@ -19,6 +19,29 @@ router.get("/junior-broker", requireAuth, (req, res) => {
   }
 });
 
+router.get("/junior-broker/mints", requireAuth, (req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT issuance_id, source, created_at
+      FROM sbc_junior_broker_issuances
+      WHERE account_id = ? AND source = 'minted'
+      ORDER BY created_at DESC, issuance_id DESC
+      LIMIT 100
+    `).all(req.account.id);
+    res.json({
+      mints: rows.map(row => ({
+        id: String(row.issuance_id),
+        source: row.source,
+        price: 48000,
+        createdAt: row.created_at,
+      }))
+    });
+  } catch (err) {
+    console.error("Junior mint activity failed", err);
+    res.status(500).json({ error: "Unable to load Junior mint activity" });
+  }
+});
+
 router.post("/junior-broker/redeem", requireAuth, (req, res) => {
   try {
     const redemptionId = `player-ui:${req.account.id}:${crypto.randomUUID()}`;
