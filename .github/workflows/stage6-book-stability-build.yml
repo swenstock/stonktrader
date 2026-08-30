@@ -25,11 +25,12 @@ jobs:
           const { exactV45Shell } = require('./server/v45ExactShell');
           const html = Buffer.isBuffer(exactV45Shell) ? exactV45Shell.toString('utf8') : String(exactV45Shell);
           const count = s => html.split(s).length - 1;
+          const cssGridMatches = html.match(/\.market-actions-v22\s*\{[^}]*display\s*:\s*grid[^}]*grid-template-columns\s*:\s*1fr\s+1fr[^}]*\}/g) || [];
           const proof = [
             ['class="market-actions-v22"', count('class="market-actions-v22"')],
             ['id="bidBook"', count('id="bidBook"')],
             ['id="askBook"', count('id="askBook"')],
-            ['.market-actions-v22{display:grid;grid-template-columns:1fr 1fr', count('.market-actions-v22{display:grid;grid-template-columns:1fr 1fr')],
+            ['market-actions grid CSS rule', cssGridMatches.length],
           ];
           console.log('EXACT V45 SHELL PROOF');
           for (const [s,n] of proof) console.log(`${s} => ${n}`);
