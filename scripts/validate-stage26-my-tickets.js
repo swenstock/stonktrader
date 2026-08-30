@@ -30,9 +30,9 @@ must(dialog.includes("id='sbcExchangeDialogV1'")||dialog.includes("root.id='sbcE
 must(dialog.includes('function notice(')&&dialog.includes('function confirmAction(')&&dialog.includes('function promptPrice('),'Exchange dialog layer supports notice, confirm, and price-edit prompt flows');
 must(dialog.includes("[data-tm36-edit]")&&dialog.includes("[data-tm36-cancel]")&&dialog.includes("stopImmediatePropagation"),'legacy My Orders adjust/cancel clicks are intercepted before native prompt/confirm handlers');
 must(dialog.includes('__sbcExchangeDialogBridge')&&dialog.includes('window.alert=bridged')&&dialog.includes('testClockModal'),'Exchange/Test Clock alerts are routed through the in-app dialog layer');
-must(dialog.includes('/v45-exchange-routing-fill-v1.js?v=2')&&dialog.includes('/v45-exchange-tier-integrity-v1.js?v=3'),'dialog bootstrap loads cache-busted routing/fill and tier-integrity guards');
+must(dialog.includes('/v45-exchange-routing-fill-v1.js?v=3')&&dialog.includes('/v45-exchange-tier-integrity-v1.js?v=3'),'dialog bootstrap loads cache-busted routing/fill and tier-integrity guards');
 must(dialog.includes('/v45-exchange-my-activity-v1.js?v=3')&&dialog.includes('data-sbc-exchange-my-activity'),'dialog bootstrap loads the cache-busted Exchange My Activity blotter');
-must(dialog.includes('/v45-exchange-layout-sales-v1.js?v=1')&&dialog.includes('data-sbc-exchange-layout-sales'),'dialog bootstrap loads the Exchange bottom-layout/recent-sales guard');
+must(dialog.includes('/v45-exchange-layout-sales-v1.js?v=2')&&dialog.includes('data-sbc-exchange-layout-sales'),'dialog bootstrap loads the cache-busted Exchange bottom-layout/recent-sales guard');
 must(dialog.includes('/v45-badge-ownership-sync-v1.js?v=2')&&dialog.includes('data-sbc-badge-ownership-sync'),'dialog bootstrap directly loads authoritative Badge ownership sync');
 must(activity.includes('MY ACTIVITY')&&activity.includes("['all','working','filled','cancelled']"),'My Activity exposes ALL/WORKING/FILLED/CANCELLED filters');
 must(activity.includes("api('/api/ticket-market/mine')")&&activity.includes("api('/api/badge-market/mine')")&&activity.includes("api('/api/account/junior-broker')"),'My Activity combines ticket, Badge market, and Badge issuance history');
@@ -40,6 +40,7 @@ must(activity.includes('function badgeMintRows')&&activity.includes("x.source===
 must(activity.includes("const fills=(d?.fills||[])")&&activity.includes("role:o.role")&&activity.includes("isMine:false"),'My Activity renders counterparty/taker ticket fills without making them editable');
 must(ticketMarket.includes('fills:[...boughtOffers, ...soldToBids]')&&ticketMarket.includes("l.buyer_account_id=?")&&ticketMarket.includes("b.seller_account_id=?"),'ticket personal feed includes buys of other users offers and sells into other users bids');
 must(routing.includes('function refreshActivity()')&&routing.includes('__SBC_EXCHANGE_MY_ACTIVITY_V1?.refresh')&&routing.includes("fillNotice(kind,price,type)"),'fill-success bridge refreshes My Activity immediately after accepted bids/offers');
+must(routing.includes("b.id!=='sbcBadgeMarketTab'")&&routing.includes('selectorButton(type)'),'Jr Broker My Tickets routing explicitly excludes the Badge tab selector collision');
 must(activity.includes('setInterval')&&activity.includes('2500'),'My Activity has a short backend reconciliation interval as a fallback');
 must(activity.includes('data-activity-change')&&activity.includes('data-activity-cancel')&&activity.includes("method:'PATCH'")&&activity.includes("method:'DELETE'"),'working My Activity rows support price change and cancellation');
 must(activity.includes('ORDER ID')&&activity.includes('TICKET ID')&&activity.includes('CREATED')&&activity.includes('FILLED')&&activity.includes('CANCELLED'),'activity drill-down exposes order identity and lifecycle timestamps');
@@ -47,6 +48,8 @@ must(badgeSync.includes("fetch('/api/account/junior-broker'")&&badgeSync.include
 must(badgeSync.includes('reconcileSoon')&&badgeSync.includes('[120,450,1000,2200]'),'Badge BUY NOW schedules repeated authoritative reconciliation instead of trusting one render');
 must(accountRoutes.includes('router.get("/junior-broker/mints"')&&accountRoutes.includes("source = 'minted'")&&accountRoutes.includes('price: 48000'),'account API can expose authoritative minted Badge events');
 must(layout.includes('sbcExchangePersonalStrip')&&layout.includes('STONK BALANCE')&&layout.includes("findPanel('MY TICKETS')"),'bottom personal strip places STONK balance beside My Activity and My Tickets');
+must(layout.includes('JR STONK BROKER BADGES')&&layout.includes("fetch('/api/account/junior-broker'")&&layout.includes('data-ex-badge-count'),'STONK balance card includes authoritative Jr Stonk Broker Badge tracker');
+must(layout.includes("fetch('/api/tickets'")&&layout.includes('reconcileSelectorCounts')&&layout.includes('setSelectorCount'),'ticket selector ownership counts reconcile from the same backend inventory as My Tickets');
 must(layout.includes("findPanel('RECENT SALES')")&&layout.includes('sbcExchangeRealRecentSales')&&layout.includes('/api/ticket-market/recent/${type}'),'legacy fake Recent Sales is hidden and replaced with backend ticket executions inside the book');
 must(layout.includes("active?.id==='sbcBadgeMarketTab'")&&layout.includes("display',on?'flex':'none','important'")&&layout.includes('#sbcBadgeMint,#sbcBadgeList,#sbcBadgeBid'),'Badge trade controls are hard-scoped to the active Badge tab');
 must(ticketMarket.includes("router.get('/recent/:ticketType'")&&ticketMarket.includes("l.status='sold'")&&ticketMarket.includes("b.status='filled'")&&ticketMarket.includes('executedAt'),'ticket recent-sales feed unions real sold offers and filled bids');
@@ -60,6 +63,7 @@ must(integrity.includes("const type=typeFromText(b.textContent)")&&integrity.inc
 must(integrity.includes("marker.textContent=' JUNIOR'")&&integrity.includes("display:none!important"),'Jr Broker title carries hidden JUNIOR parser marker so legacy v36 never falls through to Runner');
 must(integrity.includes("replace(/JR\\.?\\s*STONKBROKER/gi,'JR BROKER')"),'legacy visible JR. STONKBROKER wording is normalized without changing backend ticketType');
 must(integrity.includes('/v45-badge-ownership-sync-v1.js?v=2'),'tier-integrity bootstrap also loads Badge ownership reconciliation');
+must(integrity.includes('/v45-badge-dialog-unified-v1.js?v=2'),'tier-integrity bootstrap cache-busts the unified Badge action dialog');
 must(ticketMarket.includes("const TICKET_TYPES = new Set(['runner','clerk','trader','junior'])")&&ticketMarket.includes("WHERE ticket_bids.status = 'active' AND ticket_bids.ticket_type = ?")&&ticketMarket.includes("WHERE ticket_listings.status = 'active' AND tickets.ticket_type = ?"),'backend order books isolate bids and offers by the requested canonical ticket type');
 must(ticketMarket.includes("router.get('/book/:ticketType'")&&ticketMarket.includes('res.json({\n    ticketType,'),'book endpoint echoes canonical ticketType used for the query');
 must(ticketMarket.includes("router.post('/bids'")&&ticketMarket.includes('ticketType = normalizeType(req.body?.ticketType)'),'bid placement persists canonical ticketType');
