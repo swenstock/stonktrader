@@ -1,5 +1,6 @@
 const fs=require('fs'),path=require('path');
 const ui=fs.readFileSync(path.join(__dirname,'..','public','v45-my-tickets-cleanup-v37.js'),'utf8');
+const ticketMarketUi=fs.readFileSync(path.join(__dirname,'..','public','v45-ticket-market-v36.js'),'utf8');
 const faucet=fs.readFileSync(path.join(__dirname,'..','public','v45-test-stonk-faucet-v1.js'),'utf8');
 const own=fs.readFileSync(path.join(__dirname,'..','public','v45-exchange-own-orders-v1.js'),'utf8');
 const dialog=fs.readFileSync(path.join(__dirname,'..','public','v45-exchange-dialog-v1.js'),'utf8');
@@ -43,6 +44,7 @@ must(ticketMarket.includes('fills:[...boughtOffers, ...soldToBids]')&&ticketMark
 must(routing.includes('function refreshActivity()')&&routing.includes('__SBC_EXCHANGE_MY_ACTIVITY_V1?.refresh')&&routing.includes("fillNotice(kind,price,type)"),'fill-success bridge refreshes My Activity immediately after accepted bids/offers');
 must(routing.includes("b.id!=='sbcBadgeMarketTab'")&&routing.includes('selectorButton(type)'),'Jr Broker My Tickets routing explicitly excludes the Badge tab selector collision');
 must(routing.includes('function livePrices(book)')&&routing.includes('book?.bids||[]')&&routing.includes('book?.offers||[]')&&routing.includes('function paintSellModal')&&routing.includes('SELL NOW'),'sell confirmation paints executable highest bid, lowest ask, and SELL NOW from the exact live tier book');
+must(ticketMarketUi.includes('data-sbc-offer-id')&&ticketMarketUi.includes('function buyRealOffer(')&&ticketMarketUi.includes('/api/ticket-market/offers/${id}/buy')&&ticketMarketUi.includes('SBCExchangeDialogV1')&&ticketMarketUi.includes('sbc:exchange-heartbeat')&&!ticketMarketUi.includes('onclick=\"buyAtAsk(${priceOf(o)})\"'),'BUY OFFER bypasses the prototype shell dialog, executes the real backend offer by id, and reconciles through the existing Exchange heartbeat');
 must(routing.includes('bidId:bid?Number(bid.id):null')&&routing.includes('bidPrice:bidPrice==null?null:Number(bidPrice)')&&routing.includes('/api/ticket-market/bids/${ctx.bidId}/sell')&&!routing.includes('const book=await api(`/api/ticket-market/book/${ctx.type}`)'),'SELL NOW binds to the exact bid id/price shown when the sell window opened instead of silently substituting a later bid');
 const exchangeIntervals=[activity,badgeSync,layout,recent].reduce((n,src)=>n+(src.match(/setInterval/g)||[]).length,0);
 must(exchangeIntervals===1&&layout.includes("sbc:exchange-heartbeat")&&activity.includes("sbc:exchange-heartbeat")&&badgeSync.includes("sbc:exchange-heartbeat")&&recent.includes("sbc:exchange-heartbeat")&&layout.includes('1500'),'Exchange uses one shared 1500ms reconciliation heartbeat across all four polling consumers');
