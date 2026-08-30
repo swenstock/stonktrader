@@ -1,0 +1,41 @@
+name: Apply Stage 6 Badge Scope Symmetry
+on:
+  push:
+    branches: [stage6-badge-scope-symmetry]
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage6-badge-scope-symmetry
+      - name: Complete Badge scope symmetry
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('public/v45-exchange-layout-sales-v1.js')
+          s=p.read_text()
+          old="function enforceBadgeScope(){const active=document.querySelector('#ticketTypeSelector .active'),on=active?.id==='sbcBadgeMarketTab',c=document.getElementById('sbcBadgeStage4Controls');if(c)c.style.setProperty('display',on?'flex':'none','important');if(!on&&window.__SBC_BADGE_MARKET_STAGE4_TEST?.deactivateBadgeMode)window.__SBC_BADGE_MARKET_STAGE4_TEST.deactivateBadgeMode();return on;}"
+          new="function enforceBadgeScope(){const active=document.querySelector('#ticketTypeSelector .active'),on=active?.id==='sbcBadgeMarketTab',c=document.getElementById('sbcBadgeStage4Controls'),ticketActions=document.querySelector('.book-actions');if(c)c.style.setProperty('display',on?'flex':'none','important');if(ticketActions)ticketActions.style.setProperty('display',on?'none':'flex','important');if(!on&&window.__SBC_BADGE_MARKET_STAGE4_TEST?.deactivateBadgeMode)window.__SBC_BADGE_MARKET_STAGE4_TEST.deactivateBadgeMode();return on;}"
+          if s.count(old)!=1: raise SystemExit(f'enforceBadgeScope target count={s.count(old)}')
+          s=s.replace(old,new,1)
+          old2="const badgeAction=e.target?.closest?.('#sbcBadgeMint,#sbcBadgeList,#sbcBadgeBid,[data-badge-buy],[data-badge-sell],[data-badge-cancel-listing],[data-badge-cancel-bid]');if(badgeAction&&document.querySelector('#ticketTypeSelector .active')?.id!=='sbcBadgeMarketTab'){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation?.();}"
+          new2="const activeTab=document.querySelector('#ticketTypeSelector .active')?.id,badgeAction=e.target?.closest?.('#sbcBadgeMint,#sbcBadgeList,#sbcBadgeBid,[data-badge-buy],[data-badge-sell],[data-badge-cancel-listing],[data-badge-cancel-bid]'),ticketAction=e.target?.closest?.('#placeBid,#postOffer');if(badgeAction&&activeTab!=='sbcBadgeMarketTab'){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation?.();}if(ticketAction&&activeTab==='sbcBadgeMarketTab'){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation?.();}"
+          if s.count(old2)!=1: raise SystemExit(f'click guard target count={s.count(old2)}')
+          p.write_text(s.replace(old2,new2,1))
+      - name: Guard exact scope
+        run: |
+          node --check public/v45-exchange-layout-sales-v1.js
+          grep -F "ticketActions=document.querySelector('.book-actions')" public/v45-exchange-layout-sales-v1.js
+          grep -F "ticketAction=e.target?.closest?.('#placeBid,#postOffer')" public/v45-exchange-layout-sales-v1.js
+      - name: Commit fix and remove temporary workflow
+        run: |
+          rm .github/workflows/apply-stage6-badge-scope-symmetry.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/v45-exchange-layout-sales-v1.js .github/workflows/apply-stage6-badge-scope-symmetry.yml
+          git commit -m 'Stage 6: isolate Badge and ticket transaction controls'
+          git push origin HEAD:stage6-badge-scope-symmetry
