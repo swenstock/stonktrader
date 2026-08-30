@@ -8,6 +8,7 @@ const integrity=fs.readFileSync(path.join(__dirname,'..','public','v45-exchange-
 const activity=fs.readFileSync(path.join(__dirname,'..','public','v45-exchange-my-activity-v1.js'),'utf8');
 const badgeSync=fs.readFileSync(path.join(__dirname,'..','public','v45-badge-ownership-sync-v1.js'),'utf8');
 const layout=fs.readFileSync(path.join(__dirname,'..','public','v45-exchange-layout-sales-v1.js'),'utf8');
+const recent=fs.readFileSync(path.join(__dirname,'..','public','v45-ticket-recent-v40.js'),'utf8');
 const stageC=fs.readFileSync(path.join(__dirname,'..','public','v45-stage-c-ui-cleanup-v1.js'),'utf8');
 const dev=fs.readFileSync(path.join(__dirname,'..','server','routes','dev.js'),'utf8');
 const ticketMarket=fs.readFileSync(path.join(__dirname,'..','server','routes','ticketMarket.js'),'utf8');
@@ -42,8 +43,8 @@ must(ticketMarket.includes('fills:[...boughtOffers, ...soldToBids]')&&ticketMark
 must(routing.includes('function refreshActivity()')&&routing.includes('__SBC_EXCHANGE_MY_ACTIVITY_V1?.refresh')&&routing.includes("fillNotice(kind,price,type)"),'fill-success bridge refreshes My Activity immediately after accepted bids/offers');
 must(routing.includes("b.id!=='sbcBadgeMarketTab'")&&routing.includes('selectorButton(type)'),'Jr Broker My Tickets routing explicitly excludes the Badge tab selector collision');
 must(routing.includes('function livePrices(book)')&&routing.includes('book?.bids||[]')&&routing.includes('book?.offers||[]')&&routing.includes('function paintSellModal')&&routing.includes('SELL NOW'),'sell confirmation paints executable highest bid, lowest ask, and SELL NOW from the exact live tier book');
-const exchangeIntervals=[activity,badgeSync,layout].reduce((n,src)=>n+(src.match(/setInterval/g)||[]).length,0);
-must(exchangeIntervals===1&&layout.includes("sbc:exchange-heartbeat")&&activity.includes("sbc:exchange-heartbeat")&&badgeSync.includes("sbc:exchange-heartbeat")&&layout.includes('2500'),'Exchange uses one shared visible-view reconciliation heartbeat instead of competing polling loops');
+const exchangeIntervals=[activity,badgeSync,layout,recent].reduce((n,src)=>n+(src.match(/setInterval/g)||[]).length,0);
+must(exchangeIntervals===1&&layout.includes("sbc:exchange-heartbeat")&&activity.includes("sbc:exchange-heartbeat")&&badgeSync.includes("sbc:exchange-heartbeat")&&recent.includes("sbc:exchange-heartbeat")&&layout.includes('1500'),'Exchange uses one shared 1500ms reconciliation heartbeat across all four polling consumers');
 must(activity.includes('data-activity-change')&&activity.includes('data-activity-cancel')&&activity.includes("method:'PATCH'")&&activity.includes("method:'DELETE'"),'working My Activity rows support price change and cancellation');
 must(activity.includes('ORDER ID')&&activity.includes('TICKET ID')&&activity.includes('CREATED')&&activity.includes('FILLED')&&activity.includes('CANCELLED'),'activity drill-down exposes order identity and lifecycle timestamps');
 must(badgeSync.includes("fetch('/api/account/junior-broker'")&&badgeSync.includes("cache:'no-store'")&&badgeSync.includes('YOU OWN ${count}')&&!badgeSync.includes('__SBC_EXCHANGE_MY_ACTIVITY_V1?.refresh'),'Badge ownership tally reconciles from authoritative Junior holdings without recursively refreshing My Activity');

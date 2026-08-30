@@ -24,7 +24,7 @@ document.addEventListener('click',e=>{if(e.target?.closest?.('[data-real-sales-r
 if(typeof window.addEventListener==='function')window.addEventListener('sbc:exchange-rendered',()=>{layout();enforceBadgeScope();});
 function emitHeartbeat(){try{window.dispatchEvent?.(new CustomEvent('sbc:exchange-heartbeat'))}catch(_){}}
 function reconcile(){const v=document.getElementById('view-exchange');if(!v||v.offsetParent===null)return;refreshBalance();refreshSales();enforceBadgeScope();emitHeartbeat();}
-function run(){layout();refreshBalance();refreshSales();emitHeartbeat();if(!heartbeatTimer)heartbeatTimer=setInterval(reconcile,2500)}
+function run(){layout();refreshBalance();refreshSales();emitHeartbeat();if(!heartbeatTimer)heartbeatTimer=setInterval(reconcile,1500)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();setTimeout(run,250);setTimeout(run,1000);
 window.__SBC_EXCHANGE_LAYOUT_SALES_V1={activeType,typeFromButton,setSelectorCount,reconcileSelectorCounts,layout,refreshBalance,refreshSales,enforceBadgeScope,placePersonalStrip};
 })();
