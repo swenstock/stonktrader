@@ -4,7 +4,7 @@ if(window.__sbcTicketMarketV36)return;
 window.__sbcTicketMarketV36=true;
 window.__sbcTicketMarketV35=true;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
-const TYPE_LABELS={junior:'JR. STONKBROKER',trader:'TRADER',clerk:'CLERK',runner:'RUNNER'};
+const TYPE_LABELS={junior:'JR BROKER',trader:'TRADER',clerk:'CLERK',runner:'RUNNER'};
 const NAME_TO_TYPE={'JR. STONKBROKER':'junior','JUNIOR':'junior','TRADER':'trader','CLERK':'clerk','RUNNER':'runner'};
 let panel=null,timer=null,capturedAuth='';
 const realBookCache=new Map();
@@ -25,7 +25,7 @@ function marketTypeFromName(name){return typeFromText(name)}
 function mappedMarket(book,fallback){const fb=fallback||{bids:[],asks:[],last:0};return{bids:(book?.bids||[]).map(x=>Number(x.bidPrice??x.price)).filter(Number.isFinite),asks:(book?.offers||[]).map(x=>Number(x.askPrice??x.price)).filter(Number.isFinite),last:Number(fb.last||0)}}
 async function fetchRealBook(type=currentType()){const book=await api(`/api/ticket-market/book/${type}`);realBookCache.set(type,book);return book}
 function renderBookFromBackend(book){
-  const name=typeof activeTicketMarket!=='undefined'?activeTicketMarket:(TYPE_LABELS[book.ticketType]||book.ticketType);
+  const type=book?.ticketType||marketTypeFromName(typeof activeTicketMarket!=='undefined'?activeTicketMarket:'RUNNER'),name=TYPE_LABELS[type]||type;
   const fallback=staticMarket()||{bids:[],asks:[],last:0};
   const bids=(Array.isArray(book?.bids)?book.bids:[]).filter(o=>!o.isMine),offers=(Array.isArray(book?.offers)?book.offers:[]).filter(o=>!o.isMine);
   try{if(typeof hydrateExchangeTierIcons==='function')hydrateExchangeTierIcons()}catch(_){}
