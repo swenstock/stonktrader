@@ -1,0 +1,73 @@
+name: Apply Stage 2.5 Heartbeat Consolidation
+on:
+  push:
+    branches: [exchange-cleanup-stage2-5-heartbeat]
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: exchange-cleanup-stage2-5-heartbeat
+      - name: Consolidate Exchange polling heartbeat
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p=Path(path); s=p.read_text()
+              if old not in s:
+                  raise SystemExit(f'missing exact target in {path}: {old[:120]}')
+              if s.count(old)!=1:
+                  raise SystemExit(f'expected one target in {path}, found {s.count(old)}')
+              p.write_text(s.replace(old,new))
+
+          replace('public/v45-exchange-my-activity-v1.js',
+              "function run(){ensurePanel();ensureModal();refresh();setInterval(()=>{const v=document.getElementById('view-exchange');if(v?.offsetParent!==null)refresh()},2500)}",
+              "if(typeof window.addEventListener==='function')window.addEventListener('sbc:exchange-heartbeat',()=>refresh());\nfunction run(){ensurePanel();ensureModal();refresh()}")
+
+          replace('public/v45-badge-ownership-sync-v1.js',
+              "async function refresh(){if(busy)return;busy=true;try{apply(await snapshot());await window.__SBC_EXCHANGE_MY_ACTIVITY_V1?.refresh?.();}catch(_){}finally{busy=false;}}",
+              "async function refresh(){if(busy)return;busy=true;try{apply(await snapshot());}catch(_){}finally{busy=false;}}")
+          replace('public/v45-badge-ownership-sync-v1.js',
+              "window.addEventListener?.('sbc:badge-purchased',reconcileSoon);\nfunction run(){refresh();setInterval(()=>{const v=document.getElementById('view-exchange');if(v?.offsetParent!==null)refresh()},2500)}",
+              "window.addEventListener?.('sbc:badge-purchased',reconcileSoon);\nwindow.addEventListener?.('sbc:exchange-heartbeat',refresh);\nfunction run(){refresh()}")
+
+          replace('public/v45-exchange-layout-sales-v1.js',
+              "if(window.__sbcExchangeLayoutSalesV1)return;window.__sbcExchangeLayoutSalesV1=true;\nconst LABEL={junior:'Jr Broker',trader:'Trader',clerk:'Clerk',runner:'Runner'};",
+              "if(window.__sbcExchangeLayoutSalesV1)return;window.__sbcExchangeLayoutSalesV1=true;\nconst LABEL={junior:'Jr Broker',trader:'Trader',clerk:'Clerk',runner:'Runner'};\nlet heartbeatTimer=null;")
+          replace('public/v45-exchange-layout-sales-v1.js',
+              "function run(){layout();refreshBalance();refreshSales();setInterval(()=>{const v=document.getElementById('view-exchange');if(v?.offsetParent!==null){refreshBalance();refreshSales();enforceBadgeScope();}},7000)}",
+              "function emitHeartbeat(){try{window.dispatchEvent?.(new CustomEvent('sbc:exchange-heartbeat'))}catch(_){}}\nfunction reconcile(){const v=document.getElementById('view-exchange');if(!v||v.offsetParent===null)return;refreshBalance();refreshSales();enforceBadgeScope();emitHeartbeat();}\nfunction run(){layout();refreshBalance();refreshSales();emitHeartbeat();if(!heartbeatTimer)heartbeatTimer=setInterval(reconcile,2500)}")
+
+          p=Path('scripts/validate-stage26-my-tickets.js'); s=p.read_text()
+          old="must(activity.includes('setInterval')&&activity.includes('2500'),'My Activity has a short backend reconciliation interval as a fallback');"
+          new="const exchangeIntervals=[activity,badgeSync,layout].reduce((n,src)=>n+(src.match(/setInterval/g)||[]).length,0);\nmust(exchangeIntervals===1&&layout.includes(\"sbc:exchange-heartbeat\")&&activity.includes(\"sbc:exchange-heartbeat\")&&badgeSync.includes(\"sbc:exchange-heartbeat\")&&layout.includes('2500'),'Exchange uses one shared visible-view reconciliation heartbeat instead of competing polling loops');"
+          if old not in s: raise SystemExit('missing old Activity interval validator')
+          s=s.replace(old,new)
+          old="must(badgeSync.includes(\"fetch('/api/account/junior-broker'\")&&badgeSync.includes(\"cache:'no-store'\")&&badgeSync.includes('YOU OWN ${count}')&&badgeSync.includes('__SBC_EXCHANGE_MY_ACTIVITY_V1?.refresh'),'Badge ownership tally and Activity reconcile from authoritative Junior holdings');"
+          new="must(badgeSync.includes(\"fetch('/api/account/junior-broker'\")&&badgeSync.includes(\"cache:'no-store'\")&&badgeSync.includes('YOU OWN ${count}')&&!badgeSync.includes('__SBC_EXCHANGE_MY_ACTIVITY_V1?.refresh'),'Badge ownership tally reconciles from authoritative Junior holdings without recursively refreshing My Activity');"
+          if old not in s: raise SystemExit('missing old Badge recursion validator')
+          p.write_text(s.replace(old,new))
+
+          targets=['public/v45-exchange-my-activity-v1.js','public/v45-badge-ownership-sync-v1.js','public/v45-exchange-layout-sales-v1.js']
+          count=sum(Path(f).read_text().count('setInterval') for f in targets)
+          if count != 1: raise SystemExit(f'expected exactly one interval across polling owners; got {count}')
+      - name: Syntax and Stage 26 validator
+        run: |
+          node --check public/v45-exchange-my-activity-v1.js
+          node --check public/v45-badge-ownership-sync-v1.js
+          node --check public/v45-exchange-layout-sales-v1.js
+          node --check scripts/validate-stage26-my-tickets.js
+          node scripts/validate-stage26-my-tickets.js
+      - name: Commit consolidation and remove temporary workflow
+        run: |
+          rm .github/workflows/apply-stage2-5-heartbeat.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/v45-exchange-my-activity-v1.js public/v45-badge-ownership-sync-v1.js public/v45-exchange-layout-sales-v1.js scripts/validate-stage26-my-tickets.js .github/workflows/apply-stage2-5-heartbeat.yml
+          git commit -m 'Exchange cleanup Stage 2.5: consolidate refresh heartbeat'
+          git push origin HEAD:exchange-cleanup-stage2-5-heartbeat
