@@ -162,7 +162,13 @@ function book(db, myAccountId = null) {
       CASE WHEN b.buyer_account_id=? THEN 1 ELSE 0 END is_mine
     FROM badge_bids b JOIN accounts a ON a.id=b.buyer_account_id JOIN users u ON u.id=a.user_id
     WHERE b.status='active' ORDER BY b.bid_price DESC, b.id ASC`).all(myAccountId);
-  const recent = db.prepare(`SELECT t.*, buyer.display_name buyer_display_name, seller.display_name seller_display_name\n    FROM badge_trades t\n    JOIN accounts buyer_account ON buyer_account.id=t.buyer_account_id\n    JOIN users buyer ON buyer.id=buyer_account.user_id\n    JOIN accounts seller_account ON seller_account.id=t.seller_account_id\n    JOIN users seller ON seller.id=seller_account.user_id\n    ORDER BY t.id DESC LIMIT 20`).all();
+  const recent = db.prepare(`SELECT t.*, buyer.display_name buyer_display_name, seller.display_name seller_display_name
+    FROM badge_trades t
+    JOIN accounts buyer_account ON buyer_account.id=t.buyer_account_id
+    JOIN users buyer ON buyer.id=buyer_account.user_id
+    JOIN accounts seller_account ON seller_account.id=t.seller_account_id
+    JOIN users seller ON seller.id=seller_account.user_id
+    ORDER BY t.id DESC LIMIT 20`).all();
   const holding = myAccountId ? getHolding(db, myAccountId) : { quantity: 0n, quantity_listed: 0n };
   return {
     assetType: BADGE_ASSET_TYPE,
