@@ -97,23 +97,33 @@ function activeBids(ticketType, myAccountId) {
 function recentSales(ticketType) {
   const offers = db.prepare(`
     SELECT l.id, l.ticket_id ticketId, t.ticket_type ticketType, l.ask_price price,
-      l.platform_fee_stonk platformFee, l.sold_at executedAt, 'offer' source
+      l.platform_fee_stonk platformFee, l.sold_at executedAt, 'offer' source,
+      buyer.display_name buyerDisplayName, seller.display_name sellerDisplayName
     FROM ticket_listings l
     JOIN tickets t ON t.id = l.ticket_id
+    JOIN accounts buyer_account ON buyer_account.id = l.buyer_account_id
+    JOIN users buyer ON buyer.id = buyer_account.user_id
+    JOIN accounts seller_account ON seller_account.id = l.seller_account_id
+    JOIN users seller ON seller.id = seller_account.user_id
     WHERE l.status='sold' AND t.ticket_type=? AND l.sold_at IS NOT NULL
     ORDER BY l.sold_at DESC LIMIT 20
   `).all(ticketType);
   const bids = db.prepare(`
     SELECT b.id, b.filled_ticket_id ticketId, b.ticket_type ticketType, b.bid_price price,
-      b.platform_fee_stonk platformFee, b.filled_at executedAt, 'bid' source
+      b.platform_fee_stonk platformFee, b.filled_at executedAt, 'bid' source,
+      buyer.display_name buyerDisplayName, seller.display_name sellerDisplayName
     FROM ticket_bids b
+    JOIN accounts buyer_account ON buyer_account.id = b.buyer_account_id
+    JOIN users buyer ON buyer.id = buyer_account.user_id
+    JOIN accounts seller_account ON seller_account.id = b.seller_account_id
+    JOIN users seller ON seller.id = seller_account.user_id
     WHERE b.status='filled' AND b.ticket_type=? AND b.filled_at IS NOT NULL
     ORDER BY b.filled_at DESC LIMIT 20
   `).all(ticketType);
   return [...offers, ...bids]
     .sort((a,b)=>new Date(b.executedAt||0)-new Date(a.executedAt||0))
     .slice(0,20)
-    .map(x=>({ id:Number(x.id), ticketId:x.ticketId==null?null:Number(x.ticketId), ticketType:x.ticketType, price:Number(x.price), platformFee:Number(x.platformFee||0), executedAt:x.executedAt, source:x.source }));
+    .map(x=>({ id:Number(x.id), ticketId:x.ticketId==null?null:Number(x.ticketId), ticketType:x.ticketType, price:Number(x.price), platformFee:Number(x.platformFee||0), executedAt:x.executedAt, source:x.source, buyerDisplayName:x.buyerDisplayName, sellerDisplayName:x.sellerDisplayName }));
 }
 
 // Backward-compatible legacy endpoint: active OFFERS only.
