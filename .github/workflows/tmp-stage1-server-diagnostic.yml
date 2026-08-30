@@ -1,0 +1,44 @@
+name: Temporary Stage 1 server startup diagnostic
+on:
+  push:
+    branches:
+      - stage1-server-start-diagnostic
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Start exact browser-test server and report health
+        shell: bash
+        run: |
+          set +e
+          TEST_MODE=true PORT=34170 node server/index.js >server.out 2>server.err &
+          pid=$!
+          echo "PID=$pid"
+          for i in $(seq 1 80); do
+            if curl -fsS http://127.0.0.1:34170/api/health >health.json; then
+              echo READY
+              cat health.json
+              kill $pid || true
+              exit 0
+            fi
+            if ! kill -0 $pid 2>/dev/null; then
+              echo SERVER_EXITED
+              echo '--- STDERR ---'
+              cat server.err
+              echo '--- STDOUT ---'
+              cat server.out
+              exit 1
+            fi
+            sleep .125
+          done
+          echo TIMEOUT
+          echo '--- STDERR ---'; cat server.err
+          echo '--- STDOUT ---'; cat server.out
+          kill $pid || true
+          exit 1
