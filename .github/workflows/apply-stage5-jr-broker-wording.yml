@@ -1,0 +1,46 @@
+name: Apply Stage 5 Jr Broker Wording
+on:
+  push:
+    branches: [stage5-jr-broker-wording]
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage5-jr-broker-wording
+      - name: Fix canonical visible Jr Broker label at render source
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('public/v45-ticket-market-v36.js')
+          s=p.read_text()
+          old="const TYPE_LABELS={junior:'JR. STONKBROKER',trader:'TRADER',clerk:'CLERK',runner:'RUNNER'};"
+          new="const TYPE_LABELS={junior:'JR BROKER',trader:'TRADER',clerk:'CLERK',runner:'RUNNER'};"
+          if s.count(old)!=1: raise SystemExit(f'expected one TYPE_LABELS target, found {s.count(old)}')
+          s=s.replace(old,new,1)
+          old2="const name=typeof activeTicketMarket!=='undefined'?activeTicketMarket:(TYPE_LABELS[book.ticketType]||book.ticketType);"
+          new2="const type=book?.ticketType||marketTypeFromName(typeof activeTicketMarket!=='undefined'?activeTicketMarket:'RUNNER'),name=TYPE_LABELS[type]||type;"
+          if s.count(old2)!=1: raise SystemExit(f'expected one render name target, found {s.count(old2)}')
+          s=s.replace(old2,new2,1)
+          p.write_text(s)
+          # Legacy parser compatibility must remain intact while visible source becomes canonical.
+          out=p.read_text()
+          if "'JR. STONKBROKER':'junior'" not in out: raise SystemExit('legacy parser alias was removed')
+          if "junior:'JR BROKER'" not in out: raise SystemExit('canonical display label missing')
+          if "const type=book?.ticketType" not in out: raise SystemExit('render is not bound to canonical backend ticketType')
+      - name: Syntax and focused regression checks
+        run: |
+          node --check public/v45-ticket-market-v36.js
+          node scripts/validate-stage26-my-tickets-wrapper.js
+      - name: Commit and remove temporary runner
+        run: |
+          rm .github/workflows/apply-stage5-jr-broker-wording.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/v45-ticket-market-v36.js .github/workflows/apply-stage5-jr-broker-wording.yml
+          git commit -m 'Stage 5: render Jr Broker with canonical wording'
+          git push origin HEAD:stage5-jr-broker-wording
