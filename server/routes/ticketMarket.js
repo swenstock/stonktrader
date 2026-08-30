@@ -157,6 +157,7 @@ router.get('/recent/:ticketType', (req, res) => {
 });
 
 router.get('/mine', requireAuth, (req, res) => {
+  const accountId = req.account.id;
   const offers = db.prepare(`
     SELECT ticket_listings.*, tickets.ticket_type, users.display_name AS seller_display_name, 1 AS is_mine
     FROM ticket_listings
@@ -164,15 +165,38 @@ router.get('/mine', requireAuth, (req, res) => {
     JOIN accounts ON accounts.id = ticket_listings.seller_account_id
     JOIN users ON users.id = accounts.user_id
     WHERE seller_account_id = ? ORDER BY ticket_listings.id DESC LIMIT 50
-  `).all(req.account.id).map(serializeOffer);
+  `).all(accountId).map(serializeOffer);
   const bids = db.prepare(`
     SELECT ticket_bids.*, users.display_name AS buyer_display_name, 1 AS is_mine
     FROM ticket_bids
     JOIN accounts ON accounts.id = ticket_bids.buyer_account_id
     JOIN users ON users.id = accounts.user_id
     WHERE buyer_account_id = ? ORDER BY ticket_bids.id DESC LIMIT 50
-  `).all(req.account.id).map(serializeBid);
-  res.json({ bids, offers });
+  `).all(accountId).map(serializeBid);
+  const boughtOffers = db.prepare(`
+    SELECT l.id, l.ticket_id ticket_id, t.ticket_type, l.ask_price price,
+      l.created_at, l.sold_at filled_at, l.platform_fee_stonk
+    FROM ticket_listings l
+    JOIN tickets t ON t.id=l.ticket_id
+    WHERE l.status='sold' AND l.buyer_account_id=? AND l.seller_account_id<>?
+    ORDER BY l.sold_at DESC LIMIT 50
+  `).all(accountId, accountId).map(x => ({
+    id:Number(x.id), side:'offer', ticketId:Number(x.ticket_id), ticketType:x.ticket_type,
+    price:Number(x.price), status:'filled', createdAt:x.created_at, filledAt:x.filled_at,
+    platformFee:Number(x.platform_fee_stonk||0), role:'buyer', isMine:false
+  }));
+  const soldToBids = db.prepare(`
+    SELECT b.id, b.filled_ticket_id ticket_id, b.ticket_type, b.bid_price price,
+      b.created_at, b.filled_at, b.platform_fee_stonk
+    FROM ticket_bids b
+    WHERE b.status='filled' AND b.seller_account_id=? AND b.buyer_account_id<>?
+    ORDER BY b.filled_at DESC LIMIT 50
+  `).all(accountId, accountId).map(x => ({
+    id:Number(x.id), side:'bid', ticketId:Number(x.ticket_id), ticketType:x.ticket_type,
+    price:Number(x.price), status:'filled', createdAt:x.created_at, filledAt:x.filled_at,
+    platformFee:Number(x.platform_fee_stonk||0), role:'seller', isMine:false
+  }));
+  res.json({ bids, offers, fills:[...boughtOffers, ...soldToBids].sort((a,b)=>new Date(b.filledAt||0)-new Date(a.filledAt||0)) });
 });
 
 function createOffer(req, res) {
