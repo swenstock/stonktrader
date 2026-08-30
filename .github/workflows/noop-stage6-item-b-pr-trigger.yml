@@ -1,0 +1,21 @@
+name: Noop Stage 6 Item B PR Trigger
+on:
+  push:
+    branches: [stage6-item-b-relocate-ladder]
+permissions:
+  contents: write
+jobs:
+  cleanup:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage6-item-b-relocate-ladder
+      - run: |
+          rm .github/workflows/noop-stage6-item-b-pr-trigger.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/noop-stage6-item-b-pr-trigger.yml
+          git commit -m 'Remove temporary Stage 6 Item B PR trigger'
+          git push origin HEAD:stage6-item-b-relocate-ladder
