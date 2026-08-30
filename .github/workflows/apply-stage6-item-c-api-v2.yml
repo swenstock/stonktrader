@@ -1,0 +1,88 @@
+name: Apply Stage 6 Item C API v2
+on:
+  push:
+    branches:
+      - stage6-item-c-api-counterparties
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage6-item-c-api-counterparties
+      - name: Patch API payloads
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          def rep(path, old, new):
+              p = Path(path)
+              s = p.read_text()
+              if s.count(old) != 1:
+                  raise SystemExit(f'{path}: expected one exact target, got {s.count(old)}')
+              p.write_text(s.replace(old, new))
+
+          rep('server/routes/ticketMarket.js', """  const offers = db.prepare(`
+    SELECT l.id, l.ticket_id ticketId, t.ticket_type ticketType, l.ask_price price,
+      l.platform_fee_stonk platformFee, l.sold_at executedAt, 'offer' source
+    FROM ticket_listings l
+    JOIN tickets t ON t.id = l.ticket_id
+    WHERE l.status='sold' AND t.ticket_type=? AND l.sold_at IS NOT NULL
+    ORDER BY l.sold_at DESC LIMIT 20
+  `).all(ticketType);
+  const bids = db.prepare(`
+    SELECT b.id, b.filled_ticket_id ticketId, b.ticket_type ticketType, b.bid_price price,
+      b.platform_fee_stonk platformFee, b.filled_at executedAt, 'bid' source
+    FROM ticket_bids b
+    WHERE b.status='filled' AND b.ticket_type=? AND b.filled_at IS NOT NULL
+    ORDER BY b.filled_at DESC LIMIT 20
+  `).all(ticketType);""", """  const offers = db.prepare(`
+    SELECT l.id, l.ticket_id ticketId, t.ticket_type ticketType, l.ask_price price,
+      l.platform_fee_stonk platformFee, l.sold_at executedAt, 'offer' source,
+      buyer.display_name buyerDisplayName, seller.display_name sellerDisplayName
+    FROM ticket_listings l
+    JOIN tickets t ON t.id = l.ticket_id
+    JOIN accounts buyer_account ON buyer_account.id = l.buyer_account_id
+    JOIN users buyer ON buyer.id = buyer_account.user_id
+    JOIN accounts seller_account ON seller_account.id = l.seller_account_id
+    JOIN users seller ON seller.id = seller_account.user_id
+    WHERE l.status='sold' AND t.ticket_type=? AND l.sold_at IS NOT NULL
+    ORDER BY l.sold_at DESC LIMIT 20
+  `).all(ticketType);
+  const bids = db.prepare(`
+    SELECT b.id, b.filled_ticket_id ticketId, b.ticket_type ticketType, b.bid_price price,
+      b.platform_fee_stonk platformFee, b.filled_at executedAt, 'bid' source,
+      buyer.display_name buyerDisplayName, seller.display_name sellerDisplayName
+    FROM ticket_bids b
+    JOIN accounts buyer_account ON buyer_account.id = b.buyer_account_id
+    JOIN users buyer ON buyer.id = buyer_account.user_id
+    JOIN accounts seller_account ON seller_account.id = b.seller_account_id
+    JOIN users seller ON seller.id = seller_account.user_id
+    WHERE b.status='filled' AND b.ticket_type=? AND b.filled_at IS NOT NULL
+    ORDER BY b.filled_at DESC LIMIT 20
+  `).all(ticketType);""")
+
+          rep('server/routes/ticketMarket.js', ".map(x=>({ id:Number(x.id), ticketId:x.ticketId==null?null:Number(x.ticketId), ticketType:x.ticketType, price:Number(x.price), platformFee:Number(x.platformFee||0), executedAt:x.executedAt, source:x.source }));", ".map(x=>({ id:Number(x.id), ticketId:x.ticketId==null?null:Number(x.ticketId), ticketType:x.ticketType, price:Number(x.price), platformFee:Number(x.platformFee||0), executedAt:x.executedAt, source:x.source, buyerDisplayName:x.buyerDisplayName, sellerDisplayName:x.sellerDisplayName }));")
+
+          rep('server/badgeMarketV45.js', "  const recent = db.prepare(`SELECT * FROM badge_trades ORDER BY id DESC LIMIT 20`).all();", """  const recent = db.prepare(`SELECT t.*, buyer.display_name buyer_display_name, seller.display_name seller_display_name
+    FROM badge_trades t
+    JOIN accounts buyer_account ON buyer_account.id=t.buyer_account_id
+    JOIN users buyer ON buyer.id=buyer_account.user_id
+    JOIN accounts seller_account ON seller_account.id=t.seller_account_id
+    JOIN users seller ON seller.id=seller_account.user_id
+    ORDER BY t.id DESC LIMIT 20`).all();""")
+
+          rep('server/badgeMarketV45.js', "    recentTrades: recent.map(x => ({ id:Number(x.id), price:Number(x.price_stonk), fee:Number(x.platform_fee_stonk), createdAt:x.created_at })),", "    recentTrades: recent.map(x => ({ id:Number(x.id), price:Number(x.price_stonk), fee:Number(x.platform_fee_stonk), createdAt:x.created_at, buyerDisplayName:x.buyer_display_name, sellerDisplayName:x.seller_display_name })),")
+          PY
+          node --check server/routes/ticketMarket.js
+          node --check server/badgeMarketV45.js
+      - name: Commit API-only change
+        run: |
+          rm -f .github/workflows/apply-stage6-item-c-api.yml .github/workflows/apply-stage6-item-c-api-v2.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add server/routes/ticketMarket.js server/badgeMarketV45.js .github/workflows/apply-stage6-item-c-api.yml .github/workflows/apply-stage6-item-c-api-v2.yml
+          git commit -m 'Stage 6 Item C API: expose trade counterpart display names'
+          git push origin HEAD:stage6-item-c-api-counterparties
