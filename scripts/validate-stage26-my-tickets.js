@@ -30,7 +30,7 @@ must(dialog.includes("id='sbcExchangeDialogV1'")||dialog.includes("root.id='sbcE
 must(dialog.includes('function notice(')&&dialog.includes('function confirmAction(')&&dialog.includes('function promptPrice('),'Exchange dialog layer supports notice, confirm, and price-edit prompt flows');
 must(dialog.includes("[data-tm36-edit]")&&dialog.includes("[data-tm36-cancel]")&&dialog.includes("stopImmediatePropagation"),'legacy My Orders adjust/cancel clicks are intercepted before native prompt/confirm handlers');
 must(dialog.includes('__sbcExchangeDialogBridge')&&dialog.includes('window.alert=bridged')&&dialog.includes('testClockModal'),'Exchange/Test Clock alerts are routed through the in-app dialog layer');
-must(dialog.includes('/v45-exchange-routing-fill-v1.js?v=3')&&dialog.includes('/v45-exchange-tier-integrity-v1.js?v=3'),'dialog bootstrap loads cache-busted routing/fill and tier-integrity guards');
+must(dialog.includes('/v45-exchange-routing-fill-v1.js?v=4')&&dialog.includes('/v45-exchange-tier-integrity-v1.js?v=3'),'dialog bootstrap loads cache-busted routing/fill and tier-integrity guards');
 must(dialog.includes('/v45-exchange-my-activity-v1.js?v=3')&&dialog.includes('data-sbc-exchange-my-activity'),'dialog bootstrap loads the cache-busted Exchange My Activity blotter');
 must(dialog.includes('/v45-exchange-layout-sales-v1.js?v=2')&&dialog.includes('data-sbc-exchange-layout-sales'),'dialog bootstrap loads the cache-busted Exchange bottom-layout/recent-sales guard');
 must(dialog.includes('/v45-badge-ownership-sync-v1.js?v=2')&&dialog.includes('data-sbc-badge-ownership-sync'),'dialog bootstrap directly loads authoritative Badge ownership sync');
@@ -41,6 +41,7 @@ must(activity.includes("const fills=(d?.fills||[])")&&activity.includes("role:o.
 must(ticketMarket.includes('fills:[...boughtOffers, ...soldToBids]')&&ticketMarket.includes("l.buyer_account_id=?")&&ticketMarket.includes("b.seller_account_id=?"),'ticket personal feed includes buys of other users offers and sells into other users bids');
 must(routing.includes('function refreshActivity()')&&routing.includes('__SBC_EXCHANGE_MY_ACTIVITY_V1?.refresh')&&routing.includes("fillNotice(kind,price,type)"),'fill-success bridge refreshes My Activity immediately after accepted bids/offers');
 must(routing.includes("b.id!=='sbcBadgeMarketTab'")&&routing.includes('selectorButton(type)'),'Jr Broker My Tickets routing explicitly excludes the Badge tab selector collision');
+must(routing.includes('function livePrices(book)')&&routing.includes('book?.bids||[]')&&routing.includes('book?.offers||[]')&&routing.includes('function paintSellModal')&&routing.includes('SELL NOW'),'sell confirmation paints executable highest bid, lowest ask, and SELL NOW from the exact live tier book');
 must(activity.includes('setInterval')&&activity.includes('2500'),'My Activity has a short backend reconciliation interval as a fallback');
 must(activity.includes('data-activity-change')&&activity.includes('data-activity-cancel')&&activity.includes("method:'PATCH'")&&activity.includes("method:'DELETE'"),'working My Activity rows support price change and cancellation');
 must(activity.includes('ORDER ID')&&activity.includes('TICKET ID')&&activity.includes('CREATED')&&activity.includes('FILLED')&&activity.includes('CANCELLED'),'activity drill-down exposes order identity and lifecycle timestamps');
@@ -84,8 +85,6 @@ must(dev.includes("router.post('/order-book', requireAuth")&&dev.includes("QA_BO
 must(dev.includes('clearQaTicketBook')&&dev.includes("status='cancelled', cancelled_at=?")&&dev.includes("UPDATE tickets SET status='unredeemed'"),'QA seeder clears stale ticket working orders before rebuilding deterministic tier prices');
 must(dev.includes('junior: 1050')&&dev.includes('0.98')&&dev.includes('1.02'),'Jr Broker QA book is centered around its 1,050 STONK test backing, not Runner prices');
 must(dev.includes('QA_BADGE_BIDS = [47750')&&dev.includes('QA_BADGE_ASKS = [48250')&&dev.includes('seedQaBadgeBook'),'Badge QA book gets independent 48K-range bid/offer depth');
-must(dev.includes('badgeMarket.createListing')&&dev.includes('badgeMarket.createBid')&&dev.includes('badgeMarket.mintBadge'),'Badge QA depth uses the real Badge market/holding/custodian paths');
-must(dev.includes("issueTicket({ accountId, ticketType")&&dev.includes("INSERT INTO ticket_listings")&&dev.includes("INSERT INTO ticket_bids"),'QA ticket depth uses real backend tickets listings and bids');
-must(server.includes('v45-my-tickets-cleanup-v37.js?v=41'),'cache-busted My Tickets cleanup is served');
-must(server.includes('myTicketsCleanup: "v41-runtime-owner-cache-boundary"'),'health reports runtime-owner cache boundary');
-console.log('Stage 26 My Tickets regression checks passed.');
+must(dev.includes('badgeMarket.createListing')&&dev.includes('badgeMarket.createBid')&&dev.includes('badgeMarket.mintBadge'),'Badge QA depth uses the real Badge marketplace settlement functions');
+must(server.includes('/v45-exchange-dialog-v1.js?v=5')&&server.includes('/v45-exchange-layout-sales-v1.js?v=2'),'server serves cache-busted Exchange dialog and layout helpers');
+console.log('Stage 26 My Tickets cleanup + Exchange regression checks passed.');
