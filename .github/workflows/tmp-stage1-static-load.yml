@@ -1,0 +1,83 @@
+name: Temporary Stage 1 static-load patch
+on:
+  push:
+    branches:
+      - exchange-cleanup-stage1-static-load
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.event.head_commit.message != 'Apply Exchange cleanup Stage 1 static load'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply exact Stage 1 patch
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          # server/index.js
+          p=Path('server/index.js'); s=p.read_text()
+          old='<link rel="stylesheet" href="/v45-stage-c-ui-cleanup-v1.css?v=1">\''
+          new='<link rel="stylesheet" href="/v45-stage-c-ui-cleanup-v1.css?v=1"><link rel="stylesheet" href="/v45-ticket-settlement-v38.css?v=38"><link rel="stylesheet" href="/v45-trader-action-confirm-v42.css?v=42">\''
+          assert old in s
+          s=s.replace(old,new,1)
+          needle='<script src="/v45-ticket-native-hooks-v41.js?v=49"></script><script src="/v45-badge-market-stage4.js?v=3"></script><script src="/v45-my-tickets-cleanup-v37.js?v=41"></script>'
+          insert=needle + '<script src="/v45-ticket-settlement-v38.js?v=39"></script><script src="/v45-ticket-recent-v40.js?v=40"></script><script src="/v45-trader-action-confirm-v42.js?v=42"></script><script src="/v45-exchange-dialog-v1.js?v=5"></script><script src="/v45-exchange-tier-integrity-v1.js?v=3"></script><script src="/v45-exchange-layout-sales-v1.js?v=2"></script><script src="/v45-exchange-my-activity-v1.js?v=3"></script><script src="/v45-exchange-own-orders-v1.js?v=8"></script><script src="/v45-exchange-routing-fill-v1.js?v=4"></script><script src="/v45-badge-ownership-sync-v1.js?v=2"></script><script src="/v45-badge-dialog-unified-v1.js?v=2"></script><script src="/v45-test-stonk-faucet-v1.js?v=3"></script>'
+          assert needle in s
+          s=s.replace(needle,insert,1)
+          p.write_text(s)
+
+          p=Path('public/v45-exchange-dialog-v1.js'); s=p.read_text()
+          for line in [
+          "function ensureRoutingFill(){if(window.__sbcExchangeRoutingFillV1||document.querySelector('script[data-sbc-exchange-routing-fill]'))return;const s=document.createElement('script');s.src='/v45-exchange-routing-fill-v1.js?v=4';s.setAttribute('data-sbc-exchange-routing-fill','1');document.head.appendChild(s);}\n",
+          "function ensureTierIntegrity(){if(window.__sbcExchangeTierIntegrityV1||document.querySelector('script[data-sbc-exchange-tier-integrity]'))return;const s=document.createElement('script');s.src='/v45-exchange-tier-integrity-v1.js?v=3';s.setAttribute('data-sbc-exchange-tier-integrity','1');document.head.appendChild(s);}\n",
+          "function ensureMyActivity(){if(window.__sbcExchangeMyActivityV1||document.querySelector('script[data-sbc-exchange-my-activity]'))return;const s=document.createElement('script');s.src='/v45-exchange-my-activity-v1.js?v=3';s.setAttribute('data-sbc-exchange-my-activity','1');document.head.appendChild(s);}\n",
+          "function ensureLayoutSales(){if(window.__sbcExchangeLayoutSalesV1||document.querySelector('script[data-sbc-exchange-layout-sales]'))return;const s=document.createElement('script');s.src='/v45-exchange-layout-sales-v1.js?v=2';s.setAttribute('data-sbc-exchange-layout-sales','1');document.head.appendChild(s);}\n",
+          "function ensureBadgeSync(){if(window.__sbcBadgeOwnershipSyncV1||document.querySelector('script[data-sbc-badge-ownership-sync]'))return;const s=document.createElement('script');s.src='/v45-badge-ownership-sync-v1.js?v=2';s.setAttribute('data-sbc-badge-ownership-sync','1');document.head.appendChild(s);}\n",
+          "ensureRoutingFill();\n","ensureTierIntegrity();\n","ensureMyActivity();\n","ensureLayoutSales();\n","ensureBadgeSync();\n"]:
+              assert line in s
+              s=s.replace(line,'',1)
+          p.write_text(s)
+
+          p=Path('public/v45-exchange-tier-integrity-v1.js'); s=p.read_text()
+          for line in [
+          "function ensureBadgeSync(){if(window.__sbcBadgeOwnershipSyncV1||document.querySelector('script[data-sbc-badge-ownership-sync]'))return;const s=document.createElement('script');s.src='/v45-badge-ownership-sync-v1.js?v=2';s.setAttribute('data-sbc-badge-ownership-sync','1');document.head.appendChild(s);}\n",
+          "function ensureBadgeDialog(){if(window.__sbcBadgeDialogUnifiedV1||document.querySelector('script[data-sbc-badge-dialog-unified]'))return;const s=document.createElement('script');s.src='/v45-badge-dialog-unified-v1.js?v=2';s.setAttribute('data-sbc-badge-dialog-unified','1');document.head.appendChild(s);}\n"]:
+              assert line in s
+              s=s.replace(line,'',1)
+          s=s.replace("function run(){wrapRender();syncLegacyGlobal();auditDom();ensureBadgeSync();ensureBadgeDialog();}","function run(){wrapRender();syncLegacyGlobal();auditDom();}",1)
+          s=s.replace("window.__SBC_EXCHANGE_TIER_INTEGRITY_TEST={typeFromText,selectorType,syncLegacyGlobal,canonicalRender,ensureJuniorMarker,normalizeVisibleJunior,auditDom,scheduleAudit,ensureBadgeDialog,CANON};","window.__SBC_EXCHANGE_TIER_INTEGRITY_TEST={typeFromText,selectorType,syncLegacyGlobal,canonicalRender,ensureJuniorMarker,normalizeVisibleJunior,auditDom,scheduleAudit,CANON};",1)
+          p.write_text(s)
+
+          p=Path('public/v45-stage-c-ui-cleanup-v1.js'); s=p.read_text()
+          start=s.index('function ensureExchangeQaHelpers(){'); end=s.index('\nfunction recentRow',start)
+          s=s[:start]+s[end+1:]
+          s=s.replace("function run(){ensureExchangeQaHelpers();wrapFetch();renderRecentWithCancelled();schedulePortfolioSync(false);}","function run(){wrapFetch();renderRecentWithCancelled();schedulePortfolioSync(false);}",1)
+          p.write_text(s)
+
+          p=Path('public/v45-my-tickets-cleanup-v37.js'); s=p.read_text()
+          start=s.index('function ensureSettlement(){'); end=s.index('\nfunction clean()',start)
+          s=s[:start]+s[end+1:]
+          s=s.replace("function run(){ensureSettlement();clean();}","function run(){clean();}",1)
+          p.write_text(s)
+          PY
+      - name: Stage 1 structural checks
+        shell: bash
+        run: |
+          targets=(public/v45-exchange-dialog-v1.js public/v45-exchange-tier-integrity-v1.js public/v45-exchange-layout-sales-v1.js public/v45-exchange-my-activity-v1.js public/v45-exchange-own-orders-v1.js public/v45-exchange-routing-fill-v1.js public/v45-badge-dialog-unified-v1.js public/v45-badge-ownership-sync-v1.js public/v45-ticket-market-v36.js public/v45-ticket-market-v35.js public/v45-ticket-native-hooks-v41.js public/v45-my-tickets-cleanup-v37.js public/v45-ticket-settlement-v38.js public/v45-ticket-recent-v40.js public/v45-trader-action-confirm-v42.js public/v45-badge-market-stage4.js public/v45-stage-c-ui-cleanup-v1.js public/v45-test-stonk-faucet-v1.js server/index.js)
+          ! grep -nH "createElement(['\" ]*script" "${targets[@]}"
+          node server/stageCUiCleanupV1.test.js
+          node server/ticketExchangeStage4Ui.test.js
+          node server/ticketExchangeStage4AcceptanceV3.test.js
+      - name: Commit only Stage 1 implementation files
+        shell: bash
+        run: |
+          rm .github/workflows/tmp-stage1-static-load.yml
+          git config user.name "swenstock"
+          git config user.email "swenstock@gmail.com"
+          git add server/index.js public/v45-exchange-dialog-v1.js public/v45-exchange-tier-integrity-v1.js public/v45-stage-c-ui-cleanup-v1.js public/v45-my-tickets-cleanup-v37.js .github/workflows/tmp-stage1-static-load.yml
+          git commit -m "Apply Exchange cleanup Stage 1 static load"
+          git push origin HEAD:exchange-cleanup-stage1-static-load
