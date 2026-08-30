@@ -1,0 +1,48 @@
+name: Trace Stage 6 Item A
+on:
+  push:
+    branches: [stage6-item-a-investigate]
+permissions:
+  contents: write
+jobs:
+  trace:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage6-item-a-investigate
+      - name: Trace legacy buy path and activity ownership
+        run: |
+          node <<'NODE'
+          const { exactV45Shell } = require('./server/v45ExactShell');
+          const src = exactV45Shell.toString('utf8');
+          function printAround(label, needle, radius=1800){
+            const i=src.indexOf(needle);
+            console.log(`\n===== ${label} (${needle}) index=${i} =====`);
+            if(i<0)return;
+            console.log(src.slice(Math.max(0,i-radius),Math.min(src.length,i+radius)));
+          }
+          printAround('buyAtAsk function','function buyAtAsk',2600);
+          printAround('buy flow opening','BUY FOR',2200);
+          printAround('production build copy','Production build',2200);
+          printAround('seller ask accepted','Seller',1800);
+          const v36=require('fs').readFileSync('public/v45-ticket-market-v36.js','utf8');
+          console.log('\n===== V36 BUY REFERENCES =====');
+          for(const token of ['buyAtAsk','buyListing','offers/${','/buy','append','refreshActivity','__SBC_EXCHANGE_MY_ACTIVITY_V1']){
+            console.log(token, v36.indexOf(token));
+          }
+          const activity=require('fs').readFileSync('public/v45-exchange-my-activity-v1.js','utf8');
+          console.log('\n===== ACTIVITY BUY SUPPORT =====');
+          for(const token of ["api('/api/ticket-market/mine')","role:'buyer'","BOUGHT OFFER","sbc:exchange-heartbeat"]){
+            console.log(token, activity.indexOf(token));
+          }
+          NODE
+      - name: Remove temporary trace workflow
+        run: |
+          rm .github/workflows/trace-stage6-item-a.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/trace-stage6-item-a.yml
+          git commit -m 'Remove temporary Stage 6 Item A trace workflow'
+          git push origin HEAD:stage6-item-a-investigate
