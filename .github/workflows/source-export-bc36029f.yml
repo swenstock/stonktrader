@@ -1,0 +1,63 @@
+name: Source export bc36029f
+on:
+  push:
+    branches:
+      - source-export-bc36029f
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Verify pinned parent
+        run: |
+          echo "Export branch head: $GITHUB_SHA"
+          git rev-parse HEAD^
+      - name: Build exhaustive public injection report
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          root=Path('public')
+          rows=[]
+          refs=[]
+          for p in sorted(root.rglob('*')):
+              if not p.is_file():
+                  continue
+              try:
+                  text=p.read_text(encoding='utf-8')
+              except Exception:
+                  continue
+              lines=text.splitlines()
+              for i,line in enumerate(lines,1):
+                  if "createElement('script')" in line or 'createElement("script")' in line or '.createElement(`script`)' in line:
+                      rows.append((str(p),i,line.strip()))
+              for m in re.finditer(r"(?:\.src\s*=\s*|src\s*:\s*)['\"]([^'\"]+\.js(?:\?[^'\"]*)?)['\"]", text):
+                  refs.append((str(p),m.group(1)))
+          out=['# EXHAUSTIVE public/ DYNAMIC SCRIPT INVENTORY','',f'Files scanned: {sum(1 for p in root.rglob("*") if p.is_file())}','', '## createElement(script) occurrences']
+          if rows:
+              out += [f'- {p}:{i}: `{line}`' for p,i,line in rows]
+          else:
+              out += ['- none']
+          out += ['', '## JavaScript src assignments found in public/']
+          for p,ref in sorted(set(refs)):
+              out.append(f'- {p} -> {ref}')
+          Path('PUBLIC_DYNAMIC_SCRIPT_GREP.md').write_text('\n'.join(out)+'\n',encoding='utf-8')
+          PY
+      - name: Preserve exact source commit metadata
+        run: |
+          printf '%s\n' 'Authoritative production source commit: bc36029f154d56776140c15a79bfc6cbfccaafe1' > SOURCE_EXPORT_INFO.txt
+          printf '%s\n' "Temporary export branch commit: $GITHUB_SHA" >> SOURCE_EXPORT_INFO.txt
+          printf '%s\n' "Parent source commit: $(git rev-parse HEAD^)" >> SOURCE_EXPORT_INFO.txt
+      - name: Remove export-only workflow from packaged source
+        run: rm -f .github/workflows/source-export-bc36029f.yml
+      - name: Package complete repository
+        run: |
+          zip -r SBC_FULL_SOURCE_bc36029f.zip . -x '.git/*' 'SBC_FULL_SOURCE_bc36029f.zip'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SBC_FULL_SOURCE_bc36029f
+          path: SBC_FULL_SOURCE_bc36029f.zip
+          if-no-files-found: error
+          retention-days: 1
