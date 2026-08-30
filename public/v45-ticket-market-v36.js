@@ -42,7 +42,9 @@ function renderBookFromBackend(book){
   if(bidBook)bidBook.innerHTML=bids.map(o=>`<div class="book-row"><div class="book-ticket-meta">${visual()}<div><strong>1 ${name} Ticket Bid</strong><small>Bidder #${String(o.id).slice(-4)} • Buyer posted this bid</small></div></div><div class="book-price bid">${priceOf(o).toLocaleString()} STONK</div><button class="hit-bid" data-sbc-bid-id="${o.id}" data-sbc-bid-price="${priceOf(o)}" onclick="sellIntoBid(${priceOf(o)},${o.id})">SELL TO BID</button></div>`).join('');
   const recent=document.getElementById('recentTicketSales'),fbBids=Array.isArray(fallback.bids)?fallback.bids:[],fbAsks=Array.isArray(fallback.asks)?fallback.asks:[];
   if(recent&&Number(fallback.last)>0){const sales=[fallback.last,Math.round((fallback.last+(fbBids[0]||fallback.last))/2),Math.round((fallback.last+(fbAsks[0]||fallback.last))/2)];recent.innerHTML=sales.map((p,i)=>`<div class="market-row"><div class="ticket-name">${typeof exchangeVisualHTML==='function'?exchangeVisualHTML(name,'ticket-badge'):''}<div><b>${name}</b><small style="display:block;color:#9dacb8">1 ticket transferred</small></div></div><div>${p.toLocaleString()} STONK</div><div>${[3,17,42][i]}m ago</div><div></div><div></div></div>`).join('')}
-  return mappedMarket(book,fallback);
+  const out=mappedMarket(book,fallback);
+  window.dispatchEvent?.(new CustomEvent('sbc:exchange-rendered',{detail:{source:'ticket-market-v36',ticketType:book?.ticketType||currentType()}}));
+  return out;
 }
 const originalTicketMarket=typeof window.ticketMarket==='function'?window.ticketMarket:null;
 const originalRenderTicketMarket=typeof window.renderTicketMarket==='function'?window.renderTicketMarket:null;
@@ -104,5 +106,5 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;const root=['
 window.__SBC_TICKET_EXCHANGE_STAGE1_TEST={fetchRealBook,renderBookFromBackend,submitOffer,submitCurrentOffer,submitBid,currentOfferTicketId,captureNativeOrder,getCachedBook:type=>realBookCache.get(type),getOwnedTicketId:()=>{try{return ownedTicketContext?.ticketId}catch(_){return undefined}}};
 window.__SBC_TICKET_EXCHANGE_STAGE2_TEST={acceptBid,realHitBestBid,realSellIntoBid,prepareSpecificBid,cachedBidById,cachedBestBid,realOwnedTicketId,captureNativeOrder,getPendingBid:()=>pendingBidAccept};
 function run(){ensureModalControls();schedule()}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();new MutationObserver(()=>schedule()).observe(document.documentElement,{childList:true,subtree:true});setTimeout(run,400);setTimeout(run,1200);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();if(typeof window.addEventListener==='function')window.addEventListener('sbc:exchange-rendered',()=>schedule());document.addEventListener('click',e=>{if(e.target?.closest?.('#ticketTypeSelector button'))setTimeout(schedule,0)},true);setTimeout(run,400);setTimeout(run,1200);
 })();
