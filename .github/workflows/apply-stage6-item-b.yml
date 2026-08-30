@@ -1,0 +1,69 @@
+name: Apply Stage 6 Item B Relocation
+on:
+  push:
+    branches: [stage6-item-b-relocate-ladder]
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage6-item-b-relocate-ladder
+      - name: Relocate existing upgrade ladder safely
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p=Path(path); s=p.read_text()
+              if old not in s:
+                  raise SystemExit(f'missing exact target in {path}: {old[:160]}')
+              if s.count(old)!=1:
+                  raise SystemExit(f'expected one target in {path}, found {s.count(old)}')
+              p.write_text(s.replace(old,new,1))
+
+          # Narrow approved exception: only widen the existing burn-box lookup.
+          replace(
+            'public/v45-ticket-market-v36.js',
+            "let box=$('.tm36-burn-box',p);if(!box){box=document.createElement('div');box.className='tm36-burn-box';p.appendChild(box)}",
+            "let box=$('.tm36-burn-box');if(!box){box=document.createElement('div');box.className='tm36-burn-box';p.appendChild(box)}"
+          )
+
+          # Existing layout owner repositions the same node below the personal strip.
+          layout=Path('public/v45-exchange-layout-sales-v1.js')
+          s=layout.read_text()
+          anchor="function hideLegacyRecent(){const old=findPanel('RECENT SALES');if(old){old.style.display='none';old.setAttribute('aria-hidden','true');}}"
+          insert="function placeUpgradeLadder(){const strip=document.getElementById('sbcExchangePersonalStrip'),box=document.querySelector('.tm36-burn-box');if(!strip||!box||!strip.parentNode)return false;if(strip.nextElementSibling!==box)strip.insertAdjacentElement('afterend',box);box.style.setProperty('grid-column','1/-1');box.style.setProperty('width','100%');box.style.setProperty('margin-top','14px');return true;}\n"+anchor
+          if anchor not in s: raise SystemExit('missing layout insertion anchor')
+          s=s.replace(anchor,insert,1)
+          old="function layout(){hideLegacyRecent();placePersonalStrip();ensureRealRecent();enforceBadgeScope();}"
+          new="function layout(){hideLegacyRecent();placePersonalStrip();placeUpgradeLadder();ensureRealRecent();enforceBadgeScope();}"
+          if old not in s: raise SystemExit('missing layout function target')
+          s=s.replace(old,new,1)
+          old="function reconcile(){const v=document.getElementById('view-exchange');if(!v||v.offsetParent===null)return;refreshBalance();refreshSales();enforceBadgeScope();emitHeartbeat();}"
+          new="function reconcile(){const v=document.getElementById('view-exchange');if(!v||v.offsetParent===null)return;placeUpgradeLadder();refreshBalance();refreshSales();enforceBadgeScope();emitHeartbeat();}"
+          if old not in s: raise SystemExit('missing reconcile target')
+          layout.write_text(s.replace(old,new,1))
+
+          # Guard the exact failure mode and the user's byte-stability requirement.
+          v36=Path('public/v45-ticket-market-v36.js').read_text()
+          if "let box=$('.tm36-burn-box');if(!box){box=document.createElement('div');box.className='tm36-burn-box';p.appendChild(box)}" not in v36:
+              raise SystemExit('global burn-box reuse guard missing')
+          exact="const rows=['runner','clerk','trader'].map(type=>{const cfg=d.burnUpgrades?.[type],have=d.inventory?.[type]?.available||0;if(!cfg)return'';const enabled=have>=cfg.burnCount;return`<div class=\"tm35-order\"><div class=\"tm35-order-main\"><b>${cfg.burnCount} ${TYPE_LABELS[type]} TICKETS → ${TYPE_LABELS[cfg.targetType]} TICKET</b><span>${have} available • optional upgrade</span></div><div class=\"tm35-actions\"><button data-tm36-burn=\"${type}\" ${enabled?'':'disabled'}>${enabled?'BURN 10':'NEED '+(cfg.burnCount-have)}</button></div></div>`}).join('');box.innerHTML=`<div class=\"tm35-head\"><div><small>OPTIONAL TICKET UPGRADE</small><h3>COLLECT 10 • MOVE UP</h3></div></div><div class=\"tm35-orders\">${rows}</div>`;$$('[data-tm36-burn]',box).forEach(b=>b.onclick=()=>burnTickets(b.dataset.tm36Burn))"
+          if exact not in v36:
+              raise SystemExit('burn row-building/click-handler logic changed unexpectedly')
+      - name: Syntax check
+        run: |
+          node --check public/v45-ticket-market-v36.js
+          node --check public/v45-exchange-layout-sales-v1.js
+      - name: Commit Item B and remove temporary workflow
+        run: |
+          rm .github/workflows/apply-stage6-item-b.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/v45-ticket-market-v36.js public/v45-exchange-layout-sales-v1.js .github/workflows/apply-stage6-item-b.yml
+          git commit -m 'Stage 6 Item B: relocate optional upgrade ladder'
+          git push origin HEAD:stage6-item-b-relocate-ladder
