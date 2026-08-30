@@ -11,7 +11,7 @@ const qtyText=o=>o?.quantity!=null?Number(o.quantity).toLocaleString(undefined,{
 const orderPrice=o=>{const t=String(o?.orderType||'market');if(t==='limit')return `LMT ${money(o.limitPrice)}`;if(t==='stop')return `STP ${money(o.stopPrice)}`;if(t==='stop_limit')return `STP ${money(o.stopPrice)} / LMT ${money(o.limitPrice)}`;return 'MKT @ OPEN';};
 function ensureExchangeQaHelpers(){
   const specs=[
-    ['__sbcExchangeDialogV1','data-sbc-exchange-dialog','/v45-exchange-dialog-v1.js?v=3'],
+    ['__sbcExchangeDialogV1','data-sbc-exchange-dialog','/v45-exchange-dialog-v1.js?v=4'],
     ['__sbcTestStonkFaucetV1','data-sbc-test-stonk-direct','/v45-test-stonk-faucet-v1.js?v=2'],
     ['__sbcExchangeOwnOrdersV1','data-sbc-exchange-own-orders','/v45-exchange-own-orders-v1.js?v=8']
   ];
