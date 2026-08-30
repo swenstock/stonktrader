@@ -2,6 +2,7 @@
 'use strict';
 if(window.__sbcExchangeLayoutSalesV1)return;window.__sbcExchangeLayoutSalesV1=true;
 const LABEL={junior:'Jr Broker',trader:'Trader',clerk:'Clerk',runner:'Runner'};
+let heartbeatTimer=null;
 function token(){try{return String(localStorage.getItem('token')||'').replace(/^Bearer\s+/i,'').trim()}catch(_){return''}}
 function activeType(){const active=document.querySelector('#ticketTypeSelector .active');if(active?.id==='sbcBadgeMarketTab')return'badge';const text=String(active?.textContent||document.getElementById('marketTicketTitle')?.textContent||'RUNNER').toUpperCase();if(/JR\.?\s*(STONK\s*)?BROKER|JUNIOR/.test(text))return'junior';if(text.includes('TRADER'))return'trader';if(text.includes('CLERK'))return'clerk';return'runner';}
 function typeFromButton(btn){if(!btn||btn.id==='sbcBadgeMarketTab')return null;const t=String(btn.textContent||'').toUpperCase();if(/JR\.?\s*(STONK\s*)?BROKER|JUNIOR/.test(t))return'junior';if(t.includes('TRADER'))return'trader';if(t.includes('CLERK'))return'clerk';if(t.includes('RUNNER'))return'runner';return null;}
@@ -21,7 +22,9 @@ function enforceBadgeScope(){const active=document.querySelector('#ticketTypeSel
 function layout(){hideLegacyRecent();placePersonalStrip();ensureRealRecent();enforceBadgeScope();}
 document.addEventListener('click',e=>{if(e.target?.closest?.('[data-real-sales-refresh]'))refreshSales();const tab=e.target?.closest?.('#ticketTypeSelector button');if(tab){setTimeout(()=>{layout();refreshBalance();refreshSales();},0);setTimeout(()=>{layout();refreshBalance();refreshSales();},120);}const badgeAction=e.target?.closest?.('#sbcBadgeMint,#sbcBadgeList,#sbcBadgeBid,[data-badge-buy],[data-badge-sell],[data-badge-cancel-listing],[data-badge-cancel-bid]');if(badgeAction&&document.querySelector('#ticketTypeSelector .active')?.id!=='sbcBadgeMarketTab'){e.preventDefault();e.stopPropagation();e.stopImmediatePropagation?.();}},true);
 if(typeof window.addEventListener==='function')window.addEventListener('sbc:exchange-rendered',()=>{layout();enforceBadgeScope();});
-function run(){layout();refreshBalance();refreshSales();setInterval(()=>{const v=document.getElementById('view-exchange');if(v?.offsetParent!==null){refreshBalance();refreshSales();enforceBadgeScope();}},7000)}
+function emitHeartbeat(){try{window.dispatchEvent?.(new CustomEvent('sbc:exchange-heartbeat'))}catch(_){}}
+function reconcile(){const v=document.getElementById('view-exchange');if(!v||v.offsetParent===null)return;refreshBalance();refreshSales();enforceBadgeScope();emitHeartbeat();}
+function run(){layout();refreshBalance();refreshSales();emitHeartbeat();if(!heartbeatTimer)heartbeatTimer=setInterval(reconcile,2500)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();setTimeout(run,250);setTimeout(run,1000);
 window.__SBC_EXCHANGE_LAYOUT_SALES_V1={activeType,typeFromButton,setSelectorCount,reconcileSelectorCounts,layout,refreshBalance,refreshSales,enforceBadgeScope,placePersonalStrip};
 })();
