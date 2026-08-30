@@ -1,0 +1,66 @@
+name: Apply Stage 3 Polling Consolidation
+on:
+  push:
+    branches: [exchange-cleanup-stage3-polling]
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: exchange-cleanup-stage3-polling
+      - name: Complete four-consumer polling consolidation
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p=Path(path); s=p.read_text()
+              if old not in s:
+                  raise SystemExit(f'missing exact target in {path}: {old[:140]}')
+              if s.count(old)!=1:
+                  raise SystemExit(f'expected one target in {path}, found {s.count(old)}')
+              p.write_text(s.replace(old,new))
+
+          replace('public/v45-exchange-layout-sales-v1.js',
+              "if(!heartbeatTimer)heartbeatTimer=setInterval(reconcile,2500)",
+              "if(!heartbeatTimer)heartbeatTimer=setInterval(reconcile,1500)")
+
+          replace('public/v45-ticket-recent-v40.js',
+              "if(typeof window.addEventListener==='function')window.addEventListener('sbc:exchange-rendered',schedule);\nwindow.addEventListener('storage',e=>{if(e.key===STORE)render()});\nsetTimeout(render,400);setTimeout(render,1200);setInterval(render,1500);",
+              "if(typeof window.addEventListener==='function'){window.addEventListener('sbc:exchange-rendered',schedule);window.addEventListener('sbc:exchange-heartbeat',schedule);}\nwindow.addEventListener('storage',e=>{if(e.key===STORE)render()});\nsetTimeout(render,400);setTimeout(render,1200);")
+
+          p=Path('scripts/validate-stage26-my-tickets.js'); s=p.read_text()
+          anchor="const layout=fs.readFileSync(path.join(__dirname,'..','public','v45-exchange-layout-sales-v1.js'),'utf8');"
+          insert=anchor+"\nconst recent=fs.readFileSync(path.join(__dirname,'..','public','v45-ticket-recent-v40.js'),'utf8');"
+          if anchor not in s: raise SystemExit('missing validator layout source anchor')
+          s=s.replace(anchor,insert,1)
+          old="const exchangeIntervals=[activity,badgeSync,layout].reduce((n,src)=>n+(src.match(/setInterval/g)||[]).length,0);\nmust(exchangeIntervals===1&&layout.includes(\"sbc:exchange-heartbeat\")&&activity.includes(\"sbc:exchange-heartbeat\")&&badgeSync.includes(\"sbc:exchange-heartbeat\")&&layout.includes('2500'),'Exchange uses one shared visible-view reconciliation heartbeat instead of competing polling loops');"
+          new="const exchangeIntervals=[activity,badgeSync,layout,recent].reduce((n,src)=>n+(src.match(/setInterval/g)||[]).length,0);\nmust(exchangeIntervals===1&&layout.includes(\"sbc:exchange-heartbeat\")&&activity.includes(\"sbc:exchange-heartbeat\")&&badgeSync.includes(\"sbc:exchange-heartbeat\")&&recent.includes(\"sbc:exchange-heartbeat\")&&layout.includes('1500'),'Exchange uses one shared 1500ms reconciliation heartbeat across all four polling consumers');"
+          if old not in s: raise SystemExit('missing prior three-consumer heartbeat validator')
+          p.write_text(s.replace(old,new,1))
+
+          targets=['public/v45-exchange-layout-sales-v1.js','public/v45-badge-ownership-sync-v1.js','public/v45-exchange-my-activity-v1.js','public/v45-ticket-recent-v40.js']
+          total=sum(Path(f).read_text().count('setInterval') for f in targets)
+          if total != 1: raise SystemExit(f'expected exactly one setInterval across four Stage 3 consumers; got {total}')
+          if "setInterval(reconcile,1500)" not in Path('public/v45-exchange-layout-sales-v1.js').read_text():
+              raise SystemExit('shared heartbeat is not 1500ms')
+      - name: Syntax and Stage 26 validator
+        run: |
+          node --check public/v45-exchange-layout-sales-v1.js
+          node --check public/v45-badge-ownership-sync-v1.js
+          node --check public/v45-exchange-my-activity-v1.js
+          node --check public/v45-ticket-recent-v40.js
+          node --check scripts/validate-stage26-my-tickets.js
+          node scripts/validate-stage26-my-tickets.js
+      - name: Commit Stage 3 and remove temporary workflow
+        run: |
+          rm .github/workflows/apply-stage3-polling.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/v45-exchange-layout-sales-v1.js public/v45-ticket-recent-v40.js scripts/validate-stage26-my-tickets.js .github/workflows/apply-stage3-polling.yml
+          git commit -m 'Exchange cleanup Stage 3: consolidate all polling consumers'
+          git push origin HEAD:exchange-cleanup-stage3-polling
