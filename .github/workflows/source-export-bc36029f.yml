@@ -9,16 +9,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2
-      - name: Export exact production parent tree
+          fetch-depth: 0
+      - name: Export exact production tree
         run: |
           set -euo pipefail
-          SOURCE_COMMIT="$(git rev-parse HEAD^)"
-          test "$SOURCE_COMMIT" = "bc36029f154d56776140c15a79bfc6cbfccaafe1"
+          SOURCE_COMMIT="bc36029f154d56776140c15a79bfc6cbfccaafe1"
+          git cat-file -e "$SOURCE_COMMIT^{commit}"
           rm -rf export
           mkdir export
           git archive "$SOURCE_COMMIT" | tar -x -C export
-          printf '%s\n' 'Authoritative production source commit: bc36029f154d56776140c15a79bfc6cbfccaafe1' > export/SOURCE_EXPORT_INFO.txt
+          printf '%s\n' "Authoritative production source commit: $SOURCE_COMMIT" > export/SOURCE_EXPORT_INFO.txt
           printf '%s\n' "Temporary export workflow commit: $GITHUB_SHA" >> export/SOURCE_EXPORT_INFO.txt
           printf '%s\n' "Packaged Git tree commit: $SOURCE_COMMIT" >> export/SOURCE_EXPORT_INFO.txt
       - name: Build exhaustive public injection report
@@ -28,39 +28,23 @@ jobs:
           import re
           root=Path('export/public')
           all_files=[p for p in root.rglob('*') if p.is_file()]
-          text_files=[]
-          rows=[]
-          refs=[]
+          text_files=[]; rows=[]; refs=[]
           for p in sorted(all_files):
-              try:
-                  text=p.read_text(encoding='utf-8')
-              except Exception:
-                  continue
+              try: text=p.read_text(encoding='utf-8')
+              except Exception: continue
               text_files.append(p)
               rel=str(p.relative_to('export'))
               for i,line in enumerate(text.splitlines(),1):
                   if "createElement('script')" in line or 'createElement("script")' in line or 'createElement(`script`)' in line:
                       rows.append((rel,i,line.strip()))
-              patterns=[
-                  r"\.src\s*=\s*['\"]([^'\"]+\.js(?:\?[^'\"]*)?)['\"]",
-                  r"src\s*:\s*['\"]([^'\"]+\.js(?:\?[^'\"]*)?)['\"]"
-              ]
-              for pat in patterns:
+              for pat in (r"\.src\s*=\s*['\"]([^'\"]+\.js(?:\?[^'\"]*)?)['\"]",r"src\s*:\s*['\"]([^'\"]+\.js(?:\?[^'\"]*)?)['\"]"):
                   for m in re.finditer(pat,text): refs.append((rel,m.group(1)))
           known={('/'+str(p.relative_to(root)).replace('\\','/')) for p in all_files}
-          jsrefs=sorted(set(refs))
-          missing=[]
+          jsrefs=sorted(set(refs)); missing=[]
           for owner,ref in jsrefs:
               path=ref.split('?',1)[0]
-              if path.startswith('/') and path.endswith('.js') and path not in known:
-                  missing.append((owner,ref))
-          out=[
-              '# EXHAUSTIVE public/ DYNAMIC SCRIPT INVENTORY','',
-              'Source commit: `bc36029f154d56776140c15a79bfc6cbfccaafe1`','',
-              f'All public/ files scanned: {len(all_files)}',
-              f'UTF-8 text files scanned: {len(text_files)}','',
-              '## createElement(script) occurrences'
-          ]
+              if path.startswith('/') and path.endswith('.js') and path not in known: missing.append((owner,ref))
+          out=['# EXHAUSTIVE public/ DYNAMIC SCRIPT INVENTORY','', 'Source commit: `bc36029f154d56776140c15a79bfc6cbfccaafe1`','',f'All public/ files scanned: {len(all_files)}',f'UTF-8 text files scanned: {len(text_files)}','', '## createElement(script) occurrences']
           out += [f'- {p}:{i}: `{line}`' for p,i,line in rows] if rows else ['- none']
           out += ['', '## JavaScript src assignments found anywhere in public/']
           out += [f'- {p} -> {ref}' for p,ref in jsrefs] if jsrefs else ['- none']
