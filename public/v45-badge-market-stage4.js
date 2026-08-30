@@ -33,7 +33,7 @@ function syncModeToActiveTab(){const active=$('#ticketTypeSelector .active');if(
 document.addEventListener('click',e=>{const t=e.target?.closest?.('[data-badge-buy],[data-badge-sell],[data-badge-cancel-listing],[data-badge-cancel-bid]');if(t){e.preventDefault();e.stopPropagation();if(t.dataset.badgeCancelListing)return cancelListing(Number(t.dataset.badgeCancelListing));if(t.dataset.badgeCancelBid)return cancelBid(Number(t.dataset.badgeCancelBid));const id=Number(t.dataset.badgeBuy||t.dataset.badgeSell),price=Number(t.dataset.price);return t.dataset.badgeBuy?buy(id,price):sell(id,price)}const tab=e.target?.closest?.('#ticketTypeSelector button');if(tab&&tab.id!=='sbcBadgeMarketTab')deactivateBadgeMode()},true);
 function boot(){ensureBadgeSlot();syncModeToActiveTab()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-window.addEventListener('sbc:exchange-rendered',()=>{ensureBadgeSlot();syncModeToActiveTab()});
+if(typeof window.addEventListener==='function')window.addEventListener('sbc:exchange-rendered',()=>{ensureBadgeSlot();syncModeToActiveTab()});
 if(typeof window.addEventListener==='function')window.addEventListener('storage',()=>{if(badgeMode)render();else hideControls()});
 window.__SBC_BADGE_MARKET_STAGE4_TEST={warningFor:(price,b)=>{const old=book;book=b;const out=warningFor(price);book=old;return out},setBook:b=>{book=b},ensureBadgeSlot,deactivateBadgeMode,get badgeMode(){return badgeMode}};
 })();
