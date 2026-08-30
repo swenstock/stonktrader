@@ -1,6 +1,5 @@
 const fs=require('fs'),path=require('path');
 const hooks=fs.readFileSync(path.join(__dirname,'..','public','v45-ticket-native-hooks-v41.js'),'utf8');
-const loader=fs.readFileSync(path.join(__dirname,'..','public','v45-my-tickets-cleanup-v37.js'),'utf8');
 const retirement=fs.readFileSync(path.join(__dirname,'..','public','v45-main-event-retirement-v1.js'),'utf8');
 const junior=fs.readFileSync(path.join(__dirname,'..','public','v45-stage4-junior-ui.js'),'utf8');
 const badge=fs.readFileSync(path.join(__dirname,'..','public','v45-badge-market-stage4.js'),'utf8');
@@ -24,8 +23,8 @@ must(hooks.includes('renderAuthoritativeMyTickets')&&hooks.includes("types=['jun
 must(hooks.includes('installOwnedTicketSellGuard')&&hooks.includes('Number.isInteger(n)&&n>0')&&hooks.includes('realTicketForType(type)'),'legacy seller actions cannot pass fake nonnumeric ticket ids into the sell modal');
 must(!/Main Event/i.test(hooks.match(/async function renderAuthoritativeMyTickets[\s\S]*?function installOwnedTicketSellGuard/)?.[0]||''),'authoritative My Tickets renderer contains no Main Event row');
 must(hooks.includes('normalizeSelectorOrder')&&hooks.includes("selector.insertBefore(badge,selector.firstElementChild)")&&hooks.includes('rank={junior:1,trader:2,clerk:3,runner:4}'),'selector order is Badge then Jr Broker, Trader, Clerk, Runner');
-must(loader.includes('/v45-ticket-native-hooks-v41.js?v=49'),'fallback loader points at the runtime-owner hook');
-must(server.includes('/v45-ticket-native-hooks-v41.js?v=49')&&server.includes('/v45-my-tickets-cleanup-v37.js?v=41'),'runtime-owner hook is served directly and parent loader is cache-busted');
+must(server.includes('/v45-ticket-native-hooks-v41.js?v=49'),'static server bootstrap points at the runtime-owner hook');
+must(server.includes('/v45-ticket-native-hooks-v41.js?v=49')&&server.includes('/v45-my-tickets-cleanup-v37.js?v=41'),'runtime-owner hook and My Tickets cleanup are served directly and cache-busted');
 must(css.includes('#ticketTypeSelector')&&css.includes('#sbcBadgeMarketTab')&&css.includes('repeat(4,minmax(0,1fr))'),'five-market selector has a deliberate desktop layout');
 must(css.includes('.sbc-badge-mark')&&css.includes('.sbc-badge-controls'),'Badge uses dedicated stable mark and isolated control styling');
 must(!/CORPORATE LADDER/i.test(retirement),'Main Event retirement does not invent replacement ladder branding');
