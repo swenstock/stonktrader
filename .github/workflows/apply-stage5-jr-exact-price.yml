@@ -1,0 +1,46 @@
+name: Apply Stage 5 Jr Broker Exact Price
+on:
+  push:
+    branches: [stage5-jr-broker-exact-price]
+permissions:
+  contents: write
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage5-jr-broker-exact-price
+      - name: Bind SELL NOW to the exact displayed bid
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('public/v45-exchange-routing-fill-v1.js'); s=p.read_text()
+          old="exactSellContext={type,ticketId:Number(ticket.id)};"
+          new="const {bid,bidPrice}=livePrices(book);exactSellContext={type,ticketId:Number(ticket.id),bidId:bid?Number(bid.id):null,bidPrice:bidPrice==null?null:Number(bidPrice)};"
+          if old not in s: raise SystemExit('missing exactSellContext assignment')
+          s=s.replace(old,new,1)
+          old="async function executeExactBestBid(){const ctx=exactSellContext;if(!ctx)throw new Error('Choose the exact ticket you want to sell from My Tickets first.');const book=await api(`/api/ticket-market/book/${ctx.type}`),{bid}=livePrices(book);paintSellModal(ctx.type,ctx.ticketId,book);if(!bid)throw new Error(`No active ${LABEL[ctx.type]} bid is available.`);if(bid.ticketType!==ctx.type)throw new Error(`Bid tier mismatch: expected ${ctx.type}, received ${bid.ticketType||'unknown'}.`);const result=await api(`/api/ticket-market/bids/${bid.id}/sell`,{method:'POST',body:JSON.stringify({ticketId:ctx.ticketId})});const soldType=ctx.type;exactSellContext=null;document.getElementById('sellChoiceModal')?.classList.remove('open');await window.__SBC_TICKET_REAL_OFFER_TEST?.refreshSelectorInventory?.();await canonicalBook(soldType).catch(()=>{});fillNotice('bid',result?.soldFor??bid.bidPrice??bid.price,soldType);return result;}"
+          new="async function executeExactBestBid(){const ctx=exactSellContext;if(!ctx)throw new Error('Choose the exact ticket you want to sell from My Tickets first.');if(!(ctx.bidId>0)||!(ctx.bidPrice>0))throw new Error(`No active ${LABEL[ctx.type]} bid was available when this window opened.`);const result=await api(`/api/ticket-market/bids/${ctx.bidId}/sell`,{method:'POST',body:JSON.stringify({ticketId:ctx.ticketId})});const soldType=ctx.type,soldPrice=Number(result?.soldFor??ctx.bidPrice);exactSellContext=null;document.getElementById('sellChoiceModal')?.classList.remove('open');await window.__SBC_TICKET_REAL_OFFER_TEST?.refreshSelectorInventory?.();await canonicalBook(soldType).catch(()=>{});fillNotice('bid',soldPrice,soldType);return result;}"
+          if old not in s: raise SystemExit('missing executeExactBestBid implementation')
+          p.write_text(s.replace(old,new,1))
+
+          p=Path('scripts/validate-stage26-my-tickets.js'); s=p.read_text()
+          old="must(routing.includes('function livePrices(book)')&&routing.includes('book?.bids||[]')&&routing.includes('book?.offers||[]')&&routing.includes('function paintSellModal')&&routing.includes('SELL NOW'),'sell confirmation paints executable highest bid, lowest ask, and SELL NOW from the exact live tier book');"
+          new=old+"\nmust(routing.includes('bidId:bid?Number(bid.id):null')&&routing.includes('bidPrice:bidPrice==null?null:Number(bidPrice)')&&routing.includes('/api/ticket-market/bids/${ctx.bidId}/sell')&&!routing.includes('const book=await api(`/api/ticket-market/book/${ctx.type}`)'),'SELL NOW binds to the exact bid id/price shown when the sell window opened instead of silently substituting a later bid');"
+          if old not in s: raise SystemExit('missing sell-confirmation validator anchor')
+          p.write_text(s.replace(old,new,1))
+      - name: Syntax and focused validator
+        run: |
+          node --check public/v45-exchange-routing-fill-v1.js
+          node --check scripts/validate-stage26-my-tickets.js
+          node scripts/validate-stage26-my-tickets.js
+      - name: Commit exact-price fix and remove temporary workflow
+        run: |
+          rm .github/workflows/apply-stage5-jr-exact-price.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/v45-exchange-routing-fill-v1.js scripts/validate-stage26-my-tickets.js .github/workflows/apply-stage5-jr-exact-price.yml
+          git commit -m 'Stage 5: bind Jr Broker sell to displayed bid'
+          git push origin HEAD:stage5-jr-broker-exact-price
