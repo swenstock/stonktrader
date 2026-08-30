@@ -54,6 +54,7 @@ jobs:
           node --check scripts/validate-stage24-ticket-market.js
           node --check scripts/validate-stage25-basket.js
           node --check scripts/validate-stage26-my-tickets.js
+          node --check scripts/validate-stage26-my-tickets-wrapper.js
           node --check scripts/validate-stage27-ticket-settlement.js
           node --check scripts/validate-stage31-ticket-native.js
           node --check scripts/validate-stage39-desktop-trading.js
@@ -77,7 +78,7 @@ jobs:
       - name: Validate Stage 25 basket rules
         run: node scripts/validate-stage25-basket.js
       - name: Validate Stage 26 My Tickets cleanup
-        run: node scripts/validate-stage26-my-tickets.js
+        run: node scripts/validate-stage26-my-tickets-wrapper.js
       - name: Validate Stage 27 ticket settlement
         run: node scripts/validate-stage27-ticket-settlement.js
       - name: Validate Stage 31 native ticket exchange lifecycle
