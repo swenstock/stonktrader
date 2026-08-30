@@ -51,6 +51,6 @@ function clean(){
 window.addEventListener('click',normalizeExchangePost,true);
 function run(){clean();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();
-window.addEventListener('sbc:exchange-rendered',run);
+if(typeof window.addEventListener==='function')window.addEventListener('sbc:exchange-rendered',run);
 setTimeout(run,250);setTimeout(run,900);setTimeout(run,1800);
 })();

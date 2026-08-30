@@ -106,5 +106,5 @@ document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;const root=['
 window.__SBC_TICKET_EXCHANGE_STAGE1_TEST={fetchRealBook,renderBookFromBackend,submitOffer,submitCurrentOffer,submitBid,currentOfferTicketId,captureNativeOrder,getCachedBook:type=>realBookCache.get(type),getOwnedTicketId:()=>{try{return ownedTicketContext?.ticketId}catch(_){return undefined}}};
 window.__SBC_TICKET_EXCHANGE_STAGE2_TEST={acceptBid,realHitBestBid,realSellIntoBid,prepareSpecificBid,cachedBidById,cachedBestBid,realOwnedTicketId,captureNativeOrder,getPendingBid:()=>pendingBidAccept};
 function run(){ensureModalControls();schedule()}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();window.addEventListener('sbc:exchange-rendered',()=>schedule());document.addEventListener('click',e=>{if(e.target?.closest?.('#ticketTypeSelector button'))setTimeout(schedule,0)},true);setTimeout(run,400);setTimeout(run,1200);
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else run();if(typeof window.addEventListener==='function')window.addEventListener('sbc:exchange-rendered',()=>schedule());document.addEventListener('click',e=>{if(e.target?.closest?.('#ticketTypeSelector button'))setTimeout(schedule,0)},true);setTimeout(run,400);setTimeout(run,1200);
 })();

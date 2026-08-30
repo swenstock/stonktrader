@@ -21,7 +21,7 @@ function render(){
 let timer=null;
 function schedule(){clearTimeout(timer);timer=setTimeout(render,130)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render,{once:true});else render();
-window.addEventListener('sbc:exchange-rendered',schedule);
+if(typeof window.addEventListener==='function')window.addEventListener('sbc:exchange-rendered',schedule);
 window.addEventListener('storage',e=>{if(e.key===STORE)render()});
 setTimeout(render,400);setTimeout(render,1200);setInterval(render,1500);
 })();
