@@ -1,6 +1,8 @@
 // Backward-compatible V45 schema additions.
 // Runs after db.js creates the legacy schema. Never drops existing data.
 
+const { migrateLegacyPortfolioSchema } = require('./legacyPortfolioSchemaMigration');
+migrateLegacyPortfolioSchema();
 const db = require('./db');
 const { ensureSchema: ensurePrizeReserveSchema } = require('./prizeReserveLedger');
 const { ensureSchema: ensureJuniorBrokerStage2Schema } = require('./juniorBrokerStage2');
