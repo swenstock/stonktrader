@@ -38,6 +38,16 @@ function tierArt(block,key,index){
   const b64=m[0].match(/base64,([^"]+)/)[1];
   return Buffer.from(b64,'base64');
 }
+function floorCardArt(source,key){
+  const start=source.indexOf(`id="cleanCard-${key}"`);
+  const end=source.indexOf('</article>',start);
+  assert(start>=0&&end>start,`${key} floor card missing`);
+  const seg=source.slice(start,end);
+  const m=seg.match(/<img\s+src="data:image\/png;base64,([^"]+)"/g)||[];
+  assert.strictEqual(m.length,1,`${key} floor card must have exactly one embedded image`);
+  const b64=m[0].match(/base64,([^"]+)/)[1];
+  return Buffer.from(b64,'base64');
+}
 
 assert.deepStrictEqual(TURTLE_TIER_ART_KEYS,KEYS,'patch key order changed');
 const shell=exactV45Shell.toString('utf8');
@@ -50,6 +60,8 @@ for(let i=0;i<KEYS.length;i+=1){
   assert.deepStrictEqual(pngDimensions(file),[240,241],`${key} dimensions changed`);
   const embedded=tierArt(block,key,i);
   assert.strictEqual(sha256(embedded),sha256(file),`${key} embedded art differs from canonical file`);
+  const floorCard=floorCardArt(shell,key);
+  assert.strictEqual(sha256(floorCard),sha256(file),`${key} Trading Floor card differs from canonical file`);
   assert(!OLD_SHA256.has(sha256(file)),`${key} still resolves to legacy art`);
   embeddedHashes.push(sha256(embedded));
 }
@@ -65,4 +77,5 @@ console.log('TIERS='+KEYS.join(','));
 console.log('DIMENSIONS=240x241-all-five');
 console.log('DISTINCT_ASSETS=5');
 console.log('LEGACY_HASHES=0');
+console.log('TRADING_FLOOR_CARDS=canonical-all-five');
 console.log('EXTERNAL_CONSUMER=v45-desktop-icons');
