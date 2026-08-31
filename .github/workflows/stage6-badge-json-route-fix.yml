@@ -1,0 +1,114 @@
+name: Stage 6 Badge JSON route boundary builder
+
+on:
+  push:
+    branches: [stage6-badge-json-boundary]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage6-badge-json-boundary
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Restore internal BigInt contract and move conversion to HTTP boundary
+        run: |
+          git fetch origin main
+          git show origin/main:server/badgeMarketV45.js > server/badgeMarketV45.js
+          node <<'NODE'
+          const fs = require('fs');
+          const marketPath = 'server/badgeMarketV45.js';
+          let market = fs.readFileSync(marketPath, 'utf8');
+          const anchor = "function addBadgeInTransaction(db, accountId) {";
+          if ((market.split(anchor).length - 1) !== 1) throw new Error('market helper anchor mismatch');
+          market = market.replace(anchor, "function holdingForJson(holding) {\n  return { quantity:Number(holding.quantity), quantity_listed:Number(holding.quantity_listed) };\n}\n" + anchor);
+          const exportAnchor = "  getHolding,\n";
+          if ((market.split(exportAnchor).length - 1) !== 1) throw new Error('market export anchor mismatch');
+          market = market.replace(exportAnchor, exportAnchor + "  holdingForJson,\n");
+          fs.writeFileSync(marketPath, market);
+
+          const routePath = 'server/routes/badgeMarketV45.js';
+          let route = fs.readFileSync(routePath, 'utf8');
+          const listOld = "const result=market.createListing(db,{accountId:req.account.id,askPrice:req.body?.askPrice});\n      res.json({ok:true,...result});";
+          const listNew = "const result=market.createListing(db,{accountId:req.account.id,askPrice:req.body?.askPrice});\n      res.json({ok:true,...result,reservation:market.holdingForJson(result.reservation)});";
+          const cancelOld = "res.json(market.cancelListing(db,{accountId:req.account.id,listingId:req.params.id}));";
+          const cancelNew = "const result=market.cancelListing(db,{accountId:req.account.id,listingId:req.params.id});\n      res.json({...result,reservation:market.holdingForJson(result.reservation)});";
+          if ((route.split(listOld).length - 1) !== 1) throw new Error('listing route baseline mismatch');
+          if ((route.split(cancelOld).length - 1) !== 1) throw new Error('cancel route baseline mismatch');
+          route = route.replace(listOld, listNew).replace(cancelOld, cancelNew);
+          fs.writeFileSync(routePath, route);
+          NODE
+
+          cat > server/badgeMarketJsonBoundaryV1.test.js <<'EOF'
+          'use strict';
+
+          const assert = require('assert');
+          const { DatabaseSync } = require('node:sqlite');
+          const market = require('./badgeMarketV45');
+
+          function makeDb() {
+            const db = new DatabaseSync(':memory:');
+            db.exec('PRAGMA foreign_keys = ON;');
+            db.exec(`
+              CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, display_name TEXT);
+              CREATE TABLE accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id));
+            `);
+            market.ensureSchema(db);
+            db.prepare("INSERT INTO users(display_name) VALUES ('badge-json-boundary')").run();
+            const accountId = Number(db.prepare('INSERT INTO accounts(user_id) VALUES (1)').run().lastInsertRowid);
+            db.prepare(`INSERT INTO sbc_prize_holdings(account_id,asset_type,quantity,quantity_listed) VALUES (?,?,1,0)`)
+              .run(accountId, market.BADGE_ASSET_TYPE);
+            return { db, accountId };
+          }
+
+          (() => {
+            const { db, accountId } = makeDb();
+            const listing = market.createListing(db, { accountId, askPrice:48000 });
+            assert.strictEqual(Number(db.prepare("SELECT COUNT(*) n FROM badge_listings WHERE seller_account_id=? AND status='active'").get(accountId).n), 1);
+            assert.strictEqual(listing.reservation.quantity, 1n);
+            assert.strictEqual(listing.reservation.quantity_listed, 1n);
+            assert.throws(() => JSON.stringify({ ok:true, ...listing }), /BigInt/);
+            const listingPayload = { ok:true, ...listing, reservation:market.holdingForJson(listing.reservation) };
+            assert.deepStrictEqual(listingPayload.reservation, { quantity:1, quantity_listed:1 });
+            assert.doesNotThrow(() => JSON.stringify(listingPayload));
+            assert.strictEqual(listing.warning.warn, false);
+            assert.strictEqual(listing.warning.reason, 'no_reference');
+
+            const cancelled = market.cancelListing(db, { accountId, listingId:listing.id });
+            assert.strictEqual(cancelled.reservation.quantity, 1n);
+            assert.strictEqual(cancelled.reservation.quantity_listed, 0n);
+            const cancelPayload = { ...cancelled, reservation:market.holdingForJson(cancelled.reservation) };
+            assert.deepStrictEqual(cancelPayload.reservation, { quantity:1, quantity_listed:0 });
+            assert.doesNotThrow(() => JSON.stringify(cancelPayload));
+            assert.strictEqual(db.prepare('SELECT status FROM badge_listings WHERE id=?').get(listing.id).status, 'cancelled');
+
+            const fakeCustodian = { getBalance:() => 1000000, debit:() => {} };
+            const bid = market.createBid(db, fakeCustodian, { accountId, bidPrice:47000 });
+            assert.doesNotThrow(() => JSON.stringify({ ok:true, ...bid }));
+            assert.strictEqual(Number(db.prepare("SELECT COUNT(*) n FROM badge_bids WHERE buyer_account_id=? AND status='active'").get(accountId).n), 1);
+            db.close();
+            console.log('Badge Market JSON Boundary V1: PASS');
+            console.log('Internal reservation contract remains BigInt; listing/cancel HTTP payloads are JSON-safe; listing persists exactly once; bid response remains JSON-safe.');
+          })();
+          EOF
+
+          node --check server/badgeMarketV45.js
+          node --check server/routes/badgeMarketV45.js
+          node --check server/badgeMarketJsonBoundaryV1.test.js
+          npm run test:ticket-exchange-stage4
+          npm run test:badge-quantity-lock
+      - name: Commit source-only correction
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/stage6-badge-json-route-fix.yml
+          git add server/badgeMarketV45.js server/routes/badgeMarketV45.js server/badgeMarketJsonBoundaryV1.test.js
+          git commit -m "Keep Badge BigInt contract and sanitize HTTP responses"
+          git push origin HEAD:stage6-badge-json-boundary
