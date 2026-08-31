@@ -7,6 +7,8 @@ const history=fs.readFileSync('public/v45-exchange-history-stage2-v1.js','utf8')
 for(const token of ['recentTicketSales','[3,17,42]','function ensurePanel','function renderMine','<h3>MY ORDERS</h3>']){
   assert(!v36.includes(token),`v36 legacy producer must be removed: ${token}`);
 }
+assert(!v36.includes('summaryLast'),'v36 must not write or reference the Stage 2 LAST TRADE node');
+assert(history.includes("const summaryLast=document.getElementById('summaryLast')")||history.includes("document.getElementById('summaryLast')"),'Stage 2 history owner must retain LAST TRADE ownership');
 for(const token of ['ensureRealRecent','renderSales','refreshSales','/api/ticket-market/recent/','data-real-sales-refresh','sbcExchangeRealRecentSales']){
   assert(!layout.includes(token),`layout recent-sales producer must be removed: ${token}`);
 }
@@ -64,6 +66,7 @@ function extract(name){
   console.log('Exchange Stage 5 Source Close-out: PASS');
   console.log('LEGACY_PRODUCERS=removed-at-source');
   console.log('MY_ORDERS_CONTAINER=retired');
+  console.log('LAST_TRADE_OWNER=stage2-only');
   console.log('ACCOUNT_REFRESH=single-owner');
   console.log('BURN_REFRESH=shared-path-once');
   console.log('RECENT_SALES_API_POLLING=retired');
