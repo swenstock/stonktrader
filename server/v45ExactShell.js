@@ -80,10 +80,10 @@ function applyTurtleTierArtPatch(html) {
     const end = next ? block.indexOf(`"${next}":`, start + keyAnchor.length) : block.length;
     if (start < 0 || end <= start) throw new Error(`Exact V45 turtle art patch compatibility failure: ${key}`);
     const segment = block.slice(start, end);
-    const artPattern = /"art":"data:image\/png;base64,[^"]+"/g;
+    const artPattern = /"art":\s*"data:image\/png;base64,[^"]+"/g;
     const matches = segment.match(artPattern) || [];
     if (matches.length !== 1) throw new Error(`Exact V45 turtle art patch integrity failure: ${key} art fields=${matches.length}`);
-    const replaced = segment.replace(artPattern, `"art":"${turtleTierArtDataUri(key)}"`);
+    const replaced = segment.replace(artPattern, `"art": "${turtleTierArtDataUri(key)}"`);
     block = block.slice(0, start) + replaced + block.slice(end);
   }
   return Buffer.from(source.slice(0, tierStart) + block + source.slice(tierEnd), 'utf8');
