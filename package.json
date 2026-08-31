@@ -30,7 +30,7 @@
     "test:freeroll-route-funding": "node server/freerollRouteFundingV45.test.js",
     "test:ticket-exchange-stage1": "node server/ticketExchangeStage1.test.js",
     "test:ticket-exchange-stage2": "node server/ticketExchangeStage2.test.js",
-    "test:badge-quantity-lock": "node server/badgeQuantityLockV45.test.js",
+    "test:badge-quantity-lock": "node server/badgeQuantityLockV45.test.js && node server/badgeMarketJsonBoundaryV1.test.js",
     "test:ticket-exchange-stage4": "node server/ticketExchangeStage4AcceptanceV3.test.js && node server/ticketExchangeStage4Ui.test.js",
     "test:backend-lockdown": "node server/backendLockdownRelease.test.js",
     "test:orders-activity-panel": "node server/ordersActivityPanelFixes.test.js",

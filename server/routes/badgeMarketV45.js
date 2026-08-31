@@ -63,7 +63,7 @@ router.get('/mine', requireAuth, (req, res) => {
   } catch (err) { sendError(res, err); }
 });
 router.post('/listings', requireAuth, (req, res) => {
-  try { res.json({ ok:true, ...market.createListing(db, { accountId:req.account.id, askPrice:req.body?.askPrice }) }); }
+  try { const result=market.createListing(db, { accountId:req.account.id, askPrice:req.body?.askPrice }); res.json({ ok:true, ...result, reservation:market.holdingForJson(result.reservation) }); }
   catch (err) { sendError(res, err); }
 });
 router.patch('/listings/:id', requireAuth, (req, res) => {
@@ -78,7 +78,7 @@ router.patch('/listings/:id', requireAuth, (req, res) => {
   } catch (err) { sendError(res, err); }
 });
 router.delete('/listings/:id', requireAuth, (req, res) => {
-  try { res.json(market.cancelListing(db, { accountId:req.account.id, listingId:Number(req.params.id) })); }
+  try { const result=market.cancelListing(db, { accountId:req.account.id, listingId:Number(req.params.id) }); res.json({ ...result, reservation:market.holdingForJson(result.reservation) }); }
   catch (err) { sendError(res, err); }
 });
 router.post('/listings/:id/buy', requireAuth, (req, res) => {

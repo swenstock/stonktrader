@@ -92,6 +92,9 @@ function getHolding(db, accountId) {
     .get(accountId, BADGE_ASSET_TYPE);
   return row || { quantity: 0n, quantity_listed: 0n };
 }
+function holdingForJson(holding) {
+  return { quantity:Number(holding.quantity), quantity_listed:Number(holding.quantity_listed) };
+}
 function addBadgeInTransaction(db, accountId) {
   prepareBigInt(db, `INSERT INTO sbc_prize_holdings(account_id, asset_type, quantity, quantity_listed)
     VALUES (?, ?, 1, 0)
@@ -308,6 +311,6 @@ function mintBadge(db, custodian, { accountId, issuanceId = `player-mint:${accou
 
 module.exports = {
   BADGE_ASSET_TYPE, MINT_PRICE_STONK, BADGE_FLOOR_STONK, MISPRICING_THRESHOLD, EXCHANGE_FEE_PCT,
-  ensureSchema, feeFor, currentReferencePrice, mispricingWarning, book, getHolding,
+  ensureSchema, feeFor, currentReferencePrice, mispricingWarning, book, getHolding, holdingForJson,
   createListing, cancelListing, createBid, cancelBid, buyListing, sellToBid, mintBadge,
 };
