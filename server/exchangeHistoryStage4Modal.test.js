@@ -19,12 +19,12 @@ const api=window.__SBC_EXCHANGE_HISTORY_STAGE2_TEST;assert(api,'history test API
 function tick(){return new Promise(r=>setImmediate(r));}
 (async()=>{
  api.openHistory();await tick();
- assert(urls[0].includes('/api/exchange-history?'));assert(urls[0].includes('limit=25'));assert(urls[0].includes('offset=0'));assert(!urls[0].includes('search='));
+ assert(urls[0].includes('/api/exchange-history?'));assert(urls[0].includes('limit=25'));assert(urls[0].includes('offset=0'));assert(!urls[0].includes('search='));assert(!urls[0].includes('market='),'History must query the full ledger, not only the selected market');
  assert(parts.body.innerHTML.includes('Buyer 0'));assert(parts.body.innerHTML.includes('Ticket #100'));assert.strictEqual(parts.next.disabled,false,'first page must expose Next when hasMore=true');assert.strictEqual(parts.prev.disabled,true,'first page must disable Prev');
  parts.next.handlers.click();await tick();
- assert(urls.at(-1).includes('offset=25'),'Next must request a real second server page');assert(parts.body.innerHTML.includes('Carol Gamma'));assert(parts.body.innerHTML.includes('Jr Stonk Broker Badge'));assert.strictEqual(parts.next.disabled,true,'last page must disable Next');assert.strictEqual(parts.prev.disabled,false,'second page must enable Prev');
+ assert(urls.at(-1).includes('offset=25'),'Next must request a real second server page');assert(!urls.at(-1).includes('market='),'pagination must stay on the full ledger');assert(parts.body.innerHTML.includes('Carol Gamma'));assert(parts.body.innerHTML.includes('Jr Stonk Broker Badge'));assert.strictEqual(parts.next.disabled,true,'last page must disable Next');assert.strictEqual(parts.prev.disabled,false,'second page must enable Prev');
  parts.input.value='Bob';parts.form.handlers.submit({preventDefault(){}});await tick();
- const searchUrl=urls.at(-1);assert(searchUrl.includes('offset=0'),'new search must reset to first page');assert(searchUrl.includes('search=Bob'),'account search must be sent to the server');assert(parts.body.innerHTML.includes('Bob Beta'),'server search result must render');assert(!parts.body.innerHTML.includes('Carol Gamma'),'search result must replace prior page');assert(parts.status.textContent.includes('Bob'));
+ const searchUrl=urls.at(-1);assert(searchUrl.includes('offset=0'),'new search must reset to first page');assert(searchUrl.includes('search=Bob'),'account search must be sent to the server');assert(!searchUrl.includes('market='),'account search must search the complete ledger');assert(parts.body.innerHTML.includes('Bob Beta'),'server search result must render');assert(!parts.body.innerHTML.includes('Carol Gamma'),'search result must replace prior page');assert(parts.status.textContent.includes('Bob'));
  assert(parts.body.innerHTML.includes('<td>Bob Beta</td>'));assert(parts.body.innerHTML.includes('<td>Alice Alpha</td>'));assert(!parts.body.innerHTML.includes('account_id'));assert(!parts.body.innerHTML.includes('wallet'));
  assert(!source.includes('MutationObserver'));assert(!/setInterval\s*\(|setTimeout\s*\(/.test(source));
  console.log('Exchange History Stage 4 Modal: PASS');
@@ -32,5 +32,6 @@ function tick(){return new Promise(r=>setImmediate(r));}
  console.log('PAGE_2_REQUEST=offset-25');
  console.log('SEARCH_REQUEST=Bob-server-side');
  console.log('SEARCH_RESULT=Bob-Beta');
+ console.log('FULL_LEDGER=no-market-filter');
  console.log('COLUMNS=Time-Market-Price-Buyer-Seller-TicketBadge');
 })();
