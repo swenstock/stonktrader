@@ -70,6 +70,11 @@ assert.strictEqual(new Set(embeddedHashes).size,KEYS.length,'the five turtle tie
 assert(/TIER_DATA\[[^\]]+\]\.art|TIER_DATA\[[^\]]+\]\?\.art|TIER_DATA\.[A-Za-z]+\.art/.test(shell), 'no in-shell TIER_DATA art consumer found');
 const desktopIcons=fs.readFileSync(path.join(ROOT,'..','public','v45-desktop-icons.js'),'utf8');
 assert(desktopIcons.includes("TIER_DATA[key]?.art"),'desktop icon consumer no longer reads canonical TIER_DATA art');
+assert(desktopIcons.includes('function syncFloorTierArt()'),'Trading Floor must have runtime canonical art synchronization');
+for(const key of KEYS){
+  assert(desktopIcons.includes('`cleanCard-${key}`'),'Trading Floor runtime sync must target cleanCard tier ids');
+}
+assert(desktopIcons.includes("title.innerHTML='JR.<br>BROKER'"),'Junior Trading Floor title must render JR. BROKER');
 const desktopCss=fs.readFileSync(path.join(ROOT,'..','public','v45-desktop-icons.css'),'utf8');
 assert(desktopCss.includes('.floor-clean-card>img{'),'Trading Floor portrait override missing');
 assert(desktopCss.includes('height:auto!important;'),'Trading Floor portraits must use natural height');
@@ -77,6 +82,7 @@ assert(desktopCss.includes('aspect-ratio:auto!important;'),'Trading Floor portra
 assert(desktopCss.includes('object-fit:contain!important;'),'Trading Floor portraits must render the full canonical image');
 const serverIndex=fs.readFileSync(path.join(ROOT,'index.js'),'utf8');
 assert(serverIndex.includes('/v45-desktop-icons.css?v=2'),'Trading Floor portrait stylesheet cache-buster must be v2');
+assert(serverIndex.includes('/v45-desktop-icons.js?v=2'),'Trading Floor canonical art runtime script cache-buster must be v2');
 assert(serverIndex.includes('desktopIcons: "v2"'),'health metadata must report desktop icon assets v2');
 
 console.log('Turtle Tier Art Step 1: PASS');
@@ -86,6 +92,9 @@ console.log('DIMENSIONS=240x241-all-five');
 console.log('DISTINCT_ASSETS=5');
 console.log('LEGACY_HASHES=0');
 console.log('TRADING_FLOOR_CARDS=canonical-all-five');
+console.log('TRADING_FLOOR_RUNTIME=canonical-tier-data');
 console.log('TRADING_FLOOR_RENDER=natural-full-image');
 console.log('TRADING_FLOOR_CSS_CACHE_BUSTER=v2');
+console.log('TRADING_FLOOR_JS_CACHE_BUSTER=v2');
+console.log('JUNIOR_LABEL=JR. BROKER');
 console.log('EXTERNAL_CONSUMER=v45-desktop-icons');
