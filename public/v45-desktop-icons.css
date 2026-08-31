@@ -4,3 +4,14 @@
   .mini-tier b{min-width:0}
   .mini-tier span{white-space:nowrap}
 }
+
+/* Turtle Trading Floor portraits: render full canonical 240x241 PNGs without legacy square crop. */
+.floor-clean-card>img{
+  display:block!important;
+  width:100%!important;
+  height:auto!important;
+  aspect-ratio:auto!important;
+  object-fit:contain!important;
+  image-rendering:pixelated;
+  background:#a6c7e0;
+}
