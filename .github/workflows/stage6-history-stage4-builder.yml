@@ -1,0 +1,53 @@
+name: Stage 6 History Stage 4 builder
+on:
+  push:
+    branches: [stage6-history-stage4]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage6-history-stage4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Wire Stage 4 test and cache versions
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('package.json');s=p.read_text()
+          old='npm run test:exchange-history-stage3-preview && npm run test:badge-quantity-lock'
+          new='npm run test:exchange-history-stage3-preview && npm run test:exchange-history-stage4-modal && npm run test:badge-quantity-lock'
+          assert s.count(old)==1,s.count(old);s=s.replace(old,new)
+          old2='    "test:exchange-history-stage3-preview": "node server/exchangeHistoryStage3Preview.test.js",\n'
+          assert s.count(old2)==1,s.count(old2);s=s.replace(old2,old2+'    "test:exchange-history-stage4-modal": "node server/exchangeHistoryStage4Modal.test.js",\n')
+          p.write_text(s)
+          p=Path('server/index.js');s=p.read_text()
+          assert s.count('/v45-exchange-history-stage2-v1.js?v=2')==1
+          assert s.count('/v45-exchange-dialog-v1.js?v=5')==1
+          s=s.replace('/v45-exchange-history-stage2-v1.js?v=2','/v45-exchange-history-stage2-v1.js?v=3')
+          s=s.replace('/v45-exchange-dialog-v1.js?v=5','/v45-exchange-dialog-v1.js?v=6')
+          p.write_text(s)
+          PY
+      - name: Run focused History behavior
+        run: |
+          node server/exchangeHistoryStage2Ui.test.js
+          node server/exchangeHistoryStage3Preview.test.js
+          node server/exchangeHistoryStage4Modal.test.js
+      - name: Syntax check
+        run: |
+          node --check public/v45-exchange-dialog-v1.js
+          node --check public/v45-exchange-history-stage2-v1.js
+          node --check server/exchangeHistoryStage4Modal.test.js
+          node --check server/index.js
+      - name: Commit source only and remove builder
+        run: |
+          rm .github/workflows/stage6-history-stage4-builder.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/v45-exchange-dialog-v1.js public/v45-exchange-history-stage2-v1.js server/exchangeHistoryStage4Modal.test.js server/index.js package.json .github/workflows/stage6-history-stage4-builder.yml
+          git commit -m "Add searchable paginated Exchange history modal"
+          git push origin HEAD:stage6-history-stage4
