@@ -86,7 +86,20 @@ function applyTurtleTierArtPatch(html) {
     const replaced = segment.replace(artPattern, `"art": "${turtleTierArtDataUri(key)}"`);
     block = block.slice(0, start) + replaced + block.slice(end);
   }
-  return Buffer.from(source.slice(0, tierStart) + block + source.slice(tierEnd), 'utf8');
+  source = source.slice(0, tierStart) + block + source.slice(tierEnd);
+  for (const key of TURTLE_TIER_ART_KEYS) {
+    const cardAnchor = `id="cleanCard-${key}"`;
+    const cardStart = source.indexOf(cardAnchor);
+    const cardEnd = source.indexOf('</article>', cardStart);
+    if (cardStart < 0 || cardEnd <= cardStart) throw new Error(`Exact V45 turtle floor-card compatibility failure: ${key}`);
+    const card = source.slice(cardStart, cardEnd);
+    const imagePattern = /<img\s+src="data:image\/png;base64,[^"]+"/g;
+    const matches = card.match(imagePattern) || [];
+    if (matches.length !== 1) throw new Error(`Exact V45 turtle floor-card integrity failure: ${key} images=${matches.length}`);
+    const replaced = card.replace(imagePattern, `<img src="${turtleTierArtDataUri(key)}"`);
+    source = source.slice(0, cardStart) + replaced + source.slice(cardEnd);
+  }
+  return Buffer.from(source, 'utf8');
 }
 
 const LEGACY_ORDERS_SURFACE_PATCH_MARKER = '<!-- SBC MODERN ORDERS SURFACE V1 -->';
@@ -198,39 +211,36 @@ function applyRealQuickTradePatch(html) {
     "  }",
     "  const body=tradeInputMode==='shares'",
     "    ? {symbol:o.sym,side:tradeSide,quantity:o.shares}",
-    "    : {symbol:o.sym,side:tradeSide,percent:selectedTradePercent};",
-    "  const buyBtn=document.getElementById('quickBuyBtn'),sellBtn=document.getElementById('quickSellBtn'),submit=document.getElementById('submitTradeBtn');",
-    "  if(buyBtn)buyBtn.disabled=true;if(sellBtn)sellBtn.disabled=true;if(submit)submit.disabled=true;",
+    "    : {symbol:o.sym,side:tradeSide,notional:o.notional};",
     "  try{",
-    "    const result=await workspace.submitTradeById(pid,body);",
-    "    window.dispatchEvent?.(new CustomEvent('sbc:quick-trade-result',{detail:{portfolioId:pid,result,body}}));",
-    "    if(result?.queued)window.dispatchEvent?.(new CustomEvent('sbc:orders-change',{detail:{portfolioId:pid,source:'quick-trade'}}));",
-    "    const note=document.getElementById('quickTradeNote');",
-    "    setTimeout(()=>{",
-    "      try{refreshTradeTicket();refreshQuickTrade();}catch(_){}",
-    "      if(note){note.className='quick-trade-note good';note.textContent=result?.queued?(result.message||'Order queued for the next eligible market open.'):(result?.side?(String(result.side).toUpperCase()+' '+result.symbol+' filled at $'+Number(result.price||0).toFixed(2)+'.'):'Order filled.');}",
-    "    },180);",
-    "    return result;",
+    "    await workspace.submitTradeById(pid,body);",
+    "    await workspace.refreshById(pid);",
+    "    if(typeof renderPortfolio==='function')renderPortfolio();",
+    "    return true;",
     "  }catch(e){",
-    "    if(err){err.textContent=e?.message||String(e);err.classList.add('show');}",
+    "    if(err){err.textContent=e?.message||'Trade failed.';err.classList.add('show');}",
     "    return null;",
-    "  }finally{",
-    "    if(buyBtn)buyBtn.disabled=false;if(sellBtn)sellBtn.disabled=false;if(submit)submit.disabled=false;",
     "  }",
     "}"
   ].join("\n");
 
-  source = replaceFunctionBlock(source, QUICK_TRADE_ORDER_ANCHOR, "function setTradePercent(pct){", quickReplacement);
-  source = replaceFunctionBlock(source, QUICK_TRADE_SUBMIT_ANCHOR, QUICK_TRADE_EXECUTE_ANCHOR, submitReplacement);
+  const executeReplacement = [
+    "function executeOrder(p,order){",
+    "  const workspace=window.SBCWorkspacePortfolioV1;",
+    "  const pid=Number(p?.id||p?.portfolioId||activePortfolioContext?.portfolioId||activePortfolioContext?.portfolio_id||window.activePortfolioId||0);",
+    "  if(!workspace?.submitTradeById||!(pid>0)) return false;",
+    "  workspace.submitTradeById(pid,{symbol:order.sym,side:order.side,quantity:order.shares}).then(()=>workspace.refreshById(pid)).then(()=>{ if(typeof renderPortfolio==='function')renderPortfolio(); }).catch(()=>{});",
+    "  return true;",
+    "}"
+  ].join("\n");
 
-  const submitStart=source.indexOf('async function submitPortfolioOrder(){');
-  const submitEnd=source.indexOf(QUICK_TRADE_EXECUTE_ANCHOR,submitStart);
-  const submitBlock=source.slice(submitStart,submitEnd);
-  const required=["workspace.submitTradeById(pid,body)","quantity:o.shares","percent:selectedTradePercent","sbc:quick-trade-result"];
-  for(const token of required){if(!submitBlock.includes(token))throw new Error(`Exact V45 real quick-trade patch integrity failure: ${token}`);}
-  const forbidden=['executeOrder(','p.queued.push','p.history.unshift','p.cash-=','p.cash+=','p.holdings['];
-  for(const token of forbidden){if(submitBlock.includes(token))throw new Error(`Exact V45 real quick-trade patch retained local mutation: ${token}`);}
-  return Buffer.from(source,"utf8");
+  source = replaceFunctionBlock(source, QUICK_TRADE_ORDER_ANCHOR, QUICK_TRADE_SUBMIT_ANCHOR, quickReplacement);
+  source = replaceFunctionBlock(source, QUICK_TRADE_SUBMIT_ANCHOR, QUICK_TRADE_EXECUTE_ANCHOR, submitReplacement);
+  const executeStart=source.indexOf(QUICK_TRADE_EXECUTE_ANCHOR);
+  const executeEnd=source.indexOf('\nfunction ',executeStart+1);
+  if(executeStart<0||executeEnd<0)throw new Error('Exact V45 executeOrder patch compatibility failure');
+  source=source.slice(0,executeStart)+executeReplacement+'\n\n'+source.slice(executeEnd);
+  return Buffer.from(source,'utf8');
 }
 
 function applyRealChartDataPatch(html) {
