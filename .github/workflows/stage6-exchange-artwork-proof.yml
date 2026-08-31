@@ -1,0 +1,39 @@
+name: Stage 6 Exchange artwork proof
+
+on:
+  push:
+    branches: [stage6-exchange-artwork]
+
+permissions:
+  contents: read
+
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Prove assembled shell artwork implementation
+        run: |
+          node <<'NODE'
+          const { exactV45Shell } = require('./server/v45ExactShell');
+          const s = exactV45Shell.toString('utf8');
+          function block(name,next){const a=s.indexOf('function '+name+'(');const b=s.indexOf('function '+next+'(',a+1); if(a<0||b<0) throw new Error('missing '+name); return s.slice(a,b)}
+          console.log('=== exchangeVisualHTML ===');
+          console.log(block('exchangeVisualHTML','hydrateExchangeTierIcons'));
+          console.log('=== hydrateExchangeTierIcons ===');
+          const h=s.indexOf('function hydrateExchangeTierIcons('); if(h<0) throw new Error('missing hydrateExchangeTierIcons');
+          const after=s.indexOf('\nfunction ',h+10); console.log(s.slice(h,after>h?after:h+2500));
+          console.log('=== Exchange img src values ===');
+          const viewStart=s.indexOf('id="view-exchange"');
+          const viewEnd=s.indexOf('id="view-',viewStart+20);
+          const view=s.slice(viewStart,viewEnd>viewStart?viewEnd:viewStart+70000);
+          const srcs=[...view.matchAll(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi)].map(m=>m[1]);
+          console.log([...new Set(srcs)].join('\n'));
+          console.log('=== function counts ===');
+          console.log('exchangeVisualHTML =>', (s.match(/function exchangeVisualHTML\(/g)||[]).length);
+          console.log('hydrateExchangeTierIcons =>', (s.match(/function hydrateExchangeTierIcons\(/g)||[]).length);
+          console.log('view-exchange =>', (s.match(/id="view-exchange"/g)||[]).length);
+          NODE
