@@ -21,36 +21,17 @@ jobs:
           const { exactV45Shell } = require('./server/v45ExactShell');
           const s = exactV45Shell.toString('utf8');
           function functionBlock(name){const a=s.indexOf('function '+name+'(');if(a<0)throw new Error('missing '+name);const b=s.indexOf('\nfunction ',a+10);return s.slice(a,b>a?b:a+3000)}
-          function constBlock(name){const a=s.indexOf('const '+name+'=');if(a<0)throw new Error('missing const '+name);const b=s.indexOf('\nconst ',a+10);const f=s.indexOf('\nfunction ',a+10);const ends=[b,f].filter(x=>x>a);return s.slice(a,ends.length?Math.min(...ends):a+5000)}
-          console.log('=== TIER_DATA ===');
-          console.log(constBlock('TIER_DATA'));
+          console.log('=== TIER_DATA OCCURRENCES ===');
+          let from=0,count=0;
+          while(true){const i=s.indexOf('TIER_DATA',from);if(i<0)break;count++;console.log('--- occurrence '+count+' @ '+i+' ---');console.log(s.slice(Math.max(0,i-900),Math.min(s.length,i+1800)));from=i+9;}
+          console.log('TIER_DATA literal occurrences =>',count);
           console.log('=== getExchangeTicketVisual ===');
           console.log(functionBlock('getExchangeTicketVisual'));
           console.log('=== exchangeVisualHTML ===');
           console.log(functionBlock('exchangeVisualHTML'));
           console.log('=== hydrateExchangeTierIcons ===');
           console.log(functionBlock('hydrateExchangeTierIcons'));
-          const tierMatch=s.match(/const TIER_DATA\s*=\s*(\{[\s\S]*?\n\});/);
-          if(!tierMatch)throw new Error('unable to isolate TIER_DATA literal');
-          const vm=require('vm');
-          const tier=vm.runInNewContext('('+tierMatch[1]+')');
-          console.log('=== ART VALUES ===');
-          for(const key of ['junior','trader','clerk','runner']){
-            if(!tier[key]) throw new Error('missing tier '+key);
-            console.log(key+' => '+tier[key].art);
-          }
-          console.log('=== LOCAL PATH CHECK ===');
-          const fs=require('fs'),path=require('path');
-          for(const key of ['junior','trader','clerk','runner']){
-            const art=String(tier[key].art||'');
-            if(/^data:/i.test(art)){console.log(key+' => DATA URI');continue;}
-            if(/^https?:/i.test(art)){console.log(key+' => EXTERNAL '+art);continue;}
-            const rel=art.replace(/^\//,'');
-            const candidates=[path.join(process.cwd(),'public',rel),path.join(process.cwd(),rel)];
-            console.log(key+' => '+candidates.map(p=>p+':'+fs.existsSync(p)).join(' | '));
-          }
-          console.log('=== COUNTS ===');
-          console.log('TIER_DATA =>', (s.match(/const TIER_DATA\s*=/g)||[]).length);
+          console.log('=== FUNCTION COUNTS ===');
           console.log('getExchangeTicketVisual =>', (s.match(/function getExchangeTicketVisual\(/g)||[]).length);
           console.log('exchangeVisualHTML =>', (s.match(/function exchangeVisualHTML\(/g)||[]).length);
           console.log('hydrateExchangeTierIcons =>', (s.match(/function hydrateExchangeTierIcons\(/g)||[]).length);
