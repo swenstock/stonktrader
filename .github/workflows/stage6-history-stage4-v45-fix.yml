@@ -1,0 +1,38 @@
+name: Stage 6 History Stage 4 V45 fix
+on:
+  push:
+    branches: [stage6-history-stage4]
+permissions:
+  contents: write
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage6-history-stage4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Update Stage 26 dialog cache assertion
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+          for name in ['scripts/validate-stage26-my-tickets.js','scripts/validate-stage26-my-tickets-wrapper.js']:
+              p=Path(name);s=p.read_text();assert s.count('/v45-exchange-dialog-v1.js?v=5')>=1,name
+              p.write_text(s.replace('/v45-exchange-dialog-v1.js?v=5','/v45-exchange-dialog-v1.js?v=6'))
+          PY
+      - name: Prove focused validators and history tests
+        run: |
+          node scripts/validate-stage26-my-tickets-wrapper.js
+          node server/exchangeHistoryStage2Ui.test.js
+          node server/exchangeHistoryStage3Preview.test.js
+          node server/exchangeHistoryStage4Modal.test.js
+      - name: Commit source only and remove fixer
+        run: |
+          rm .github/workflows/stage6-history-stage4-v45-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/validate-stage26-my-tickets.js scripts/validate-stage26-my-tickets-wrapper.js .github/workflows/stage6-history-stage4-v45-fix.yml
+          git commit -m "Update Stage 26 dialog cache assertion"
+          git push origin HEAD:stage6-history-stage4
