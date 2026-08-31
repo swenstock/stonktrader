@@ -1,28 +1,9 @@
 (()=>{
 'use strict';
 if(window.__sbcTicketRecentV40)return;window.__sbcTicketRecentV40=true;
-const STORE='sbcTicketSettlementV38';
-const LABELS={junior:'JR BROKER',trader:'TRADER',clerk:'CLERK',runner:'RUNNER'};
-const ACTIVE_TYPES=new Set(Object.keys(LABELS));
-const $=(s,r=document)=>r.querySelector(s);
-function loadTrades(){try{const x=JSON.parse(localStorage.getItem(STORE)||'{}');return Array.isArray(x.trades)?x.trades.filter(t=>ACTIVE_TYPES.has(t?.type)):[]}catch(_){return[]}}
-function ensureBox(){
-  const mine=$('#tm36Mine');if(!mine||!mine.parentNode)return null;
-  const legacy=$('#tm38Recent',mine);if(legacy)legacy.remove();
-  let box=$('#tm40Recent');
-  if(!box){box=document.createElement('section');box.id='tm40Recent';box.className='tm38-recent tm40-recent-persistent';mine.parentNode.insertBefore(box,mine.nextSibling);}
-  else if(box.previousElementSibling!==mine)mine.parentNode.insertBefore(box,mine.nextSibling);
-  return box;
-}
-function render(){
-  const box=ensureBox();if(!box)return;
-  const trades=loadTrades().slice(0,6);
-  box.innerHTML=`<div class="tm38-recent-head"><b>RECENT TRADES</b><span>PERSISTED FILLS</span></div>${trades.length?trades.map(t=>`<div class="tm38-trade"><span class="${t.side==='BUY'?'buy':'sell'}">${t.side}</span><b>${LABELS[t.type]}</b><strong>${Number(t.price||0).toLocaleString()} STONK</strong><time>${new Date(t.at).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'})}</time></div>`).join(''):'<div class="tm38-empty">No completed ticket trades yet.</div>'}`;
-}
-let timer=null;
-function schedule(){clearTimeout(timer);timer=setTimeout(render,130)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',render,{once:true});else render();
-if(typeof window.addEventListener==='function'){window.addEventListener('sbc:exchange-rendered',schedule);window.addEventListener('sbc:exchange-heartbeat',schedule);}
-window.addEventListener('storage',e=>{if(e.key===STORE)render()});
-setTimeout(render,400);setTimeout(render,1200);
+function retire(){document.getElementById('tm38Recent')?.remove?.();document.getElementById('tm40Recent')?.remove?.();return true;}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',retire,{once:true});else retire();
+window.addEventListener?.('sbc:exchange-rendered',retire);
+window.addEventListener?.('sbc:exchange-heartbeat',retire);
+window.__SBC_TICKET_RECENT_V40={retired:true,retire};
 })();
