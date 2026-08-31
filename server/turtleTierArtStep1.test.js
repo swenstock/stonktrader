@@ -75,6 +75,9 @@ assert(desktopCss.includes('.floor-clean-card>img{'),'Trading Floor portrait ove
 assert(desktopCss.includes('height:auto!important;'),'Trading Floor portraits must use natural height');
 assert(desktopCss.includes('aspect-ratio:auto!important;'),'Trading Floor portraits must not use legacy square aspect ratio');
 assert(desktopCss.includes('object-fit:contain!important;'),'Trading Floor portraits must render the full canonical image');
+const serverIndex=fs.readFileSync(path.join(ROOT,'index.js'),'utf8');
+assert(serverIndex.includes('/v45-desktop-icons.css?v=2'),'Trading Floor portrait stylesheet cache-buster must be v2');
+assert(serverIndex.includes('desktopIcons: "v2"'),'health metadata must report desktop icon assets v2');
 
 console.log('Turtle Tier Art Step 1: PASS');
 console.log('CANONICAL_OWNER=TIER_DATA-only');
@@ -84,4 +87,5 @@ console.log('DISTINCT_ASSETS=5');
 console.log('LEGACY_HASHES=0');
 console.log('TRADING_FLOOR_CARDS=canonical-all-five');
 console.log('TRADING_FLOOR_RENDER=natural-full-image');
+console.log('TRADING_FLOOR_CSS_CACHE_BUSTER=v2');
 console.log('EXTERNAL_CONSUMER=v45-desktop-icons');
