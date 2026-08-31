@@ -15,24 +15,42 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Prove assembled shell artwork implementation
+      - name: Validate embedded Exchange tier PNG data
         run: |
           node <<'NODE'
           const { exactV45Shell } = require('./server/v45ExactShell');
-          const s = exactV45Shell.toString('utf8');
-          function functionBlock(name){const a=s.indexOf('function '+name+'(');if(a<0)throw new Error('missing '+name);const b=s.indexOf('\nfunction ',a+10);return s.slice(a,b>a?b:a+3000)}
-          console.log('=== TIER_DATA OCCURRENCES ===');
-          let from=0,count=0;
-          while(true){const i=s.indexOf('TIER_DATA',from);if(i<0)break;count++;console.log('--- occurrence '+count+' @ '+i+' ---');console.log(s.slice(Math.max(0,i-900),Math.min(s.length,i+1800)));from=i+9;}
-          console.log('TIER_DATA literal occurrences =>',count);
-          console.log('=== getExchangeTicketVisual ===');
-          console.log(functionBlock('getExchangeTicketVisual'));
-          console.log('=== exchangeVisualHTML ===');
-          console.log(functionBlock('exchangeVisualHTML'));
-          console.log('=== hydrateExchangeTierIcons ===');
-          console.log(functionBlock('hydrateExchangeTierIcons'));
-          console.log('=== FUNCTION COUNTS ===');
-          console.log('getExchangeTicketVisual =>', (s.match(/function getExchangeTicketVisual\(/g)||[]).length);
-          console.log('exchangeVisualHTML =>', (s.match(/function exchangeVisualHTML\(/g)||[]).length);
-          console.log('hydrateExchangeTierIcons =>', (s.match(/function hydrateExchangeTierIcons\(/g)||[]).length);
+          const s=exactV45Shell.toString('utf8');
+          const start=s.indexOf('const TIER_DATA = ');
+          const end=s.indexOf(';\n',start);
+          if(start<0||end<0)throw new Error('TIER_DATA declaration not isolated');
+          const literal=s.slice(start+'const TIER_DATA = '.length,end);
+          const tier=JSON.parse(literal);
+          console.log('TIER_DATA declaration count =>',(s.match(/const TIER_DATA\s*=\s*/g)||[]).length);
+          for(const key of ['junior','trader','clerk','runner']){
+            const art=String(tier[key]?.art||'');
+            const prefix='data:image/png;base64,';
+            console.log('--- '+key+' ---');
+            console.log('art chars =>',art.length);
+            console.log('prefix =>',art.slice(0,prefix.length));
+            if(!art.startsWith(prefix))throw new Error(key+' is not PNG data URI');
+            const b64=art.slice(prefix.length);
+            const buf=Buffer.from(b64,'base64');
+            console.log('base64 chars =>',b64.length,'mod4 =>',b64.length%4);
+            console.log('decoded bytes =>',buf.length);
+            console.log('signature =>',buf.subarray(0,8).toString('hex'));
+            if(buf.subarray(0,8).toString('hex')!=='89504e470d0a1a0a')throw new Error(key+' invalid PNG signature');
+            let off=8,last='';let iend=false;let chunks=0;
+            while(off+12<=buf.length){
+              const len=buf.readUInt32BE(off);const type=buf.subarray(off+4,off+8).toString('ascii');
+              const next=off+12+len;if(next>buf.length)throw new Error(key+' truncated '+type+' chunk');
+              chunks++;last=type;off=next;if(type==='IEND'){iend=true;break;}
+            }
+            console.log('chunks =>',chunks,'last =>',last,'IEND =>',iend,'consumed =>',off+'/'+buf.length);
+            if(!iend)throw new Error(key+' missing IEND');
+            if(off!==buf.length)console.log('trailing bytes =>',buf.length-off);
+          }
+          const gv=s.indexOf('function getExchangeTicketVisual(');
+          const ev=s.indexOf('function exchangeVisualHTML(',gv);
+          const hy=s.indexOf('function hydrateExchangeTierIcons(',ev);
+          console.log('functions =>',{getExchangeTicketVisual:gv>=0,exchangeVisualHTML:ev>=0,hydrateExchangeTierIcons:hy>=0});
           NODE
