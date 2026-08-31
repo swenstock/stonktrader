@@ -70,6 +70,11 @@ assert.strictEqual(new Set(embeddedHashes).size,KEYS.length,'the five turtle tie
 assert(/TIER_DATA\[[^\]]+\]\.art|TIER_DATA\[[^\]]+\]\?\.art|TIER_DATA\.[A-Za-z]+\.art/.test(shell), 'no in-shell TIER_DATA art consumer found');
 const desktopIcons=fs.readFileSync(path.join(ROOT,'..','public','v45-desktop-icons.js'),'utf8');
 assert(desktopIcons.includes("TIER_DATA[key]?.art"),'desktop icon consumer no longer reads canonical TIER_DATA art');
+const desktopCss=fs.readFileSync(path.join(ROOT,'..','public','v45-desktop-icons.css'),'utf8');
+assert(desktopCss.includes('.floor-clean-card>img{'),'Trading Floor portrait override missing');
+assert(desktopCss.includes('height:auto!important;'),'Trading Floor portraits must use natural height');
+assert(desktopCss.includes('aspect-ratio:auto!important;'),'Trading Floor portraits must not use legacy square aspect ratio');
+assert(desktopCss.includes('object-fit:contain!important;'),'Trading Floor portraits must render the full canonical image');
 
 console.log('Turtle Tier Art Step 1: PASS');
 console.log('CANONICAL_OWNER=TIER_DATA-only');
@@ -78,4 +83,5 @@ console.log('DIMENSIONS=240x241-all-five');
 console.log('DISTINCT_ASSETS=5');
 console.log('LEGACY_HASHES=0');
 console.log('TRADING_FLOOR_CARDS=canonical-all-five');
+console.log('TRADING_FLOOR_RENDER=natural-full-image');
 console.log('EXTERNAL_CONSUMER=v45-desktop-icons');
