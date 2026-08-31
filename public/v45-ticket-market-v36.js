@@ -33,10 +33,9 @@ function renderBookFromBackend(book){
   try{if(typeof hydrateExchangeTierIcons==='function')hydrateExchangeTierIcons()}catch(_){}
   const title=document.getElementById('marketTicketTitle');
   if(title){const visual=typeof exchangeVisualHTML==='function'?exchangeVisualHTML(artName):'';title.innerHTML=visual+`<span style="display:inline-flex;align-items:center;gap:10px;vertical-align:middle">${String(name).toUpperCase()} TICKET MARKET</span>`}
-  const summaryBid=document.getElementById('summaryBid'),summaryAsk=document.getElementById('summaryAsk'),summaryLast=document.getElementById('summaryLast');
+  const summaryBid=document.getElementById('summaryBid'),summaryAsk=document.getElementById('summaryAsk');
   if(summaryBid)summaryBid.textContent=book?.highestBid!=null?Number(book.highestBid).toLocaleString():'—';
   if(summaryAsk)summaryAsk.textContent=book?.lowestAsk!=null?Number(book.lowestAsk).toLocaleString():'—';
-  if(summaryLast)summaryLast.textContent=Number(fallback.last||0).toLocaleString();
   const visual=()=>typeof exchangeVisualHTML==='function'?exchangeVisualHTML(artName):'';
   const askBook=document.getElementById('askBook');
   if(askBook)askBook.innerHTML=offers.map(o=>`<div class="book-row"><div class="book-ticket-meta">${visual()}<div><strong>1 ${name} Ticket Offered</strong><small>Seller #${String(o.id).slice(-4)} • Offer listed for sale</small></div></div><div class="book-price ask">${priceOf(o).toLocaleString()} STONK</div><button class="hit-ask" data-sbc-offer-id="${o.id}" data-sbc-offer-price="${priceOf(o)}">BUY OFFER</button></div>`).join('');
