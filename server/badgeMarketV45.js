@@ -92,6 +92,9 @@ function getHolding(db, accountId) {
     .get(accountId, BADGE_ASSET_TYPE);
   return row || { quantity: 0n, quantity_listed: 0n };
 }
+function holdingForJson(holding) {
+  return { quantity:Number(holding.quantity), quantity_listed:Number(holding.quantity_listed) };
+}
 function addBadgeInTransaction(db, accountId) {
   prepareBigInt(db, `INSERT INTO sbc_prize_holdings(account_id, asset_type, quantity, quantity_listed)
     VALUES (?, ?, 1, 0)
@@ -194,7 +197,7 @@ function createListing(db, { accountId, askPrice }) {
     const info = db.prepare(`INSERT INTO badge_listings(seller_account_id, ask_price) VALUES (?,?)`).run(accountId, price);
     db.exec('COMMIT');
     const id = Number(info.lastInsertRowid);
-    return { id, askPrice:price, reservation:getHolding(db, accountId), warning:mispricingWarning(price, currentReferencePriceExcluding(db, id)) };
+    return { id, askPrice:price, reservation:holdingForJson(getHolding(db, accountId)), warning:mispricingWarning(price, currentReferencePriceExcluding(db, id)) };
   } catch (err) { try { db.exec('ROLLBACK'); } catch (_) {} throw err; }
 }
 function cancelListing(db, { accountId, listingId }) {
@@ -207,7 +210,7 @@ function cancelListing(db, { accountId, listingId }) {
     releaseListedQuantityInTransaction(db, { accountId, assetType: BADGE_ASSET_TYPE, quantity:1n });
     db.prepare(`UPDATE badge_listings SET status='cancelled', cancelled_at=? WHERE id=?`).run(new Date().toISOString(), listing.id);
     db.exec('COMMIT');
-    return { ok:true, reservation:getHolding(db, accountId) };
+    return { ok:true, reservation:holdingForJson(getHolding(db, accountId)) };
   } catch (err) { try { db.exec('ROLLBACK'); } catch (_) {} throw err; }
 }
 function createBid(db, custodian, { accountId, bidPrice }) {

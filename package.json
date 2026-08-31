@@ -1,7 +1,7 @@
 {
   "name": "stonk-paper-trading",
   "version": "1.0.0",
-  "description": "Multi-user paper trading contest platform \u2014 real accounts, simulated/live-ready quotes, positions, leaderboard, and contest lifecycle.",
+  "description": "Multi-user paper trading contest platform — real accounts, simulated/live-ready quotes, positions, leaderboard, and contest lifecycle.",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
@@ -30,7 +30,7 @@
     "test:freeroll-route-funding": "node server/freerollRouteFundingV45.test.js",
     "test:ticket-exchange-stage1": "node server/ticketExchangeStage1.test.js",
     "test:ticket-exchange-stage2": "node server/ticketExchangeStage2.test.js",
-    "test:badge-quantity-lock": "node server/badgeQuantityLockV45.test.js",
+    "test:badge-quantity-lock": "node server/badgeQuantityLockV45.test.js && node server/badgeMarketJsonBoundaryV1.test.js",
     "test:ticket-exchange-stage4": "node server/ticketExchangeStage4AcceptanceV3.test.js && node server/ticketExchangeStage4Ui.test.js",
     "test:backend-lockdown": "node server/backendLockdownRelease.test.js",
     "test:orders-activity-panel": "node server/ordersActivityPanelFixes.test.js",
