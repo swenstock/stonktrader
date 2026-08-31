@@ -4,6 +4,7 @@ const zlib = require("zlib");
 const crypto = require("crypto");
 
 const DIR = path.join(__dirname, "v45_exact");
+const TURTLE_ART_DIR = path.join(__dirname, "turtle_art_v1");
 const EXPECTED_BYTES = 407262;
 const EXPECTED_SHA256 = "06b85e828cb2404b830c648f0d6f3f5832ad15826ffd6f8446700c2683c7d669";
 
@@ -57,6 +58,35 @@ function repairedChunk(index) {
 
 function countOccurrences(haystack, needle) {
   return haystack.split(needle).length - 1;
+}
+
+const TURTLE_TIER_ART_KEYS = ['freeroll','runner','clerk','trader','junior'];
+function turtleTierArtDataUri(key) {
+  if (!TURTLE_TIER_ART_KEYS.includes(key)) throw new Error(`Unknown turtle tier art key: ${key}`);
+  return `data:image/png;base64,${fs.readFileSync(path.join(TURTLE_ART_DIR, `${key}.png`)).toString('base64')}`;
+}
+function applyTurtleTierArtPatch(html) {
+  let source = Buffer.isBuffer(html) ? html.toString('utf8') : String(html);
+  const tierStart = source.indexOf('const TIER_DATA = {');
+  if (tierStart < 0) throw new Error('Exact V45 turtle art patch compatibility failure: TIER_DATA missing');
+  const tierEnd = source.indexOf(';\n', tierStart);
+  if (tierEnd <= tierStart) throw new Error('Exact V45 turtle art patch compatibility failure: TIER_DATA terminator missing');
+  let block = source.slice(tierStart, tierEnd);
+  for (let i = 0; i < TURTLE_TIER_ART_KEYS.length; i += 1) {
+    const key = TURTLE_TIER_ART_KEYS[i];
+    const next = TURTLE_TIER_ART_KEYS[i + 1];
+    const keyAnchor = `"${key}":`;
+    const start = block.indexOf(keyAnchor);
+    const end = next ? block.indexOf(`"${next}":`, start + keyAnchor.length) : block.length;
+    if (start < 0 || end <= start) throw new Error(`Exact V45 turtle art patch compatibility failure: ${key}`);
+    const segment = block.slice(start, end);
+    const artPattern = /"art":"data:image\/png;base64,[^"]+"/g;
+    const matches = segment.match(artPattern) || [];
+    if (matches.length !== 1) throw new Error(`Exact V45 turtle art patch integrity failure: ${key} art fields=${matches.length}`);
+    const replaced = segment.replace(artPattern, `"art":"${turtleTierArtDataUri(key)}"`);
+    block = block.slice(0, start) + replaced + block.slice(end);
+  }
+  return Buffer.from(source.slice(0, tierStart) + block + source.slice(tierEnd), 'utf8');
 }
 
 const LEGACY_ORDERS_SURFACE_PATCH_MARKER = '<!-- SBC MODERN ORDERS SURFACE V1 -->';
@@ -239,7 +269,7 @@ function buildExactV45Shell() {
   if (html.length !== EXPECTED_BYTES || sha256 !== EXPECTED_SHA256) {
     throw new Error(`Exact V45 integrity failure: ${html.length} bytes ${sha256}`);
   }
-  return applyChartPresentationTuning(applyLegacyOrdersSurfaceRetirementPatch(applyRealQuickTradePatch(applyRealChartDataPatch(html))));
+  return applyTurtleTierArtPatch(applyChartPresentationTuning(applyLegacyOrdersSurfaceRetirementPatch(applyRealQuickTradePatch(applyRealChartDataPatch(html)))));
 }
 
 const exactV45Shell = buildExactV45Shell();
@@ -255,4 +285,6 @@ module.exports = {
   LEGACY_ORDERS_SURFACE_PATCH_MARKER,
   applyChartPresentationTuning,
   CHART_PRESENTATION_TUNING_MARKER,
+  applyTurtleTierArtPatch,
+  TURTLE_TIER_ART_KEYS,
 };
