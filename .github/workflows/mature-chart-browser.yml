@@ -25,6 +25,18 @@ jobs:
       - run: npm ci
       - name: Install Playwright browser for acceptance only
         run: npm install --no-save @playwright/test@1.55.0 && npx playwright install --with-deps chromium
+      - name: Drain spawned SBC test server output
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('server/matureChartBrowser.spec.js')
+          s=p.read_text()
+          old="stdio:['ignore','pipe','pipe']"
+          new="stdio:['ignore','inherit','inherit']"
+          if old not in s:
+              raise SystemExit('expected child stdio pattern not found')
+          p.write_text(s.replace(old,new,1))
+          PY
       - name: Served Portfolio DOM and scripts
         run: npx playwright test server/matureChartBrowser.spec.js --grep "@shell" --reporter=line --workers=1
       - name: Native chart surface after symbol selection
