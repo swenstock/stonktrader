@@ -59,6 +59,10 @@ assert(filtered.rows.length>0,'partial account search should return matches');
 assert(filtered.rows.length<34,'server-side search must narrow the unfiltered history set');
 assert(filtered.rows.every(r=>/ali/i.test(r.buyer)||/ali/i.test(r.seller)),'every filtered row must match buyer or seller display name');
 
+const bobFiltered=queryHistory(db,{limit:100,offset:0,search:'bOb'});
+assert.strictEqual(bobFiltered.rows.length,12,'Bob search should return only the 12 seeded transactions involving Bob');
+assert(bobFiltered.rows.every(r=>/bob/i.test(r.buyer)||/bob/i.test(r.seller)),'every Bob-filtered row must match buyer or seller display name');
+
 const runner=queryHistory(db,{limit:100,offset:0,market:'RUNNER'});
 assert(runner.rows.length>0,'market filter should return Runner rows');
 assert(runner.rows.every(r=>r.market==='runner'),'market filter must be applied server-side');
@@ -71,5 +75,6 @@ console.log('Exchange History V1: PASS');
 console.log(`UNFILTERED_PAGE=${first.rows.length} HAS_MORE=${first.hasMore} NEXT_OFFSET=${first.nextOffset}`);
 console.log(`SECOND_PAGE=${second.rows.length}`);
 console.log(`SEARCH_aLi_MATCHES=${filtered.rows.length} OF_TOTAL=34`);
+console.log(`SEARCH_bOb_MATCHES=${bobFiltered.rows.length} OF_TOTAL=34`);
 console.log(`RUNNER_MARKET_MATCHES=${runner.rows.length}`);
 console.log('SEARCH_MODE=case-insensitive partial display-name match, executed in SQL');
