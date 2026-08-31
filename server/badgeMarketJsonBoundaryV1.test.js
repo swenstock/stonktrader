@@ -23,14 +23,21 @@ function makeDb() {
   const { db, accountId } = makeDb();
   const listing = market.createListing(db, { accountId, askPrice:48000 });
   assert.strictEqual(Number(db.prepare("SELECT COUNT(*) n FROM badge_listings WHERE seller_account_id=? AND status='active'").get(accountId).n), 1);
-  assert.deepStrictEqual(listing.reservation, { quantity:1, quantity_listed:1 });
-  assert.doesNotThrow(() => JSON.stringify({ ok:true, ...listing }));
+  assert.strictEqual(listing.reservation.quantity, 1n);
+  assert.strictEqual(listing.reservation.quantity_listed, 1n);
+  assert.throws(() => JSON.stringify({ ok:true, ...listing }), /BigInt/);
+  const listingPayload = { ok:true, ...listing, reservation:market.holdingForJson(listing.reservation) };
+  assert.deepStrictEqual(listingPayload.reservation, { quantity:1, quantity_listed:1 });
+  assert.doesNotThrow(() => JSON.stringify(listingPayload));
   assert.strictEqual(listing.warning.warn, false);
   assert.strictEqual(listing.warning.reason, 'no_reference');
 
   const cancelled = market.cancelListing(db, { accountId, listingId:listing.id });
-  assert.deepStrictEqual(cancelled.reservation, { quantity:1, quantity_listed:0 });
-  assert.doesNotThrow(() => JSON.stringify(cancelled));
+  assert.strictEqual(cancelled.reservation.quantity, 1n);
+  assert.strictEqual(cancelled.reservation.quantity_listed, 0n);
+  const cancelPayload = { ...cancelled, reservation:market.holdingForJson(cancelled.reservation) };
+  assert.deepStrictEqual(cancelPayload.reservation, { quantity:1, quantity_listed:0 });
+  assert.doesNotThrow(() => JSON.stringify(cancelPayload));
   assert.strictEqual(db.prepare('SELECT status FROM badge_listings WHERE id=?').get(listing.id).status, 'cancelled');
 
   const fakeCustodian = { getBalance:() => 1000000, debit:() => {} };
@@ -39,5 +46,5 @@ function makeDb() {
   assert.strictEqual(Number(db.prepare("SELECT COUNT(*) n FROM badge_bids WHERE buyer_account_id=? AND status='active'").get(accountId).n), 1);
   db.close();
   console.log('Badge Market JSON Boundary V1: PASS');
-  console.log('Listing/cancel reservation responses are JSON-safe; listing persists exactly once; no-reference warning remains non-throwing; bid response remains JSON-safe.');
+  console.log('Internal reservation contract remains BigInt; listing/cancel HTTP payloads are JSON-safe; listing persists exactly once; bid response remains JSON-safe.');
 })();

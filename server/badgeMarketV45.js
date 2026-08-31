@@ -197,7 +197,7 @@ function createListing(db, { accountId, askPrice }) {
     const info = db.prepare(`INSERT INTO badge_listings(seller_account_id, ask_price) VALUES (?,?)`).run(accountId, price);
     db.exec('COMMIT');
     const id = Number(info.lastInsertRowid);
-    return { id, askPrice:price, reservation:holdingForJson(getHolding(db, accountId)), warning:mispricingWarning(price, currentReferencePriceExcluding(db, id)) };
+    return { id, askPrice:price, reservation:getHolding(db, accountId), warning:mispricingWarning(price, currentReferencePriceExcluding(db, id)) };
   } catch (err) { try { db.exec('ROLLBACK'); } catch (_) {} throw err; }
 }
 function cancelListing(db, { accountId, listingId }) {
@@ -210,7 +210,7 @@ function cancelListing(db, { accountId, listingId }) {
     releaseListedQuantityInTransaction(db, { accountId, assetType: BADGE_ASSET_TYPE, quantity:1n });
     db.prepare(`UPDATE badge_listings SET status='cancelled', cancelled_at=? WHERE id=?`).run(new Date().toISOString(), listing.id);
     db.exec('COMMIT');
-    return { ok:true, reservation:holdingForJson(getHolding(db, accountId)) };
+    return { ok:true, reservation:getHolding(db, accountId) };
   } catch (err) { try { db.exec('ROLLBACK'); } catch (_) {} throw err; }
 }
 function createBid(db, custodian, { accountId, bidPrice }) {
@@ -311,6 +311,6 @@ function mintBadge(db, custodian, { accountId, issuanceId = `player-mint:${accou
 
 module.exports = {
   BADGE_ASSET_TYPE, MINT_PRICE_STONK, BADGE_FLOOR_STONK, MISPRICING_THRESHOLD, EXCHANGE_FEE_PCT,
-  ensureSchema, feeFor, currentReferencePrice, mispricingWarning, book, getHolding,
+  ensureSchema, feeFor, currentReferencePrice, mispricingWarning, book, getHolding, holdingForJson,
   createListing, cancelListing, createBid, cancelBid, buyListing, sellToBid, mintBadge,
 };
