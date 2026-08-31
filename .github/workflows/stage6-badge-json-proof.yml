@@ -1,0 +1,63 @@
+name: Stage 6 Badge JSON boundary proof
+
+on:
+  push:
+    branches: [stage6-badge-json-boundary]
+
+permissions:
+  contents: read
+
+jobs:
+  prove:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: stage6-badge-json-boundary
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Reproduce committed-listing JSON failure
+        run: |
+          node <<'NODE'
+          const assert = require('assert');
+          const { DatabaseSync } = require('node:sqlite');
+          const market = require('./server/badgeMarketV45');
+
+          const db = new DatabaseSync(':memory:');
+          db.exec('PRAGMA foreign_keys = ON;');
+          db.exec(`
+            CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, display_name TEXT);
+            CREATE TABLE accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER REFERENCES users(id));
+          `);
+          market.ensureSchema(db);
+          db.prepare("INSERT INTO users(display_name) VALUES ('badge-json-proof')").run();
+          const accountId = Number(db.prepare('INSERT INTO accounts(user_id) VALUES (1)').run().lastInsertRowid);
+          const holding = db.prepare(`INSERT INTO sbc_prize_holdings(account_id,asset_type,quantity,quantity_listed) VALUES (?,?,1,0)`);
+          holding.run(accountId, market.BADGE_ASSET_TYPE);
+
+          const listing = market.createListing(db, { accountId, askPrice: 48000 });
+          const active = Number(db.prepare("SELECT COUNT(*) n FROM badge_listings WHERE seller_account_id=? AND status='active'").get(accountId).n);
+          assert.strictEqual(active, 1);
+          console.log('LISTING COMMITTED =>', active);
+          console.log('reservation quantity typeof =>', typeof listing.reservation.quantity);
+          console.log('reservation listed typeof =>', typeof listing.reservation.quantity_listed);
+          console.log('warning no-reference =>', JSON.stringify(listing.warning));
+          let listingError = null;
+          try { JSON.stringify({ ok:true, ...listing }); } catch (e) { listingError = e; }
+          assert(listingError);
+          console.log('LISTING JSON THROW =>', listingError.name + ': ' + listingError.message);
+
+          const cancelled = market.cancelListing(db, { accountId, listingId: listing.id });
+          let cancelError = null;
+          try { JSON.stringify(cancelled); } catch (e) { cancelError = e; }
+          assert(cancelError);
+          console.log('CANCEL JSON THROW =>', cancelError.name + ': ' + cancelError.message);
+
+          const fakeCustodian = { getBalance: () => 1000000, debit: () => {} };
+          const bid = market.createBid(db, fakeCustodian, { accountId, bidPrice: 47000 });
+          assert.doesNotThrow(() => JSON.stringify({ ok:true, ...bid }));
+          console.log('BID JSON => serializable');
+          console.log('PROOF PASS');
+          db.close();
+          NODE
