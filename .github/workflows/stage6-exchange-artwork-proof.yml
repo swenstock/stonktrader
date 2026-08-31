@@ -12,22 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Check assembled shell image security and mutations
+      - name: Check production response headers for image policy
         run: |
-          node <<'NODE'
-          const { exactV45Shell } = require('./server/v45ExactShell');
-          const s=exactV45Shell.toString('utf8');
-          for(const term of ['Content-Security-Policy','content-security-policy','img-src','default-src']){
-            const matches=[];let from=0;while(true){const i=s.indexOf(term,from);if(i<0)break;matches.push(i);from=i+term.length;}
-            console.log(term+' => '+matches.length, matches);
-            matches.forEach(i=>console.log(s.slice(Math.max(0,i-300),Math.min(s.length,i+600))));
-          }
-          console.log('=== all TIER_DATA art assignments ===');
-          const lines=s.split('\n');
-          lines.forEach((line,i)=>{if(/TIER_DATA.*\.art|\.src\s*=.*TIER_DATA|tierArt/.test(line))console.log((i+1)+': '+line.trim())});
-          console.log('=== exchange art img creation ===');
-          lines.forEach((line,i)=>{if(/book-tier-art|exchangeFilter.*Art|exchangeInv.*Art/.test(line))console.log((i+1)+': '+line.trim())});
-          NODE
+          set -euo pipefail
+          curl -sS -L -D /tmp/headers.txt -o /tmp/prod.html https://stonkbrokerchallenge.com/
+          echo '=== FINAL RESPONSE HEADERS ==='
+          cat /tmp/headers.txt
+          echo '=== SECURITY HEADER FILTER ==='
+          grep -iE '^(content-security-policy|content-security-policy-report-only|x-content-type-options|cross-origin-resource-policy|cross-origin-opener-policy|cross-origin-embedder-policy|content-type|server|via|x-render|cf-|x-cache|cache-control):' /tmp/headers.txt || true
+          echo '=== HTML CSP META COUNTS ==='
+          printf 'Content-Security-Policy => '; grep -oi 'Content-Security-Policy' /tmp/prod.html | wc -l
+          printf 'img-src => '; grep -oi 'img-src' /tmp/prod.html | wc -l
+          printf 'data:image/png;base64 => '; grep -o 'data:image/png;base64' /tmp/prod.html | wc -l
