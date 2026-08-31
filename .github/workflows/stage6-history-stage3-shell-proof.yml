@@ -1,25 +1,53 @@
-name: Stage 6 History Stage 3 shell proof
+name: Stage 6 History Stage 3 builder
 on:
   push:
     branches: [stage6-history-stage3]
+permissions:
+  contents: write
 jobs:
-  proof:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: stage6-history-stage3
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Prove exact assembled order-book shell
+      - name: Wire Stage 3 source and test
         run: |
-          node <<'NODE'
-          const { exactV45Shell } = require('./server/v45ExactShell');
-          const html = exactV45Shell.toString('utf8');
-          const count = s => html.split(s).length - 1;
-          for (const s of ['id="bidBook"','id="askBook"','class="market-summary"']) console.log(`${s} => ${count(s)}`);
-          const bi=html.indexOf('id="bidBook"');
-          const ai=html.indexOf('id="askBook"');
-          console.log('BID_SNIPPET='+html.slice(bi-500,bi+700).replace(/\s+/g,' '));
-          console.log('ASK_SNIPPET='+html.slice(ai-500,ai+700).replace(/\s+/g,' '));
-          if(count('id="bidBook"')!==1||count('id="askBook"')!==1) process.exit(2);
-          NODE
+          python3 <<'PY'
+          from pathlib import Path
+          p=Path('package.json'); s=p.read_text()
+          a='npm run test:exchange-history-stage2-ui && npm run test:badge-quantity-lock'
+          b='npm run test:exchange-history-stage2-ui && npm run test:exchange-history-stage3-preview && npm run test:badge-quantity-lock'
+          assert s.count(a)==1, s.count(a)
+          s=s.replace(a,b)
+          a='    "test:exchange-history-stage2-ui": "node server/exchangeHistoryStage2Ui.test.js",\n'
+          b=a+'    "test:exchange-history-stage3-preview": "node server/exchangeHistoryStage3Preview.test.js",\n'
+          assert s.count(a)==1, s.count(a)
+          p.write_text(s.replace(a,b))
+          p=Path('server/index.js'); s=p.read_text()
+          a='/v45-exchange-history-stage2-v1.js?v=1'
+          b='/v45-exchange-history-stage2-v1.js?v=2'
+          assert s.count(a)==1, s.count(a)
+          p.write_text(s.replace(a,b))
+          PY
+      - name: Run focused Stage 2 and Stage 3 behavior
+        run: |
+          node server/exchangeHistoryStage2Ui.test.js
+          node server/exchangeHistoryStage3Preview.test.js
+      - name: Syntax check
+        run: |
+          node --check public/v45-exchange-history-stage2-v1.js
+          node --check server/exchangeHistoryStage2Ui.test.js
+          node --check server/exchangeHistoryStage3Preview.test.js
+          node --check server/index.js
+      - name: Commit source only and remove builder
+        run: |
+          rm .github/workflows/stage6-history-stage3-shell-proof.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/v45-exchange-history-stage2-v1.js server/exchangeHistoryStage3Preview.test.js server/index.js package.json .github/workflows/stage6-history-stage3-shell-proof.yml
+          git commit -m "Add compact unified Recent Trades preview"
+          git push origin HEAD:stage6-history-stage3
