@@ -28,11 +28,11 @@ for(const type of ['junior','trader','clerk','runner']){
   assert(/<img src="data:image\/png;base64,/.test(html),type+' visual must resolve to embedded PNG');
   assert(!/src=""/.test(html),type+' visual must not render empty src');
 }
-assert(runtime.includes("exchangeVisualHTML(artName)"),'book/title renderer must use artName');
-assert(runtime.includes("exchangeVisualHTML(artName,'ticket-badge')"),'recent renderer must use artName');
+assert(runtime.includes("exchangeVisualHTML(artName)"),'live book/title renderer must use artName');
+assert(!runtime.includes('recentTicketSales'),'retired synthetic recent renderer must not remain solely for artwork mapping');
 assert.strictEqual(display.runner,'RUNNER');
 assert.strictEqual(visual.runner,'Runner');
 assert.strictEqual(display.junior,'JR BROKER');
 assert.strictEqual(visual.junior,'Jr. StonkBroker');
 console.log('Exchange Artwork Mapping V1: PASS');
-console.log('Canonical visible labels remain unchanged while all four real-book artwork calls resolve to valid assembled-shell PNGs.');
+console.log('Canonical visible labels remain unchanged while all four live Exchange tier visuals resolve to valid assembled-shell PNGs.');
