@@ -29,9 +29,9 @@ jobs:
           const anchor = "function addBadgeInTransaction(db, accountId) {";
           if ((market.split(anchor).length - 1) !== 1) throw new Error('market helper anchor mismatch');
           market = market.replace(anchor, "function holdingForJson(holding) {\n  return { quantity:Number(holding.quantity), quantity_listed:Number(holding.quantity_listed) };\n}\n" + anchor);
-          const exportAnchor = "  getHolding,\n";
+          const exportAnchor = "  ensureSchema, feeFor, currentReferencePrice, mispricingWarning, book, getHolding,\n";
           if ((market.split(exportAnchor).length - 1) !== 1) throw new Error('market export anchor mismatch');
-          market = market.replace(exportAnchor, exportAnchor + "  holdingForJson,\n");
+          market = market.replace(exportAnchor, "  ensureSchema, feeFor, currentReferencePrice, mispricingWarning, book, getHolding, holdingForJson,\n");
           fs.writeFileSync(marketPath, market);
 
           const routePath = 'server/routes/badgeMarketV45.js';
