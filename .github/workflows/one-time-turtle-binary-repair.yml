@@ -1,0 +1,52 @@
+name: One-time Turtle Binary Repair
+on:
+  push:
+    branches: [turtle-art-binary-repair]
+    paths: [".asset-repair/READY"]
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: turtle-art-binary-repair
+          fetch-depth: 0
+      - name: Rebuild approved PNGs exactly
+        shell: bash
+        run: |
+          set -euo pipefail
+          for n in freeroll runner clerk trader junior; do
+            cat .asset-repair/${n}.part* | tr -d '\n\r' | base64 -d > server/turtle_art_v1/${n}.png
+          done
+          echo 'b28eb74b0951930217fae66adc5ab40d6c64b7d9159864522cd60c53689db46f  server/turtle_art_v1/freeroll.png' > /tmp/expected.sha
+          echo 'd92a59f1e9470f732cdf1caf196776f5b31e7a674d2e233e67a9b877d410e203  server/turtle_art_v1/runner.png' >> /tmp/expected.sha
+          echo '5c13bc7b3dd59771ee1235bbe9051fcab33675ede61d419fe1aa23143c8bce96  server/turtle_art_v1/clerk.png' >> /tmp/expected.sha
+          echo '3e7c139ca352c1b384e6e5be1c0cb0b3c213ba82a80c572f09ca41989d368549  server/turtle_art_v1/trader.png' >> /tmp/expected.sha
+          echo '309d204c9ef6b67162f6860de87ba79a7ce973e43cbbf4b00b5e14c87cd49d3d  server/turtle_art_v1/junior.png' >> /tmp/expected.sha
+          sha256sum -c /tmp/expected.sha
+          node - <<'NODE'
+          const fs=require('fs'),zlib=require('zlib');
+          for(const n of ['freeroll','runner','clerk','trader','junior']){
+            const b=fs.readFileSync(`server/turtle_art_v1/${n}.png`);
+            if(!b.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) throw new Error(`${n}: bad PNG signature`);
+            let o=8,w=0,h=0,id=[];
+            while(o+12<=b.length){const len=b.readUInt32BE(o),type=b.toString('ascii',o+4,o+8),data=b.subarray(o+8,o+8+len); if(type==='IHDR'){w=data.readUInt32BE(0);h=data.readUInt32BE(4);} if(type==='IDAT')id.push(data); o+=12+len; if(type==='IEND')break;}
+            if(w!==240||h!==241) throw new Error(`${n}: ${w}x${h}`);
+            const raw=zlib.inflateSync(Buffer.concat(id));
+            if(!raw.length) throw new Error(`${n}: empty decoded stream`);
+            console.log(`${n}: strict inflate PASS ${w}x${h} decoded=${raw.length}`);
+          }
+          NODE
+      - name: Remove one-time repair scaffolding
+        run: rm -rf .asset-repair .github/workflows/one-time-turtle-binary-repair.yml
+      - name: Commit repaired canonical binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "Repair canonical turtle PNG binaries"
+          git push origin HEAD:turtle-art-binary-repair
