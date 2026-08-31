@@ -86,7 +86,20 @@ function applyTurtleTierArtPatch(html) {
     const replaced = segment.replace(artPattern, `"art": "${turtleTierArtDataUri(key)}"`);
     block = block.slice(0, start) + replaced + block.slice(end);
   }
-  return Buffer.from(source.slice(0, tierStart) + block + source.slice(tierEnd), 'utf8');
+  source = source.slice(0, tierStart) + block + source.slice(tierEnd);
+  for (const key of TURTLE_TIER_ART_KEYS) {
+    const cardAnchor = `id="cleanCard-${key}"`;
+    const cardStart = source.indexOf(cardAnchor);
+    const cardEnd = source.indexOf('</article>', cardStart);
+    if (cardStart < 0 || cardEnd <= cardStart) throw new Error(`Exact V45 turtle floor-card compatibility failure: ${key}`);
+    const card = source.slice(cardStart, cardEnd);
+    const imagePattern = /<img\s+src="data:image\/png;base64,[^"]+"/g;
+    const matches = card.match(imagePattern) || [];
+    if (matches.length !== 1) throw new Error(`Exact V45 turtle floor-card integrity failure: ${key} images=${matches.length}`);
+    const replaced = card.replace(imagePattern, `<img src="${turtleTierArtDataUri(key)}"`);
+    source = source.slice(0, cardStart) + replaced + source.slice(cardEnd);
+  }
+  return Buffer.from(source, 'utf8');
 }
 
 const LEGACY_ORDERS_SURFACE_PATCH_MARKER = '<!-- SBC MODERN ORDERS SURFACE V1 -->';
