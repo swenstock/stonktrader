@@ -8,7 +8,7 @@ for(const token of ['recentTicketSales','[3,17,42]','function ensurePanel','func
   assert(!v36.includes(token),`v36 legacy producer must be removed: ${token}`);
 }
 assert(!v36.includes('summaryLast'),'v36 must not write or reference the Stage 2 LAST TRADE node');
-assert(history.includes("const summaryLast=document.getElementById('summaryLast')")||history.includes("document.getElementById('summaryLast')"),'Stage 2 history owner must retain LAST TRADE ownership');
+assert(history.includes("last=$('#summaryLast')")&&history.includes('async function refreshLastTrade()')&&history.includes('ui.last.textContent'),'Stage 2 history owner must retain sole LAST TRADE node/write ownership');
 for(const token of ['ensureRealRecent','renderSales','refreshSales','/api/ticket-market/recent/','data-real-sales-refresh','sbcExchangeRealRecentSales']){
   assert(!layout.includes(token),`layout recent-sales producer must be removed: ${token}`);
 }
