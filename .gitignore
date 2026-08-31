@@ -1,0 +1,4 @@
+# Runtime SQLite databases are generated from schema + seed and must never be committed.
+data/*.db
+data/*.db-wal
+data/*.db-shm

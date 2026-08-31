@@ -126,11 +126,9 @@ function seedCore(db) {
   db.close();
 })();
 
-async function bootCommittedSnapshotCopy(){
-  const source = path.join(__dirname,'..','data','app.db');
-  assert(fs.existsSync(source),'committed data/app.db snapshot missing');
-  const { dir, dbPath } = tempDb('committed-copy.db');
-  fs.copyFileSync(source,dbPath);
+async function bootFreshSchemaAndSeed(){
+  const { dir, dbPath } = tempDb('fresh-runtime.db');
+  assert(!fs.existsSync(dbPath),'fresh boot test must begin without a database file');
   const port = 34271;
   const child = spawn(process.execPath,['server/index.js'],{
     cwd:path.join(__dirname,'..'),
@@ -148,6 +146,16 @@ async function bootCommittedSnapshotCopy(){
         if(r.ok){
           const health=await r.json();
           assert.strictEqual(health.ok,true);
+          assert(fs.existsSync(dbPath),'fresh boot must create the runtime database from schema');
+          const db = new DatabaseSync(dbPath);
+          try {
+            const satelliteCols = columnNames(db,'satellites');
+            assert(satelliteCols.includes('price_level'),'fresh schema must include satellites.price_level');
+            const positionCols = columnNames(db,'positions');
+            assert(positionCols.includes('portfolio_id'),'fresh schema must include positions.portfolio_id');
+          } finally {
+            db.close();
+          }
           return;
         }
       } catch (_) {}
@@ -160,11 +168,11 @@ async function bootCommittedSnapshotCopy(){
   }
 }
 
-bootCommittedSnapshotCopy().then(()=>{
+bootFreshSchemaAndSeed().then(()=>{
   console.log('Legacy Portfolio Schema Migration: PASS');
   console.log('IDEMPOTENT=two-runs');
   console.log('ALTERNATE_LEGACY_SHAPE=covered');
-  console.log('COMMITTED_DB_SNAPSHOT_BOOT=pass');
+  console.log('FRESH_SCHEMA_BOOT=pass');
 }).catch(err=>{
   console.error(err.stack||err);
   process.exitCode=1;
