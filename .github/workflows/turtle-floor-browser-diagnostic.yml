@@ -4,6 +4,7 @@ on:
     paths:
       - "server/turtleFloorPortraitBrowserDiagnostic.spec.js"
       - ".github/workflows/turtle-floor-browser-diagnostic.yml"
+      - "server/turtle_art_v1/**"
   workflow_dispatch:
 jobs:
   diagnostic:
@@ -11,6 +12,9 @@ jobs:
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -20,3 +24,18 @@ jobs:
         run: npm install --no-save @playwright/test@1.55.0 && npx playwright install --with-deps chromium
       - name: Inspect Trading Floor portraits
         run: npx playwright test server/turtleFloorPortraitBrowserDiagnostic.spec.js --reporter=line --workers=1
+      - name: Package exact full source for Claude
+        if: always()
+        run: |
+          mkdir -p claude_bundle
+          git archive --format=zip --output=claude_bundle/SBC_PR253_FULL_SOURCE_${GITHUB_SHA}.zip HEAD
+          cp -f test-results/turtleFloorPortraitBrowserDiagnostic-Trading-Floor-portrait-diagnostic/turtle-floor-diagnostic.png claude_bundle/TURTLE_FLOOR_DIAGNOSTIC.png 2>/dev/null || true
+          git rev-parse HEAD > claude_bundle/EXACT_HEAD_SHA.txt
+          git status --short > claude_bundle/GIT_STATUS.txt
+      - name: Upload Claude full-source bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SBC_PR253_CLAUDE_FULL_SOURCE
+          path: claude_bundle/
+          if-no-files-found: error
