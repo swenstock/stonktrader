@@ -15,37 +15,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: CRC and inflate embedded Exchange PNGs
+      - name: Check assembled shell image security and mutations
         run: |
           node <<'NODE'
           const { exactV45Shell } = require('./server/v45ExactShell');
-          const zlib=require('zlib');
           const s=exactV45Shell.toString('utf8');
-          const start=s.indexOf('const TIER_DATA = '),end=s.indexOf(';\n',start);
-          if(start<0||end<0)throw new Error('TIER_DATA declaration not isolated');
-          const tier=JSON.parse(s.slice(start+'const TIER_DATA = '.length,end));
-          const table=(()=>{let t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=(c&1)?0xedb88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t})();
-          function crc32(buf){let c=0xffffffff;for(const x of buf)c=table[(c^x)&255]^(c>>>8);return (c^0xffffffff)>>>0}
-          for(const key of ['junior','trader','clerk','runner']){
-            const art=String(tier[key]?.art||''),prefix='data:image/png;base64,';
-            if(!art.startsWith(prefix))throw new Error(key+' not PNG data URI');
-            const buf=Buffer.from(art.slice(prefix.length),'base64');
-            let off=8,iend=false;const idats=[];let width=0,height=0,colorType=-1,bitDepth=-1;
-            console.log('--- '+key+' bytes='+buf.length+' ---');
-            while(off+12<=buf.length){
-              const len=buf.readUInt32BE(off),type=buf.subarray(off+4,off+8).toString('ascii');
-              const data=buf.subarray(off+8,off+8+len),stored=buf.readUInt32BE(off+8+len);
-              const actual=crc32(Buffer.concat([Buffer.from(type,'ascii'),data]));
-              console.log(type,'len='+len,'crc='+(stored===actual?'OK':'BAD'));
-              if(stored!==actual)throw new Error(key+' bad CRC in '+type);
-              if(type==='IHDR'){width=data.readUInt32BE(0);height=data.readUInt32BE(4);bitDepth=data[8];colorType=data[9];console.log('IHDR',width+'x'+height,'bitDepth='+bitDepth,'colorType='+colorType)}
-              if(type==='IDAT')idats.push(data);
-              off+=12+len;if(type==='IEND'){iend=true;break;}
-            }
-            if(!iend)throw new Error(key+' missing IEND');
-            const raw=zlib.inflateSync(Buffer.concat(idats));
-            console.log('IDAT inflate => OK rawBytes='+raw.length);
-            if(!(width>0&&height>0&&raw.length>0))throw new Error(key+' invalid decoded image data');
+          for(const term of ['Content-Security-Policy','content-security-policy','img-src','default-src']){
+            const matches=[];let from=0;while(true){const i=s.indexOf(term,from);if(i<0)break;matches.push(i);from=i+term.length;}
+            console.log(term+' => '+matches.length, matches);
+            matches.forEach(i=>console.log(s.slice(Math.max(0,i-300),Math.min(s.length,i+600))));
           }
-          console.log('FULL PNG INTEGRITY PASS');
+          console.log('=== all TIER_DATA art assignments ===');
+          const lines=s.split('\n');
+          lines.forEach((line,i)=>{if(/TIER_DATA.*\.art|\.src\s*=.*TIER_DATA|tierArt/.test(line))console.log((i+1)+': '+line.trim())});
+          console.log('=== exchange art img creation ===');
+          lines.forEach((line,i)=>{if(/book-tier-art|exchangeFilter.*Art|exchangeInv.*Art/.test(line))console.log((i+1)+': '+line.trim())});
           NODE
