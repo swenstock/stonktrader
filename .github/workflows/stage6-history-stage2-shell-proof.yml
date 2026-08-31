@@ -1,0 +1,34 @@
+name: Stage 6 History Stage 2 shell proof
+on:
+  push:
+    branches: [stage6-history-stage2]
+permissions:
+  contents: read
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Prove exact Exchange stat strip selectors
+        run: |
+          node <<'NODE'
+          const { exactV45Shell } = require('./server/v45ExactShell');
+          const html = exactV45Shell.toString('utf8');
+          const needles = ['id="summaryBid"','id="summaryAsk"','id="summaryLast"','id="ticketTypeSelector"','24H SALES','LAST SALE','HIGHEST BID','LOWEST ASK'];
+          console.log('EXACT V45 STAGE2 SHELL PROOF');
+          for (const n of needles) {
+            const count = html.split(n).length - 1;
+            console.log(`${n} => ${count}`);
+            const i = html.indexOf(n);
+            if (i >= 0) console.log(html.slice(Math.max(0,i-180), Math.min(html.length,i+320)).replace(/\s+/g,' '));
+          }
+          const summaryIds = [...html.matchAll(/id="([^"]*summary[^"]*)"/gi)].map(m=>m[1]);
+          console.log('SUMMARY_IDS=' + JSON.stringify(summaryIds));
+          if ((html.split('id="summaryBid"').length-1)!==1) process.exit(2);
+          if ((html.split('id="summaryAsk"').length-1)!==1) process.exit(3);
+          if ((html.split('id="summaryLast"').length-1)!==1) process.exit(4);
+          if ((html.split('id="ticketTypeSelector"').length-1)!==1) process.exit(5);
+          NODE
