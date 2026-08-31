@@ -1,0 +1,22 @@
+name: Turtle Floor Portrait Diagnostic
+on:
+  pull_request:
+    paths:
+      - "server/turtleFloorPortraitBrowserDiagnostic.spec.js"
+      - ".github/workflows/turtle-floor-browser-diagnostic.yml"
+  workflow_dispatch:
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Install Playwright Chromium
+        run: npm install --no-save @playwright/test@1.55.0 && npx playwright install --with-deps chromium
+      - name: Inspect Trading Floor portraits
+        run: npx playwright test server/turtleFloorPortraitBrowserDiagnostic.spec.js --reporter=line --workers=1
