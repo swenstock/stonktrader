@@ -36,10 +36,13 @@ jobs:
 
           const routePath = 'server/routes/badgeMarketV45.js';
           let route = fs.readFileSync(routePath, 'utf8');
-          const listOld = "const result=market.createListing(db,{accountId:req.account.id,askPrice:req.body?.askPrice});\n      res.json({ok:true,...result});";
-          const listNew = "const result=market.createListing(db,{accountId:req.account.id,askPrice:req.body?.askPrice});\n      res.json({ok:true,...result,reservation:market.holdingForJson(result.reservation)});";
-          const cancelOld = "res.json(market.cancelListing(db,{accountId:req.account.id,listingId:req.params.id}));";
-          const cancelNew = "const result=market.cancelListing(db,{accountId:req.account.id,listingId:req.params.id});\n      res.json({...result,reservation:market.holdingForJson(result.reservation)});";
+          const listOld = "  try { res.json({ ok:true, ...market.createListing(db, { accountId:req.account.id, askPrice:req.body?.askPrice }) }); }";
+          const listNew = "  try { const result=market.createListing(db, { accountId:req.account.id, askPrice:req.body?.askPrice }); res.json({ ok:true, ...result, reservation:market.holdingForJson(result.reservation) }); }";
+          const cancelOld = "  try { res.json(market.cancelListing(db, { accountId:req.account.id, listingId:Number(req.params.id) })); }";
+          const cancelNew = "  try { const result=market.cancelListing(db, { accountId:req.account.id, listingId:Number(req.params.id) }); res.json({ ...result, reservation:market.holdingForJson(result.reservation) }); }";
+          console.log('ROUTE BASELINE PROOF');
+          console.log('listing exact =>', route.split(listOld).length - 1);
+          console.log('cancel exact =>', route.split(cancelOld).length - 1);
           if ((route.split(listOld).length - 1) !== 1) throw new Error('listing route baseline mismatch');
           if ((route.split(cancelOld).length - 1) !== 1) throw new Error('cancel route baseline mismatch');
           route = route.replace(listOld, listNew).replace(cancelOld, cancelNew);
