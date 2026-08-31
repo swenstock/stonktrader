@@ -27,7 +27,7 @@ must(faucet.includes("fetch('/api/dev/fund'")&&faucet.includes('amount=250000')&
 must(faucet.includes("fetch('/api/dev/order-book'")&&faucet.includes("id='seedTestOrderBook'")&&faucet.includes("textContent='+ TEST ORDER BOOK'"),'TEST order-book control calls the backend QA depth seeder');
 must(faucet.includes('Jr Broker:')&&faucet.includes('Badge:'),'QA seeder reports separate Jr Broker and Badge spreads');
 must(!/localStorage\.setItem\([^\n]*stonk/i.test(faucet),'TEST STONK faucet does not fabricate a browser-local balance');
-must(server.includes('/v45-exchange-dialog-v1.js?v=5')&&server.includes('/v45-test-stonk-faucet-v1.js?v=3')&&server.includes('/v45-exchange-own-orders-v1.js?v=8'),'server statically boots cache-busted Exchange dialogs, QA, and own-order helpers');
+must(server.includes('/v45-exchange-dialog-v1.js?v=6')&&server.includes('/v45-test-stonk-faucet-v1.js?v=3')&&server.includes('/v45-exchange-own-orders-v1.js?v=8'),'server statically boots cache-busted Exchange dialogs, QA, and own-order helpers');
 must(dialog.includes("id='sbcExchangeDialogV1'")||dialog.includes("root.id='sbcExchangeDialogV1'"),'Exchange uses an in-app dark dialog instead of browser-native message chrome');
 must(dialog.includes('function notice(')&&dialog.includes('function confirmAction(')&&dialog.includes('function promptPrice('),'Exchange dialog layer supports notice, confirm, and price-edit prompt flows');
 must(dialog.includes("[data-tm36-edit]")&&dialog.includes("[data-tm36-cancel]")&&dialog.includes("stopImmediatePropagation"),'legacy My Orders adjust/cancel clicks are intercepted before native prompt/confirm handlers');
@@ -92,5 +92,5 @@ must(dev.includes('junior: 1050')&&dev.includes('0.98')&&dev.includes('1.02'),'J
 must(dev.includes('QA_BADGE_BIDS = [47750')&&dev.includes('QA_BADGE_ASKS = [48250')&&dev.includes('seedQaBadgeBook'),'Badge QA book gets independent 48K-range bid/offer depth');
 must(dev.includes('badgeMarket.createListing')&&dev.includes('badgeMarket.createBid')&&dev.includes('badgeMarket.mintBadge'),'Badge QA depth uses the real Badge marketplace settlement functions');
 must(!ui.includes("createElement('script')")&&!dialog.includes("createElement('script')")&&!integrity.includes("createElement('script')")&&!stageC.includes("createElement('script')"),'Stage 1 removes dynamic script injection from the four former bootstrap owners');
-must(server.includes('/v45-exchange-dialog-v1.js?v=5')&&server.includes('/v45-exchange-layout-sales-v1.js?v=2'),'server serves cache-busted Exchange dialog and layout helpers');
+must(server.includes('/v45-exchange-dialog-v1.js?v=6')&&server.includes('/v45-exchange-layout-sales-v1.js?v=2'),'server serves cache-busted Exchange dialog and layout helpers');
 console.log('Stage 26 My Tickets cleanup + Exchange regression checks passed.');
