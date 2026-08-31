@@ -5,6 +5,8 @@ window.__sbcTicketMarketV36=true;
 window.__sbcTicketMarketV35=true;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const TYPE_LABELS={junior:'JR BROKER',trader:'TRADER',clerk:'CLERK',runner:'RUNNER'};
+const VISUAL_LABELS={junior:'Jr. StonkBroker',trader:'Trader',clerk:'Clerk',runner:'Runner'};
+function visualLabel(type){return VISUAL_LABELS[type]||TYPE_LABELS[type]||type}
 const NAME_TO_TYPE={'JR. STONKBROKER':'junior','JUNIOR':'junior','TRADER':'trader','CLERK':'clerk','RUNNER':'runner'};
 let panel=null,timer=null,capturedAuth='';
 const realBookCache=new Map();
@@ -25,23 +27,23 @@ function marketTypeFromName(name){return typeFromText(name)}
 function mappedMarket(book,fallback){const fb=fallback||{bids:[],asks:[],last:0};return{bids:(book?.bids||[]).map(x=>Number(x.bidPrice??x.price)).filter(Number.isFinite),asks:(book?.offers||[]).map(x=>Number(x.askPrice??x.price)).filter(Number.isFinite),last:Number(fb.last||0)}}
 async function fetchRealBook(type=currentType()){const book=await api(`/api/ticket-market/book/${type}`);realBookCache.set(type,book);return book}
 function renderBookFromBackend(book){
-  const type=book?.ticketType||marketTypeFromName(typeof activeTicketMarket!=='undefined'?activeTicketMarket:'RUNNER'),name=TYPE_LABELS[type]||type;
+  const type=book?.ticketType||marketTypeFromName(typeof activeTicketMarket!=='undefined'?activeTicketMarket:'RUNNER'),name=TYPE_LABELS[type]||type,artName=visualLabel(type);
   const fallback=staticMarket()||{bids:[],asks:[],last:0};
   const bids=(Array.isArray(book?.bids)?book.bids:[]).filter(o=>!o.isMine),offers=(Array.isArray(book?.offers)?book.offers:[]).filter(o=>!o.isMine);
   try{if(typeof hydrateExchangeTierIcons==='function')hydrateExchangeTierIcons()}catch(_){}
   const title=document.getElementById('marketTicketTitle');
-  if(title){const visual=typeof exchangeVisualHTML==='function'?exchangeVisualHTML(name):'';title.innerHTML=visual+`<span style="display:inline-flex;align-items:center;gap:10px;vertical-align:middle">${String(name).toUpperCase()} TICKET MARKET</span>`}
+  if(title){const visual=typeof exchangeVisualHTML==='function'?exchangeVisualHTML(artName):'';title.innerHTML=visual+`<span style="display:inline-flex;align-items:center;gap:10px;vertical-align:middle">${String(name).toUpperCase()} TICKET MARKET</span>`}
   const summaryBid=document.getElementById('summaryBid'),summaryAsk=document.getElementById('summaryAsk'),summaryLast=document.getElementById('summaryLast');
   if(summaryBid)summaryBid.textContent=book?.highestBid!=null?Number(book.highestBid).toLocaleString():'—';
   if(summaryAsk)summaryAsk.textContent=book?.lowestAsk!=null?Number(book.lowestAsk).toLocaleString():'—';
   if(summaryLast)summaryLast.textContent=Number(fallback.last||0).toLocaleString();
-  const visual=()=>typeof exchangeVisualHTML==='function'?exchangeVisualHTML(name):'';
+  const visual=()=>typeof exchangeVisualHTML==='function'?exchangeVisualHTML(artName):'';
   const askBook=document.getElementById('askBook');
   if(askBook)askBook.innerHTML=offers.map(o=>`<div class="book-row"><div class="book-ticket-meta">${visual()}<div><strong>1 ${name} Ticket Offered</strong><small>Seller #${String(o.id).slice(-4)} • Offer listed for sale</small></div></div><div class="book-price ask">${priceOf(o).toLocaleString()} STONK</div><button class="hit-ask" data-sbc-offer-id="${o.id}" data-sbc-offer-price="${priceOf(o)}">BUY OFFER</button></div>`).join('');
   const bidBook=document.getElementById('bidBook');
   if(bidBook)bidBook.innerHTML=bids.map(o=>`<div class="book-row"><div class="book-ticket-meta">${visual()}<div><strong>1 ${name} Ticket Bid</strong><small>Bidder #${String(o.id).slice(-4)} • Buyer posted this bid</small></div></div><div class="book-price bid">${priceOf(o).toLocaleString()} STONK</div><button class="hit-bid" data-sbc-bid-id="${o.id}" data-sbc-bid-price="${priceOf(o)}" onclick="sellIntoBid(${priceOf(o)},${o.id})">SELL TO BID</button></div>`).join('');
   const recent=document.getElementById('recentTicketSales'),fbBids=Array.isArray(fallback.bids)?fallback.bids:[],fbAsks=Array.isArray(fallback.asks)?fallback.asks:[];
-  if(recent&&Number(fallback.last)>0){const sales=[fallback.last,Math.round((fallback.last+(fbBids[0]||fallback.last))/2),Math.round((fallback.last+(fbAsks[0]||fallback.last))/2)];recent.innerHTML=sales.map((p,i)=>`<div class="market-row"><div class="ticket-name">${typeof exchangeVisualHTML==='function'?exchangeVisualHTML(name,'ticket-badge'):''}<div><b>${name}</b><small style="display:block;color:#9dacb8">1 ticket transferred</small></div></div><div>${p.toLocaleString()} STONK</div><div>${[3,17,42][i]}m ago</div><div></div><div></div></div>`).join('')}
+  if(recent&&Number(fallback.last)>0){const sales=[fallback.last,Math.round((fallback.last+(fbBids[0]||fallback.last))/2),Math.round((fallback.last+(fbAsks[0]||fallback.last))/2)];recent.innerHTML=sales.map((p,i)=>`<div class="market-row"><div class="ticket-name">${typeof exchangeVisualHTML==='function'?exchangeVisualHTML(artName,'ticket-badge'):''}<div><b>${name}</b><small style="display:block;color:#9dacb8">1 ticket transferred</small></div></div><div>${p.toLocaleString()} STONK</div><div>${[3,17,42][i]}m ago</div><div></div><div></div></div>`).join('')}
   const out=mappedMarket(book,fallback);
   window.dispatchEvent?.(new CustomEvent('sbc:exchange-rendered',{detail:{source:'ticket-market-v36',ticketType:book?.ticketType||currentType()}}));
   return out;
