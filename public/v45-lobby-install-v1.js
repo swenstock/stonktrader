@@ -4,38 +4,25 @@ if(window.__sbcLobbyInstallV1)return;window.__sbcLobbyInstallV1=true;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const HERO_SRC='/approved-lobby-hero-reference.png';
 const JR_VISIBLE='JR. BROKER';
+const RACE_ENDPOINT='/api/leaderboard-v45/broker-race?limit=50';
+let raceOpen=false,raceTimer=null;
 function setHtml(el,html){if(el&&el.innerHTML!==html)el.innerHTML=html;}
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function normalizeJrBrokerLabels(root=document){
-  const card=$('#cleanCard-junior',root);
-  const heading=card?.querySelector('h3');
-  if(heading)setHtml(heading,'JR.<br>BROKER');
-  const modeAll=$('#modeAll span',root);
-  if(modeAll&&/Jr\./i.test(modeAll.textContent||''))modeAll.textContent='See every tier — Free Roll through Jr. Broker — and choose your level.';
-  $$('.mini-tier b,.leaderboard-card-title,.floor-clean-card h3,.session-tier-name,.tier-name,[data-tier-name]',root).forEach(el=>{
-    const txt=(el.textContent||'').replace(/\s+/g,' ').trim().toUpperCase();
-    if(txt==='JR. STONKBROKER'||txt==='JR STONKBROKER'||txt==='JUNIOR'){
-      if(el.tagName==='H3'&&el.closest('#cleanCard-junior'))setHtml(el,'JR.<br>BROKER');
-      else el.textContent=JR_VISIBLE;
-    }
-  });
+  const card=$('#cleanCard-junior',root);const heading=card?.querySelector('h3');if(heading)setHtml(heading,'JR.<br>BROKER');
+  const modeAll=$('#modeAll span',root);if(modeAll&&/Jr\./i.test(modeAll.textContent||''))modeAll.textContent='See every tier — Free Roll through Jr. Broker — and choose your level.';
+  $$('.mini-tier b,.leaderboard-card-title,.floor-clean-card h3,.session-tier-name,.tier-name,[data-tier-name]',root).forEach(el=>{const txt=(el.textContent||'').replace(/\s+/g,' ').trim().toUpperCase();if(txt==='JR. STONKBROKER'||txt==='JR STONKBROKER'||txt==='JUNIOR'){if(el.tagName==='H3'&&el.closest('#cleanCard-junior'))setHtml(el,'JR.<br>BROKER');else el.textContent=JR_VISIBLE;}});
 }
-function installLobbyHero(){
-  const view=$('#view-lobby');
-  const hero=view?.querySelector('.hero');
-  if(!view||!hero)return;
-  hero.classList.add('approved-lobby-hero-v1');
-  if(!hero.dataset.lobbyHeroInstalled){
-    hero.innerHTML=`<div class="approved-lobby-hero-card panel"><img src="${HERO_SRC}" alt="Stonk Broker Challenge lobby hero"><div class="approved-lobby-hero-copy" aria-hidden="true">Stonk Broker Challenge lobby hero</div></div>`;
-    hero.dataset.lobbyHeroInstalled='1';
-  }else{
-    const img=hero.querySelector('img');
-    if(img&&img.getAttribute('src')!==HERO_SRC)img.setAttribute('src',HERO_SRC);
-  }
-}
+function runnerArt(){try{return TIER_DATA?.runner?.art||'/server/turtle_art_v1/runner.png'}catch(_){return'/server/turtle_art_v1/runner.png'}}
+function rowArt(row){try{return row?.art||TIER_DATA?.junior?.art||TIER_DATA?.runner?.art||runnerArt()}catch(_){return runnerArt()}}
+function raceRows(model){const rows=Array.isArray(model?.topStackers)?model.topStackers:[];const list=raceOpen?rows:rows.slice(0,5);if(!list.length)return'<div class="rot-empty">No badge collections yet.</div>';return list.map(r=>`<div class="rot-row"><b class="rot-rank">#${Number(r.rank||0)}</b><img src="${esc(rowArt(r))}" alt=""><span class="rot-name">${esc(r.displayName||'Trader')}</span><strong class="rot-count">${Number(r.juniorCount||0)} BADGES</strong></div>`).join('')}
+function renderRace(model){const box=$('#riseOfTurtlesLive');if(!box)return;box.innerHTML=`<div class="rot-head"><div><h2>RISE OF THE TURTLES</h2><p>Collect Jr. Stonk Broker Badges.<br>Climb higher. Get promoted.</p></div><img src="${runnerArt()}" alt="Runner turtle"></div><div class="rot-list-title">⭐ <b>NEXT IN LINE FOR PROMOTION</b></div><div class="rot-rows">${raceRows(model)}</div><button type="button" id="riseOfTurtlesViewAll">${raceOpen?'SHOW TOP 5':'VIEW ALL'} <span>⌄</span></button>`;const btn=$('#riseOfTurtlesViewAll');if(btn)btn.onclick=()=>{raceOpen=!raceOpen;renderRace(model)};}
+async function refreshRace(){try{const r=await fetch(RACE_ENDPOINT,{cache:'no-store'});if(!r.ok)throw new Error(`Race ${r.status}`);renderRace(await r.json())}catch(_){renderRace({topStackers:[]})}}
+function installLobbyHero(){const view=$('#view-lobby'),hero=view?.querySelector('.hero');if(!view||!hero)return;hero.classList.add('approved-lobby-hero-v1');if(!hero.dataset.lobbyHeroInstalled){hero.innerHTML=`<div class="approved-lobby-hero-card panel"><img class="approved-lobby-hero-image" src="${HERO_SRC}" alt="Stonk Broker Challenge lobby hero"><section id="riseOfTurtlesLive" class="rise-of-turtles-live" aria-label="Rise of the Turtles promotion leaderboard"></section></div>`;hero.dataset.lobbyHeroInstalled='1';}else{const img=hero.querySelector('.approved-lobby-hero-image');if(img&&img.getAttribute('src')!==HERO_SRC)img.setAttribute('src',HERO_SRC);if(!$('#riseOfTurtlesLive',hero)){const sec=document.createElement('section');sec.id='riseOfTurtlesLive';sec.className='rise-of-turtles-live';hero.querySelector('.approved-lobby-hero-card')?.appendChild(sec);}}refreshRace();}
 function install(){installLobbyHero();normalizeJrBrokerLabels();}
-function start(){install();setTimeout(install,250);setTimeout(install,1200);}
+function start(){install();setTimeout(install,250);setTimeout(install,1200);raceTimer=setInterval(()=>{if($('#view-lobby')?.offsetParent!==null)refreshRace()},5000);}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 document.addEventListener('click',e=>{if(e.target.closest?.('[onclick*="showView"],[onclick*="openTier"],#navLobby,#navFloor'))setTimeout(install,0);},false);
-new MutationObserver(()=>{clearTimeout(start.t);start.t=setTimeout(install,90)}).observe(document.documentElement,{childList:true,subtree:true});
-window.__SBC_LOBBY_INSTALL_V1_TEST={installLobbyHero,normalizeJrBrokerLabels,HERO_SRC,JR_VISIBLE};
+new MutationObserver(()=>{clearTimeout(start.t);start.t=setTimeout(()=>{normalizeJrBrokerLabels();const hero=$('#view-lobby .hero');if(hero&&!$('#riseOfTurtlesLive',hero))installLobbyHero()},90)}).observe(document.documentElement,{childList:true,subtree:true});
+window.__SBC_LOBBY_INSTALL_V1_TEST={installLobbyHero,normalizeJrBrokerLabels,renderRace,raceRows,HERO_SRC,JR_VISIBLE,RACE_ENDPOINT};
 })();
