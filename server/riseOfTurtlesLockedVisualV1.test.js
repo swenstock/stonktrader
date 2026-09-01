@@ -1,0 +1,13 @@
+'use strict';
+const assert=require('assert'),fs=require('fs');
+const js=fs.readFileSync('public/v45-lobby-install-v1.js','utf8');
+const css=fs.readFileSync('public/v45-lobby-install-v1.css','utf8');
+assert(js.includes('rot-rise')&&js.includes('rot-of-the')&&js.includes('rot-turtles'),'locked three-line title hierarchy must render');
+assert(js.includes('rot-climb-scene')&&js.includes('rot-ladder'),'Runner climbing-ladder scene must render');
+assert(js.includes('rot-promo-panel')&&js.includes('NEXT IN LINE FOR PROMOTION'),'promotion frame must render');
+assert(js.includes('toGo>=1&&toGo<=5'),'special live progress window must extend through 5 TO GO');
+assert(css.includes('.rot-near-5')&&css.includes('.rot-near-4'),'5 and 4 TO GO visual states must exist');
+assert(js.includes("setInterval(()=>{if($('#view-lobby')?.offsetParent!==null)refreshRace()},5000)"),'leaderboard must remain live on the existing refresh cadence');
+assert(js.includes("const RACE_ENDPOINT='/api/leaderboard-v45/broker-race?limit=50'"),'existing live race endpoint must remain authoritative');
+assert(js.includes("const HERO_SRC='/approved-lobby-hero-reference.png'"),'approved full Lobby hero must remain preserved');
+console.log('Rise of the Turtles Locked Visual V1: PASS');
