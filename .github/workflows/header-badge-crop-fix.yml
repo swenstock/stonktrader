@@ -1,0 +1,30 @@
+name: Header Badge Crop Fix
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'public/v45-lobby-install-v1.css'
+      - 'public/stonkbroker-reward-crop.png'
+      - 'server/headerBadgeCropFixV1.test.js'
+      - '.github/workflows/header-badge-crop-fix.yml'
+  push:
+    branches: [header-badge-crop-fix-v1]
+    paths:
+      - 'public/v45-lobby-install-v1.css'
+      - 'public/stonkbroker-reward-crop.png'
+      - 'server/headerBadgeCropFixV1.test.js'
+      - '.github/workflows/header-badge-crop-fix.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: Syntax check regression test
+        run: node --check server/headerBadgeCropFixV1.test.js
+      - name: Verify header Badge crop framing
+        run: node server/headerBadgeCropFixV1.test.js
