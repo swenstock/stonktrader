@@ -20,14 +20,14 @@ const PROMOTION_COPY=Object.freeze({
   topTitle:'🔥 NEXT IN LINE FOR PROMOTION',
   topLabel:'TOP 5 COLLECTORS',
 });
-window.__SBC_BROKER_RACE_UI_TEST={buildRaceModel,PROMOTION_COPY};
+window.__SBC_BROKER_RACE_UI_TEST={buildRaceModel,PROMOTION_COPY,leadersEmbedded:false};
 if(typeof document==='undefined')return;
 
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let latest=null,loading=false;
 
-function ensureCss(){if($('#sbcBrokerRaceCss'))return;const l=document.createElement('link');l.id='sbcBrokerRaceCss';l.rel='stylesheet';l.href='/v45-broker-race-ui.css?v=1';document.head.appendChild(l)}
+function ensureCss(){if($('#sbcBrokerRaceCss'))return;const l=document.createElement('link');l.id='sbcBrokerRaceCss';l.rel='stylesheet';l.href='/v45-broker-race-ui.css?v=2';document.head.appendChild(l)}
 async function load(){if(loading)return latest;loading=true;try{const r=await fetch('/api/leaderboard-v45/broker-race?limit=50',{cache:'no-store'});if(!r.ok)throw new Error(`Broker Race ${r.status}`);latest=buildRaceModel(await r.json());return latest}finally{loading=false}}
 function progressText(r){if(Number(r.juniorCount||0)>=Number(r.redeemCount||20)&&Number(r.progress||0)===Number(r.redeemCount||20))return 'READY FOR PROMOTION';const left=Number(r.juniorsToNextBroker||0);return left===1?'1 JR TO PROMOTION':`${left} JR TO PROMOTION`}
 function topRows(rows,limit=5){const list=rows.slice(0,limit);if(!list.length)return'<div class="sbc-race-empty">No Juniors have been collected yet. The race starts with the first award.</div>';return list.map(r=>`<div class="sbc-race-row"><div class="sbc-race-rank">#${r.rank}</div><div class="sbc-race-name"><b>${esc(r.displayName)}</b><span>${esc(progressText(r))}</span></div><div class="sbc-race-count">${r.juniorCount} JR</div></div>`).join('')}
@@ -46,11 +46,10 @@ function renderHome(model){
   return true;
 }
 
-function renderLeaders(model){
+function renderLeaders(){
   const view=$('#view-leaders');if(!view)return false;
-  let card=$('#sbcJrStackersLeaders',view);if(!card){card=document.createElement('section');card.id='sbcJrStackersLeaders';card.className='sbc-jr-leaders-card';view.appendChild(card)}
-  const rows=model.topStackers;
-  card.innerHTML=`<div class="sbc-jr-leaders-head"><div><div class="sbc-race-kicker">CAREER / PROGRESSION</div><h3>JR BROKER COLLECTORS</h3></div><p>Platform-wide Junior collections — separate from contest P&amp;L standings. Collect 20 and get promoted to an Activated StonkBroker.</p></div>${rows.length?`<table class="sbc-jr-leaders-table"><thead><tr><th>RANK</th><th>TRADER</th><th>JR COLLECTED</th><th>TO PROMOTION</th></tr></thead><tbody>${rows.map(r=>`<tr><td>#${r.rank}</td><td>${esc(r.displayName)}</td><td><b>${r.juniorCount}</b></td><td><span class="sbc-jr-progress-mini ${r.juniorsToNextBroker===0?'hot':''}">${esc(progressText(r))}</span></td></tr>`).join('')}</tbody></table>`:'<div class="sbc-race-empty">No Junior Broker collections yet.</div>'}`;
+  const card=$('#sbcJrStackersLeaders',view);
+  if(card)card.remove();
   return true;
 }
 
