@@ -1,0 +1,10 @@
+const assert=require('assert');
+const fs=require('fs');
+const js=fs.readFileSync('public/v45-leaderboard-v30.js','utf8');
+const css=fs.readFileSync('public/v45-leaderboard-v30.css','utf8');
+assert(js.includes('id="leaderV30TierArt"'),'leaderboard modal tier art img missing');
+assert(js.includes('displayTierName'),'displayTierName helper missing');
+assert(js.includes("junior:'JR. BROKER'"),'JR. BROKER visible label mapping missing');
+assert(js.includes('img.src=art'),'tier art is not bound into modal');
+assert(css.includes('.leader-v30-tier-art'),'tier art css missing');
+console.log('Leaderboard Popup Tier Icon V1: PASS');
