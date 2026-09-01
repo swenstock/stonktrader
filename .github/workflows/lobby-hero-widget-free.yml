@@ -1,0 +1,34 @@
+name: Lobby Hero Widget Free
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'public/approved-lobby-hero-widget-free.png'
+      - 'public/v45-lobby-install-v1.js'
+      - 'public/v45-lobby-install-v1.css'
+      - 'server/lobbyHeroWidgetFreeV1.test.js'
+      - '.github/workflows/lobby-hero-widget-free.yml'
+  push:
+    branches: [lobby-hero-widget-free-v1]
+    paths:
+      - 'public/approved-lobby-hero-widget-free.png'
+      - 'public/v45-lobby-install-v1.js'
+      - 'public/v45-lobby-install-v1.css'
+      - 'server/lobbyHeroWidgetFreeV1.test.js'
+      - '.github/workflows/lobby-hero-widget-free.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: Syntax check Lobby hero regression
+        run: |
+          node --check public/v45-lobby-install-v1.js
+          node --check server/lobbyHeroWidgetFreeV1.test.js
+      - name: Verify approved widget-free Lobby hero
+        run: node server/lobbyHeroWidgetFreeV1.test.js
