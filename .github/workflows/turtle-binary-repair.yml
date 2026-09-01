@@ -24,7 +24,7 @@ jobs:
           fi
           mkdir -p server/turtle_art_v1
           for key in freeroll runner clerk trader junior; do
-            cat .repair/${key}.*.b64 | tr -d '\n\r' | base64 --decode > server/turtle_art_v1/${key}.png
+            cat .repair/${key}.part*.b64 | tr -d '\n\r' | base64 --decode > server/turtle_art_v1/${key}.png
           done
           sha256sum -c .repair/SHA256SUMS
           python - <<'PY'
