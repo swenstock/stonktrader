@@ -4,6 +4,8 @@ if(window.__sbcBadgeMarketStage4)return;window.__sbcBadgeMarketStage4=true;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 let badgeMode=false,book=null,capturedAuth='';
 const nativeFetch=window.fetch.bind(window);
+const BADGE_ICON_SRC='/stonkbroker-reward-crop.png?v=1';
+
 function headerValue(headers,name){try{if(headers instanceof Headers)return headers.get(name)||'';if(Array.isArray(headers)){const x=headers.find(([k])=>String(k).toLowerCase()===name.toLowerCase());return x?.[1]||''}if(headers&&typeof headers==='object'){const k=Object.keys(headers).find(k=>k.toLowerCase()===name.toLowerCase());return k?headers[k]:''}}catch(_){}return''}
 window.fetch=async function(input,init){const ah=headerValue(init?.headers,'authorization')||headerValue(input?.headers,'authorization');if(ah)capturedAuth=ah;return nativeFetch(input,init)};
 function auth(){try{const t=String(localStorage.getItem('token')||'').replace(/^Bearer\s+/i,'').trim();if(t)return`Bearer ${t}`}catch(_){}return capturedAuth||''}
@@ -14,7 +16,7 @@ function referencePrice(){if(book?.lowestAsk!=null)return Number(book.lowestAsk)
 function warningFor(price){const p=Number(price),ref=referencePrice();if(!(ref>0))return null;const gap=Math.abs(p-ref)/ref,threshold=Number(book?.warningThreshold??.25),floor=Number(book?.floor??36666.6),ceiling=Number(book?.mintPrice??48000);if(!(gap>threshold&&(p<floor||p>ceiling)))return null;return{price:p,ref,gap,threshold,floor,ceiling}}
 function unified(){return window.__SBC_BADGE_DIALOG_UNIFIED_V1}
 function routeBadge(action,...args){const owner=unified();if(owner?.[action])return owner[action](...args);return window.SBCExchangeDialogV1?.notice?.('Badge transaction dialog is unavailable. Refresh and try again.',{title:'BADGE EXCHANGE',eyebrow:'JR STONK BROKER BADGE',icon:'!'})}
-function visual(){return'<span class="sbc-badge-mark" aria-hidden="true">★</span>'}
+function visual(){return `<span class="sbc-badge-mark" aria-hidden="true"><img src="${BADGE_ICON_SRC}" alt="" loading="lazy" decoding="async"></span>`}
 function controls(){let el=$('#sbcBadgeStage4Controls');if(!el){const title=$('#marketTicketTitle');if(!title?.parentNode)return null;el=document.createElement('div');el.id='sbcBadgeStage4Controls';el.className='sbc-badge-controls';el.innerHTML='<button id="sbcBadgeMint">BUY NOW · 48,000</button><button id="sbcBadgeList">LIST BADGE</button><button id="sbcBadgeBid">POST BID</button><span id="sbcBadgeOwned"></span>';title.parentNode.insertBefore(el,title.nextSibling);$('#sbcBadgeMint',el).onclick=()=>routeBadge('mint');$('#sbcBadgeList',el).onclick=()=>routeBadge('listBadge');$('#sbcBadgeBid',el).onclick=()=>routeBadge('postBid');}const ok=signedIn();['sbcBadgeMint','sbcBadgeList','sbcBadgeBid'].forEach(id=>{const b=$(`#${id}`,el);if(b){b.disabled=!ok;b.setAttribute('aria-disabled',String(!ok));}});const owned=$('#sbcBadgeOwned',el);if(owned&&!ok)owned.textContent='SIGN IN TO TRADE';return el}
 function hideControls(){const c=$('#sbcBadgeStage4Controls');if(c)c.hidden=true}
 function deactivateBadgeMode(){badgeMode=false;hideControls()}
