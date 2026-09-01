@@ -26,6 +26,7 @@ function getBrokerRaceStats(db, { limit = 50 } = {}) {
         WHERE asset_type = ?) AS juniors_stacked
   `).get(ASSET_TYPE);
 
+  const redeemCount = Number(REDEEM_COUNT);
   const rows = prepareBigInt(db, `
     SELECT h.account_id AS accountId,
            u.display_name AS displayName,
@@ -34,11 +35,15 @@ function getBrokerRaceStats(db, { limit = 50 } = {}) {
       JOIN accounts a ON a.id = h.account_id
       JOIN users u ON u.id = a.user_id
      WHERE h.asset_type = ? AND h.quantity > 0
-     ORDER BY h.quantity DESC, LOWER(u.display_name) ASC, h.account_id ASC
+     ORDER BY CASE
+                WHEN h.quantity >= ${redeemCount} AND h.quantity % ${redeemCount} = 0 THEN ${redeemCount}
+                ELSE h.quantity % ${redeemCount}
+              END DESC,
+              LOWER(u.display_name) ASC,
+              h.account_id ASC
      LIMIT ?
   `).all(ASSET_TYPE, BigInt(limit));
 
-  const redeemCount = Number(REDEEM_COUNT);
   const stackers = rows.map((row, index) => {
     const count = Number(row.juniorCount);
     const remainder = count % redeemCount;
