@@ -2,6 +2,7 @@
 'use strict';
 if(window.__sbcStage4JuniorUi)return;
 window.__sbcStage4JuniorUi=true;
+const BADGE_ICON_SRC='/stonkbroker-reward-crop.png?v=1';
 
 function buildViewModel(snapshot){
   const s=snapshot||{};
@@ -110,14 +111,14 @@ function render(snapshot,{signedOut=false,error=''}={}){
   const card=ensureCard();
   if(!card)return;
   if(signedOut){
-    card.innerHTML=`<div class="sbc-jr4-head"><div><small>PRIZE COLLECTION</small><h3>JR STONK BROKER BADGES</h3></div><span>20 = 1 BROKER</span></div><div class="sbc-jr4-signedout">Sign in to track your Badges, promotion progress, and prize history.</div>`;
+    card.innerHTML=`<div class="sbc-jr4-head"><div class="sbc-jr4-title"><span class="sbc-jr4-badge-art"><img src="${BADGE_ICON_SRC}" alt="" loading="lazy" decoding="async"></span><div><small>PRIZE COLLECTION</small><h3>JR STONK BROKER BADGES</h3></div></div><span>20 = 1 BROKER</span></div><div class="sbc-jr4-signedout">Sign in to track your Badges, promotion progress, and prize history.</div>`;
     return;
   }
-  if(error){card.innerHTML=`<div class="sbc-jr4-head"><div><small>PRIZE COLLECTION</small><h3>JR STONK BROKER BADGES</h3></div><span>20 = 1 BROKER</span></div><div class="sbc-jr4-signedout">${esc(error)}</div>`;return}
+  if(error){card.innerHTML=`<div class="sbc-jr4-head"><div class="sbc-jr4-title"><span class="sbc-jr4-badge-art"><img src="${BADGE_ICON_SRC}" alt="" loading="lazy" decoding="async"></span><div><small>PRIZE COLLECTION</small><h3>JR STONK BROKER BADGES</h3></div></div><span>20 = 1 BROKER</span></div><div class="sbc-jr4-signedout">${esc(error)}</div>`;return}
   const vm=buildViewModel(snapshot);
   latest=vm;
   card.innerHTML=`
-    <div class="sbc-jr4-head"><div><small>PRIZE COLLECTION</small><h3>JR STONK BROKER BADGES</h3></div><span>COLLECT 20 → GET PROMOTED</span></div>
+    <div class="sbc-jr4-head"><div class="sbc-jr4-title"><span class="sbc-jr4-badge-art"><img src="${BADGE_ICON_SRC}" alt="" loading="lazy" decoding="async"></span><div><small>PRIZE COLLECTION</small><h3>JR STONK BROKER BADGES</h3></div></div><span>COLLECT 20 → GET PROMOTED</span></div>
     <div class="sbc-jr4-grid">
       <div class="sbc-jr4-count"><small>YOU OWN</small><b>${vm.count}</b><span>BADGES</span></div>
       <div class="sbc-jr4-progress"><div class="sbc-jr4-progress-top"><small>NEXT PROMOTION</small><b>${vm.progressLabel}</b></div><div class="sbc-jr4-track"><i style="width:${vm.progressPercent}%"></i></div><p>Collect Jr Stonk Broker Badges. Collect 20. Get promoted to an Activated StonkBroker.</p></div>
@@ -155,4 +156,4 @@ new MutationObserver(()=>{if(!mounted&&view())run()}).observe(document.documentE
 document.addEventListener('click',e=>{const t=(e.target?.textContent||'').trim().toUpperCase();if(t==='MY CONTESTS')setTimeout(refresh,120)},true);
 })();
 
-(()=>{if(typeof document==='undefined'||document.getElementById('sbcBrokerRaceLoader'))return;const s=document.createElement('script');s.id='sbcBrokerRaceLoader';s.src='/v45-broker-race-ui.js?v=1';document.body.appendChild(s)})();
+(()=>{if(typeof document==='undefined'||document.getElementById('sbcBrokerRaceLoader'))return;const s=document.createElement('script');s.id='sbcBrokerRaceLoader';s.src='/v45-broker-race-ui.js?v=2';document.body.appendChild(s)})();
