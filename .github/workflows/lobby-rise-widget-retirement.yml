@@ -1,0 +1,32 @@
+name: Lobby Rise Widget Retirement
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'public/v45-lobby-install-v1.js'
+      - 'public/v45-lobby-install-v1.css'
+      - 'server/lobbyRiseWidgetRetirementV1.test.js'
+      - '.github/workflows/lobby-rise-widget-retirement.yml'
+  push:
+    branches: [retire-rise-widget-v1]
+    paths:
+      - 'public/v45-lobby-install-v1.js'
+      - 'public/v45-lobby-install-v1.css'
+      - 'server/lobbyRiseWidgetRetirementV1.test.js'
+      - '.github/workflows/lobby-rise-widget-retirement.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: Syntax check Lobby installer
+        run: |
+          node --check public/v45-lobby-install-v1.js
+          node --check server/lobbyRiseWidgetRetirementV1.test.js
+      - name: Verify Rise widget retirement
+        run: node server/lobbyRiseWidgetRetirementV1.test.js
