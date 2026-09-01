@@ -60,6 +60,27 @@ function countOccurrences(haystack, needle) {
   return haystack.split(needle).length - 1;
 }
 
+const STATIC_LEADER_POSITION_CARD = `      <div class="leader-find-identity">
+        <span class="find-kicker">YOUR POSITION</span>
+        <b id="leaderYourRank">#31 / 224</b>
+        <span id="leaderYourPnl">+6.84%</span>
+      </div>
+
+`;
+const STATIC_LEADER_POSITION_RETIREMENT_MARKER = '<!-- SBC STATIC LEADER POSITION RETIRED V1 -->';
+function applyStaticLeaderPositionRetirementPatch(html) {
+  let source = Buffer.isBuffer(html) ? html.toString("utf8") : String(html);
+  if (source.includes(STATIC_LEADER_POSITION_RETIREMENT_MARKER)) return Buffer.from(source, "utf8");
+  if (countOccurrences(source, STATIC_LEADER_POSITION_CARD) !== 1) {
+    throw new Error('Exact V45 static leader position retirement compatibility failure');
+  }
+  source = source.replace(STATIC_LEADER_POSITION_CARD, `      ${STATIC_LEADER_POSITION_RETIREMENT_MARKER}\n`);
+  if (source.includes('YOUR POSITION') || source.includes('id="leaderYourRank"') || source.includes('id="leaderYourPnl"')) {
+    throw new Error('Exact V45 static leader position retirement integrity failure');
+  }
+  return Buffer.from(source, "utf8");
+}
+
 const TURTLE_TIER_ART_KEYS = ['freeroll','runner','clerk','trader','junior'];
 function turtleTierArtDataUri(key) {
   if (!TURTLE_TIER_ART_KEYS.includes(key)) throw new Error(`Unknown turtle tier art key: ${key}`);
@@ -282,7 +303,7 @@ function buildExactV45Shell() {
   if (html.length !== EXPECTED_BYTES || sha256 !== EXPECTED_SHA256) {
     throw new Error(`Exact V45 integrity failure: ${html.length} bytes ${sha256}`);
   }
-  return applyTurtleTierArtPatch(applyChartPresentationTuning(applyLegacyOrdersSurfaceRetirementPatch(applyRealQuickTradePatch(applyRealChartDataPatch(html)))));
+  return applyStaticLeaderPositionRetirementPatch(applyTurtleTierArtPatch(applyChartPresentationTuning(applyLegacyOrdersSurfaceRetirementPatch(applyRealQuickTradePatch(applyRealChartDataPatch(html))))));
 }
 
 const exactV45Shell = buildExactV45Shell();
@@ -300,4 +321,6 @@ module.exports = {
   CHART_PRESENTATION_TUNING_MARKER,
   applyTurtleTierArtPatch,
   TURTLE_TIER_ART_KEYS,
+  applyStaticLeaderPositionRetirementPatch,
+  STATIC_LEADER_POSITION_RETIREMENT_MARKER,
 };
