@@ -1,0 +1,10 @@
+const assert=require('assert');
+const fs=require('fs');
+assert(fs.existsSync('public/approved-lobby-hero-reference.png'),'approved lobby hero asset missing');
+const js=fs.readFileSync('public/v45-lobby-install-v1.js','utf8');
+const css=fs.readFileSync('public/v45-lobby-install-v1.css','utf8');
+assert(js.includes("/approved-lobby-hero-reference.png"),'lobby hero asset path missing');
+assert(js.includes('JR. BROKER'),'JR. BROKER normalization missing');
+assert(js.includes('installLobbyHero'),'lobby install routine missing');
+assert(css.includes('approved-lobby-hero-v1'),'lobby install css missing');
+console.log('Lobby Install V1: PASS');

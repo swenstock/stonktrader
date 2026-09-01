@@ -8,5 +8,5 @@ must(!css.includes('.leader-tier-v30 img{'),'tier portrait image sizing override
 must(!css.includes('.leader-tier-v30{min-height:'),'tier card height override removed');
 must(server.includes('leaderboardPlacement: "v34-popup-only"'),'health reports popup-only leaderboard');
 must(server.includes('leaderboardPortraits: "native-card-sizing"'),'health reports native tier card sizing');
-must(server.includes('v45-leaderboard-v30.css?v=34'),'popup-only stylesheet is cache-busted');
+must(server.includes('v45-leaderboard-v30.css?v=35'),'popup-only stylesheet is cache-busted');
 console.log('Stage 22 leaderboard regression checks passed.');
