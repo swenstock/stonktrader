@@ -60,6 +60,27 @@ function countOccurrences(haystack, needle) {
   return haystack.split(needle).length - 1;
 }
 
+
+const LOBBY_MAIN_EVENT_LIVE_MARKET_STRIP = `<section class="quote panel">
+ <div style="font-size:34px">🎟️</div>
+ <div class="quote-title"><b>MAIN EVENT TICKET — LIVE MARKET</b><span>Earn one in competition or buy one from another player. Buyers can accept an Ask or place a Bid. SBC does not sell Main Event entry.</span></div>
+ <div class="quotes"><div class="q bid"><span>HIGHEST BID</span><b>8,100</b></div><div class="q ask"><span>LOWEST ASK</span><b>8,500</b></div><div class="q"><span>LAST</span><b>8,350</b></div><div class="q vol"><span>24H SALES</span><b>47</b></div></div>
+</section>
+`;
+const LOBBY_MAIN_EVENT_LIVE_MARKET_RETIREMENT_MARKER = '<!-- SBC LOBBY MAIN EVENT LIVE MARKET RETIRED V1 -->';
+function applyLobbyMainEventLiveMarketRetirementPatch(html) {
+  let source = Buffer.isBuffer(html) ? html.toString("utf8") : String(html);
+  if (source.includes(LOBBY_MAIN_EVENT_LIVE_MARKET_RETIREMENT_MARKER)) return Buffer.from(source, "utf8");
+  if (countOccurrences(source, LOBBY_MAIN_EVENT_LIVE_MARKET_STRIP) !== 1) {
+    throw new Error('Exact V45 Lobby Main Event live-market retirement compatibility failure');
+  }
+  source = source.replace(LOBBY_MAIN_EVENT_LIVE_MARKET_STRIP, `${LOBBY_MAIN_EVENT_LIVE_MARKET_RETIREMENT_MARKER}\n`);
+  if (source.includes('MAIN EVENT TICKET — LIVE MARKET')) {
+    throw new Error('Exact V45 Lobby Main Event live-market retirement integrity failure');
+  }
+  return Buffer.from(source, "utf8");
+}
+
 const STATIC_LEADER_POSITION_CARD = `      <div class="leader-find-identity">
         <span class="find-kicker">YOUR POSITION</span>
         <b id="leaderYourRank">#31 / 224</b>
@@ -308,7 +329,7 @@ function buildExactV45Shell() {
   if (html.length !== EXPECTED_BYTES || sha256 !== EXPECTED_SHA256) {
     throw new Error(`Exact V45 integrity failure: ${html.length} bytes ${sha256}`);
   }
-  return applyStaticLeaderPositionRetirementPatch(applyTurtleTierArtPatch(applyChartPresentationTuning(applyLegacyOrdersSurfaceRetirementPatch(applyRealQuickTradePatch(applyRealChartDataPatch(html))))));
+  return applyLobbyMainEventLiveMarketRetirementPatch(applyStaticLeaderPositionRetirementPatch(applyTurtleTierArtPatch(applyChartPresentationTuning(applyLegacyOrdersSurfaceRetirementPatch(applyRealQuickTradePatch(applyRealChartDataPatch(html)))))));
 }
 
 const exactV45Shell = buildExactV45Shell();
@@ -328,4 +349,6 @@ module.exports = {
   TURTLE_TIER_ART_KEYS,
   applyStaticLeaderPositionRetirementPatch,
   STATIC_LEADER_POSITION_RETIREMENT_MARKER,
+  applyLobbyMainEventLiveMarketRetirementPatch,
+  LOBBY_MAIN_EVENT_LIVE_MARKET_RETIREMENT_MARKER,
 };
