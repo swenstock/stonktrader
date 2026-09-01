@@ -1,14 +1,14 @@
 const fs=require('fs'),path=require('path'),Module=require('module');
 const target=path.join(__dirname,'validate-stage26-my-tickets.js');
 let src=fs.readFileSync(target,'utf8');
-const staticBootstrap="must(server.includes('/v45-exchange-dialog-v1.js?v=6')&&server.includes('/v45-exchange-layout-sales-v1.js?v=2'),'server serves cache-busted Exchange dialog and layout helpers');";
+const staticBootstrap="must(server.includes('/v45-exchange-dialog-v1.js?v=6')&&server.includes('/v45-exchange-layout-sales-v1.js?v=3'),'server serves cache-busted Exchange dialog and layout helpers');";
 if(!src.includes(staticBootstrap))throw new Error('Stage 26 static bootstrap assertion changed; review wrapper before proceeding.');
 const legacyRecent="must(layout.includes(\"findPanel('RECENT SALES')\")&&layout.includes('sbcExchangeRealRecentSales')&&layout.includes('/api/ticket-market/recent/${type}'),'legacy fake Recent Sales is hidden and replaced with backend ticket executions inside the book');";
 const sourceCleanRecent="must(!ticketMarketUi.includes('recentTicketSales')&&!ticketMarketUi.includes('[3,17,42]')&&!layout.includes('sbcExchangeRealRecentSales')&&!layout.includes('ensureRealRecent')&&!layout.includes('renderSales')&&!layout.includes('refreshSales')&&!layout.includes('/api/ticket-market/recent/')&&server.includes('/v45-exchange-history-stage2-v1.js?v=3'),'legacy Recent Sales producers are removed at source and unified Exchange History remains authoritative');";
 if(!src.includes(legacyRecent))throw new Error('Stage 26 legacy Recent Sales assertion changed; review wrapper before proceeding.');
 src=src.replace(legacyRecent,sourceCleanRecent);
 const oldLayoutLabel="must(server.includes('/v45-exchange-layout-sales-v1.js?v=2'),'server static bootstrap loads the cache-busted Exchange bottom-layout/recent-sales guard');";
-const newLayoutLabel="must(server.includes('/v45-exchange-layout-sales-v1.js?v=2'),'server static bootstrap loads the cache-busted Exchange bottom-layout/reconciliation guard');";
+const newLayoutLabel="must(server.includes('/v45-exchange-layout-sales-v1.js?v=3'),'server static bootstrap loads the cache-busted Exchange bottom-layout/reconciliation guard');";
 src=src.replace(oldLayoutLabel,newLayoutLabel);
 const oldHeartbeat="'Exchange uses one shared 1500ms reconciliation heartbeat across all four polling consumers'";
 const newHeartbeat="'Exchange uses one shared 1500ms reconciliation heartbeat across Exchange consumers'";
