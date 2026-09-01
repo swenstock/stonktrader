@@ -7,7 +7,7 @@ const path = require('path');
 const js = fs.readFileSync(path.join(__dirname, '..', 'public', 'v45-lobby-install-v1.js'), 'utf8');
 const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'v45-lobby-install-v1.css'), 'utf8');
 
-assert(js.includes("const HERO_SRC='/approved-lobby-hero-reference.png'"), 'approved Lobby hero must remain owned by the installer');
+assert(js.includes("const HERO_SRC='/approved-lobby-hero-widget-free.png'"), 'approved Lobby hero must remain owned by the installer');
 assert(js.includes('normalizeJrBrokerLabels'), 'Jr. Broker label normalization must remain');
 assert(js.includes('retireLegacyRiseWidget'), 'installer must actively remove any stale Rise node encountered in the current DOM');
 assert(!js.includes('MutationObserver'), 'retired Lobby installer must not keep the document-wide MutationObserver');
