@@ -1,0 +1,11 @@
+const assert=require('assert'),fs=require('fs');
+const js=fs.readFileSync('public/v45-lobby-install-v1.js','utf8');
+const css=fs.readFileSync('public/v45-lobby-install-v1.css','utf8');
+assert(js.includes('RISE OF THE TURTLES'));
+assert(js.includes('Collect Jr. Stonk Broker Badges.'));
+assert(js.includes('NEXT IN LINE FOR PROMOTION'));
+assert(js.includes("/api/leaderboard-v45/broker-race?limit=50"));
+assert(js.includes('TIER_DATA?.runner?.art'));
+assert(js.includes("raceOpen?'SHOW TOP 5':'VIEW ALL'"));
+assert(css.includes('position:absolute')&&css.includes('right:1.35%')&&css.includes('top:31.5%'));
+console.log('Lobby Rise of the Turtles V2: PASS');
