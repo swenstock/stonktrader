@@ -75,6 +75,11 @@ function applyStaticLeaderPositionRetirementPatch(html) {
     throw new Error('Exact V45 static leader position retirement compatibility failure');
   }
   source = source.replace(STATIC_LEADER_POSITION_CARD, `      ${STATIC_LEADER_POSITION_RETIREMENT_MARKER}\n`);
+  const staleLeaderWrites = `  document.getElementById('leaderYourRank').textContent=\`#\${s.rank} / \${s.entries}\`;\n  document.getElementById('leaderYourPnl').textContent=\`+\${s.userPnl.toFixed(2)}%\`;\n`;
+  if (countOccurrences(source, staleLeaderWrites) !== 1) {
+    throw new Error('Exact V45 static leader position retirement compatibility failure: stale leader writes');
+  }
+  source = source.replace(staleLeaderWrites, '  /* retired static leader identity writes */\n');
   if (source.includes('YOUR POSITION') || source.includes('id="leaderYourRank"') || source.includes('id="leaderYourPnl"')) {
     throw new Error('Exact V45 static leader position retirement integrity failure');
   }
