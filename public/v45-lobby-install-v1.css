@@ -1,6 +1,6 @@
 #view-lobby .hero.approved-lobby-hero-v1{display:block!important;margin:0 0 16px!important}
-#view-lobby .hero.approved-lobby-hero-v1 .approved-lobby-hero-card{display:block;position:relative;width:96%;aspect-ratio:16/9;margin:0 auto;padding:0;overflow:hidden;border:1px solid #2f4555;border-radius:24px;background:linear-gradient(180deg,#07131d,#03090f);box-shadow:0 20px 54px rgba(0,0,0,.34)}
-#view-lobby .hero.approved-lobby-hero-v1 .approved-lobby-hero-image{display:block;width:100%;height:100%;object-fit:cover;object-position:center center}
+#view-lobby .hero.approved-lobby-hero-v1 .approved-lobby-hero-card{display:block;position:relative;width:96%;margin:0 auto;padding:0;overflow:hidden;border:1px solid #2f4555;border-radius:24px;background:linear-gradient(180deg,#07131d,#03090f);box-shadow:0 20px 54px rgba(0,0,0,.34)}
+#view-lobby .hero.approved-lobby-hero-v1 .approved-lobby-hero-image{display:block;width:100%;height:auto}
 header.top > img.avatar{object-position:center top}
 #view-floor #cleanCard-junior h3 br{display:block}
 @media(max-width:900px){#view-lobby .hero.approved-lobby-hero-v1 .approved-lobby-hero-card{width:100%;border-radius:18px}}
