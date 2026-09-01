@@ -7,5 +7,5 @@ assert(js.includes('NEXT IN LINE FOR PROMOTION'));
 assert(js.includes("/api/leaderboard-v45/broker-race?limit=50"));
 assert(js.includes('TIER_DATA?.runner?.art'));
 assert(js.includes("raceOpen?'SHOW TOP 5':'VIEW ALL'"));
-assert(css.includes('position:absolute')&&css.includes('right:1.35%')&&css.includes('top:31.5%'));
+assert(css.includes('position:absolute')&&css.includes('right:2.5%')&&css.includes('top:30.8%')&&css.includes('width:19.3%')&&css.includes('height:47.4%'));
 console.log('Lobby Rise of the Turtles V2: PASS');
