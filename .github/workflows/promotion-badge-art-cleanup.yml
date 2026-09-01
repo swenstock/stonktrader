@@ -1,0 +1,34 @@
+name: Promotion Badge Art Cleanup
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'public/v45-lobby-install-v1.js'
+      - 'public/stonkbroker-reward-crop.png'
+      - 'public/v45-stage4-junior-ui.js'
+      - 'server/promotionBadgeArtCleanupV1.test.js'
+      - '.github/workflows/promotion-badge-art-cleanup.yml'
+  push:
+    branches: [promotion-badge-art-cleanup-v1]
+    paths:
+      - 'public/v45-lobby-install-v1.js'
+      - 'public/stonkbroker-reward-crop.png'
+      - 'public/v45-stage4-junior-ui.js'
+      - 'server/promotionBadgeArtCleanupV1.test.js'
+      - '.github/workflows/promotion-badge-art-cleanup.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: Syntax check promotion art cleanup
+        run: |
+          node --check public/v45-lobby-install-v1.js
+          node --check server/promotionBadgeArtCleanupV1.test.js
+      - name: Verify canonical Badge art and help removal
+        run: node server/promotionBadgeArtCleanupV1.test.js
