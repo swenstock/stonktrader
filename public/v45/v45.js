@@ -163,10 +163,6 @@
     $('#fundTarget').textContent = `Target: ${fmt(target)} STONK`;
     $('#fundReserve').textContent = `${fmt(committed)} STONK`;
 
-    const book = state.ticketType === 'main_event' ? state.marketBook : null;
-    $('#meBid').textContent = book?.highestBid ? fmt(book.highestBid) : '—';
-    $('#meAsk').textContent = book?.lowestAsk ? fmt(book.lowestAsk) : '—';
-
     $('#quoteTape').innerHTML = (state.quotes || []).map(q => `
       <div class="tape-card">
         <b>${escapeHtml(q.symbol)}</b><small>${escapeHtml(q.exchange || '')}</small>
