@@ -25,7 +25,6 @@ if(typeof document==='undefined')return;
 
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const APPROVED_STONKBROKER_ART='/stonkbroker-reward-crop.png?v=1';
 let latest=null,loading=false;
 
 function ensureCss(){if($('#sbcBrokerRaceCss'))return;const l=document.createElement('link');l.id='sbcBrokerRaceCss';l.rel='stylesheet';l.href='/v45-broker-race-ui.css?v=2';document.head.appendChild(l)}
@@ -54,24 +53,7 @@ function renderLeaders(){
   return true;
 }
 
-function retireObsoleteUiAndBrokerArt(){
-  const quote=$('section.quote.panel');
-  if(quote&&/MAIN EVENT TICKET — LIVE MARKET/i.test(quote.textContent||''))quote.remove();
-  $('.tutorial-replay')?.remove();
-  $('.footer-card')?.remove();
-  const brokerImages=[
-    $('header.top img.avatar'),
-    $('.pitch.panel>img'),
-    $('.event.panel .prize-art img'),
-    $('#how .step.own img'),
-    $('.me-compact.panel img'),
-  ].filter(Boolean);
-  brokerImages.forEach(img=>{img.src=APPROVED_STONKBROKER_ART;img.removeAttribute?.('srcset');img.style?.removeProperty?.('image-rendering');});
-  return brokerImages.length;
-}
-
 function patchCorporateLadderCopy(){
-  retireObsoleteUiAndBrokerArt();
   const pitch=$('.pitch-copy');
   if(pitch){const h=pitch.querySelector('h1');const p=pitch.querySelector('p');if(h)h.innerHTML=`${PROMOTION_COPY.heroHeadline}<br><span>${PROMOTION_COPY.heroAction}</span>`;if(p)p.innerHTML=PROMOTION_COPY.heroSupport;}
   const statement=$('.statement');
@@ -79,13 +61,11 @@ function patchCorporateLadderCopy(){
   const steps=$$('#how .step');
   if(steps[2]){const h=steps[2].querySelector('h3');const ps=steps[2].querySelectorAll(':scope>p');if(h)h.textContent='FINISH TOP 10%';if(ps[0])ps[0].textContent='Paid contests target the top 10%. Fully funded Jr. Broker Badges go to the highest eligible finishers; remaining places receive the tier fallback.';if(ps[1])ps[1].innerHTML='<strong>Tickets:</strong> play them, hold them, sell them, or collect 10 for an optional upgrade.';}
   if(steps[3]){const h=steps[3].querySelector('h3');const ps=steps[3].querySelectorAll(':scope>p');if(h)h.textContent='GET PROMOTED';if(ps[0])ps[0].textContent='Collect Jr. StonkBrokers as you compete. Collect 20 and get promoted to an Activated StonkBroker.';if(ps[1])ps[1].innerHTML='Your Junior collection follows you across SBC — it is <strong>not</strong> tied to one contest.';const fan=steps[3].querySelector('.fanfare');if(fan)fan.textContent='🏆 COLLECT 20 JR. STONKBROKERS → GET PROMOTED.';}
-  const footer=$('.footer-card');if(footer)footer.remove();
+  const footer=$('.footer-card');if(footer)footer.innerHTML='<strong>CLIMB THE CORPORATE LADDER.</strong><br><span>Win tickets. Collect Juniors. Collect 20. Get promoted.</span>';
 }
 async function refresh(){ensureCss();patchCorporateLadderCopy();try{const m=await load();renderHome(m);renderLeaders(m);patchCorporateLadderCopy()}catch(e){console.warn('Broker Race UI unavailable',e)}}
 function start(){ensureCss();refresh();setTimeout(refresh,700)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 new MutationObserver(()=>{clearTimeout(start.t);start.t=setTimeout(()=>{if(latest){renderHome(latest);renderLeaders(latest);patchCorporateLadderCopy()}else{patchCorporateLadderCopy()}},100)}).observe(document.documentElement,{childList:true,subtree:true});
 document.addEventListener('click',e=>{const t=(e.target?.textContent||'').trim().toUpperCase();if(t==='LOBBY'||t==='LEADERBOARD')setTimeout(refresh,120)},true);
-window.__SBC_BROKER_RACE_UI_TEST.retireObsoleteUiAndBrokerArt=retireObsoleteUiAndBrokerArt;
-window.__SBC_BROKER_RACE_UI_TEST.APPROVED_STONKBROKER_ART=APPROVED_STONKBROKER_ART;
 })();
