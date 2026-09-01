@@ -1,0 +1,44 @@
+name: PR254 Binary Repair
+on:
+  push:
+    branches: [turtle-art-binary-repair]
+permissions:
+  contents: write
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Reconstruct only when ready marker exists
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f .pr254-chunks/READY || exit 0
+          python - <<'PY'
+          from pathlib import Path
+          import base64, hashlib
+          expected={
+          'freeroll':'b28eb74b0951930217fae66adc5ab40d6c64b7d9159864522cd60c53689db46f',
+          'runner':'d92a59f1e9470f732cdf1caf196776f5b31e7a674d2e233e67a9b877d410e203',
+          'clerk':'5c13bc7b3dd59771ee1235bbe9051fcab33675ede61d419fe1aa23143c8bce96',
+          'trader':'3e7c139ca352c1b384e6e5be1c0cb0b3c213ba82a80c572f09ca41989d368549',
+          'junior':'309d204c9ef6b67162f6860de87ba79a7ce973e43cbbf4b00b5e14c87cd49d3d'}
+          out=Path('server/turtle_art_v1'); out.mkdir(parents=True, exist_ok=True)
+          for name,sha in expected.items():
+              parts=sorted(Path('.pr254-chunks').glob(f'{name}-*.b64'))
+              if not parts: raise SystemExit(f'missing chunks for {name}')
+              raw=base64.b64decode(''.join(p.read_text().strip() for p in parts), validate=True)
+              got=hashlib.sha256(raw).hexdigest()
+              if got!=sha: raise SystemExit(f'{name} sha256 mismatch {got}')
+              if raw[:8] != b'\x89PNG\r\n\x1a\n': raise SystemExit(f'{name} not PNG')
+              (out/f'{name}.png').write_bytes(raw)
+          PY
+          rm -rf .pr254-chunks
+          rm -f .pr254-probe.txt
+          rm -f .github/workflows/pr254-binary-repair.yml
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git diff --cached --exit-code && exit 0
+          git commit -m 'Repair canonical turtle art binaries'
+          git push
