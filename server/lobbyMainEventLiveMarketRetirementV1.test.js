@@ -1,0 +1,10 @@
+'use strict';
+const assert = require('assert');
+const { exactV45Shell, LOBBY_MAIN_EVENT_LIVE_MARKET_RETIREMENT_MARKER } = require('./v45ExactShell');
+const html = exactV45Shell.toString('utf8');
+assert(html.includes(LOBBY_MAIN_EVENT_LIVE_MARKET_RETIREMENT_MARKER), 'served shell must contain retirement marker');
+assert(!html.includes('MAIN EVENT TICKET — LIVE MARKET'), 'stale Lobby live-market strip must be absent');
+assert(!html.includes('<section class="quote panel">'), 'stale Lobby quote panel must be removed');
+assert(html.includes('<section class="actions">'), 'Lobby actions immediately after retired strip must remain');
+assert(html.includes('NEXT STONKBROKER MAIN EVENT'), 'separate funding surface is outside D1 and must remain untouched');
+console.log('Lobby Main Event Live Market Retirement V1: PASS');
