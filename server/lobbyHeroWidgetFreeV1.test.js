@@ -25,8 +25,10 @@ assert.strictEqual(art.readUInt32BE(20), 1024, 'approved Lobby hero height chang
 
 assert(ui.includes("const HERO_SRC='/approved-lobby-hero-widget-free.png'"), 'Lobby installer must point at approved widget-free hero');
 assert(ui.includes('retireLobbyStatementStrip'), 'Lobby statement-strip retirement owner missing');
-assert(css.includes('width:96%;aspect-ratio:16/9;margin:0 auto'), 'desktop Lobby hero must be slightly smaller and centered');
-assert(css.includes('height:100%;object-fit:cover;object-position:center center'), 'approved hero must retain its compact 16:9 display framing');
+assert(css.includes('width:96%;margin:0 auto'), 'desktop Lobby hero must be slightly smaller and centered');
+assert(css.includes('.approved-lobby-hero-image{display:block;width:100%;height:auto}'), 'approved hero must keep its natural aspect ratio with no crop');
+assert(!css.includes('aspect-ratio:16/9'), 'approved hero must not be forced into a 16:9 crop');
+assert(!css.includes('object-fit:cover'), 'approved hero must not be cover-cropped');
 assert(css.includes('header.top > img.avatar{object-position:center top}'), 'PR #279 header Badge crop fix must remain intact');
 
 let removed = false;
