@@ -31,5 +31,5 @@ must(!/CORPORATE LADDER/i.test(retirement),'Main Event retirement does not inven
 must(retirement.includes('#sbcJuniorCollectionV4')&&retirement.includes('[id*="badge" i]'),'Main Event retirement explicitly protects established Junior/Badge UI');
 must(junior.includes('JR STONK BROKER BADGES')&&junior.includes('20 = 1 BROKER'),'Jr Stonk Broker Badge collection remains intact');
 must(badge.includes("slot.id='sbcBadgeMarketTab'")&&badge.includes('JR STONK BROKER BADGE')&&badge.includes("localStorage.getItem('token')"),'Jr Stonk Broker Badge has its own dedicated authenticated market tab');
-must(badge.includes("function visual(){return'<span class=\"sbc-badge-mark\"")&&badge.includes('deactivateBadgeMode')&&badge.includes("SIGN IN TO TRADE"),'Badge UI uses self-contained art, deactivates off-tab, and blocks signed-out transaction prompts');
+must(badge.includes("BADGE_ICON_SRC='/stonkbroker-reward-crop.png?v=1'")&&badge.includes('function visual()')&&badge.includes('<img src=')&&badge.includes('deactivateBadgeMode')&&badge.includes("SIGN IN TO TRADE"),'Badge UI uses approved StonkBroker art, deactivates off-tab, and blocks signed-out transaction prompts');
 console.log('Stage 31/32 ticket exchange runtime-owner + real-ticket authority checks passed.');
