@@ -2,9 +2,10 @@
 const assert=require('assert'),fs=require('fs');
 const js=fs.readFileSync('public/v45-lobby-install-v1.js','utf8');
 const css=fs.readFileSync('public/v45-lobby-install-v1.css','utf8');
-assert(js.includes('rot-rise')&&js.includes('rot-of-the')&&js.includes('rot-turtles'),'locked three-line title hierarchy must render');
-assert(js.includes('rot-climb-scene')&&js.includes('rot-ladder'),'Runner climbing-ladder scene must render');
-assert(js.includes('rot-promo-panel')&&js.includes('NEXT IN LINE FOR PROMOTION'),'promotion frame must render');
+assert(js.includes("const RISE_ART_SRC='/rise-of-turtles-approved-final.png.png'"),'exact approved Rise artwork must be the visual source');
+assert(js.includes('rot-approved-art'),'approved artwork element must render');
+assert(js.includes('rot-live-rows-shell'),'only the live leaderboard rows should overlay the approved artwork');
+assert(!js.includes('rot-title-lockup')&&!js.includes('rot-climb-scene')&&!js.includes('rot-ladder'),'title, turtle and ladder must not be recreated in HTML/CSS');
 assert(js.includes('toGo>=1&&toGo<=5'),'special live progress window must extend through 5 TO GO');
 assert(css.includes('.rot-near-5')&&css.includes('.rot-near-4'),'5 and 4 TO GO visual states must exist');
 assert(js.includes("setInterval(()=>{if($('#view-lobby')?.offsetParent!==null)refreshRace()},5000)"),'leaderboard must remain live on the existing refresh cadence');
