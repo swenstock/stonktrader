@@ -1,0 +1,38 @@
+name: Activated Broker Delivery
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'server/activatedBrokerDelivery.js'
+      - 'server/activatedBrokerDelivery.test.js'
+      - 'server/routes/admin.js'
+      - 'server/schemaV45.js'
+      - '.github/workflows/activated-broker-delivery.yml'
+  push:
+    branches: [delivery-completion-v1]
+    paths:
+      - 'server/activatedBrokerDelivery.js'
+      - 'server/activatedBrokerDelivery.test.js'
+      - 'server/routes/admin.js'
+      - 'server/schemaV45.js'
+      - '.github/workflows/activated-broker-delivery.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+      - run: npm ci
+      - name: Syntax check delivery completion
+        run: |
+          node --check server/activatedBrokerDelivery.js
+          node --check server/activatedBrokerDelivery.test.js
+          node --check server/routes/admin.js
+          node --check server/schemaV45.js
+      - name: Execute delivery completion behavior
+        run: node server/activatedBrokerDelivery.test.js
