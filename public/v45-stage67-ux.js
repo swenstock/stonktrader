@@ -62,8 +62,8 @@ const tierLabel=l=>l.priceLevel==='free'?'FREE ROLL':l.priceLevel==='runner'?'RU
 function projectionText(level){
   const p=level.payoutProjection,n=Number(level.entrantCount||0);
   if(!p)return n?`${n} entries • projection unavailable`:`0 entries • waiting for entries`;
-  if(level.priceLevel==='free'){const parts=[`${n} entries`,`${p.badgesAwarded||0} Jr. Broker Badge${p.badgesAwarded===1?'':'s'}`];if(p.cashDistributed)parts.push(`${Number(p.cashDistributed).toLocaleString()} STONK local prize pool`);parts.push('no top-10% guarantee');return parts.join(' • ');}
-  const parts=[`${n} entries`,`top ${p.paidPlaces}`,`${p.badgesAwarded||0} Jr. Broker Badge${p.badgesAwarded===1?'':'s'}`];
+  if(level.priceLevel==='free'){const parts=[`${n} entries`,`${p.badgesAwarded||0} Jr. Stonk Broker Badge${p.badgesAwarded===1?'':'s'}`];if(p.cashDistributed)parts.push(`${Number(p.cashDistributed).toLocaleString()} STONK local prize pool`);parts.push('no top-10% guarantee');return parts.join(' • ');}
+  const parts=[`${n} entries`,`top ${p.paidPlaces}`,`${p.badgesAwarded||0} Jr. Stonk Broker Badge${p.badgesAwarded===1?'':'s'}`];
   if(p.fallbackTickets)parts.push(`${p.fallbackTickets} fallback ticket${p.fallbackTickets===1?'':'s'}`);
   if(p.cashPrizePlaces)parts.push(`${p.cashPrizePlaces} STONK fallback place${p.cashPrizePlaces===1?'':'s'}`);
   if(p.poolCarryContribution)parts.push(`${Number(p.poolCarryContribution).toLocaleString()} STONK Badge carry`);
