@@ -1,7 +1,11 @@
 'use strict';
-const assert=require('assert'),fs=require('fs');
+const assert=require('assert'),fs=require('fs'),crypto=require('crypto');
 const js=fs.readFileSync('public/v45-lobby-install-v1.js','utf8');
 const css=fs.readFileSync('public/v45-lobby-install-v1.css','utf8');
+const artPath='public/rise-of-turtles-approved-final.png.png';
+assert(fs.existsSync(artPath),'exact approved Rise artwork file must exist');
+const artHash=crypto.createHash('sha256').update(fs.readFileSync(artPath)).digest('hex');
+assert.strictEqual(artHash,'851d3fd0ff1d77786bf7cf0a6310799e86b8d86658114633a4ff7e79c4444c26','approved Rise artwork must remain byte-for-byte exact');
 assert(js.includes("const RISE_ART_SRC='/rise-of-turtles-approved-final.png.png'"),'exact approved Rise artwork must be the visual source');
 assert(js.includes('rot-approved-art'),'approved artwork element must render');
 assert(js.includes('rot-live-rows-shell'),'only the live leaderboard rows should overlay the approved artwork');
