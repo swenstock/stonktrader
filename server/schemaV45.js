@@ -6,6 +6,7 @@ migrateLegacyPortfolioSchema();
 const db = require('./db');
 const { ensureSchema: ensurePrizeReserveSchema } = require('./prizeReserveLedger');
 const { ensureSchema: ensureJuniorBrokerStage2Schema } = require('./juniorBrokerStage2');
+const { migrateActivatedBrokerDeliverySchema } = require('./activatedBrokerDelivery');
 const { ensureSchema: ensureContestJuniorFundingPoolSchema } = require('./contestJuniorFundingPool');
 const { ensureSchema: ensureFreerollFundingSchema } = require('./freerollFundingV45');
 const { ensureSchema: ensureBadgeQuantityLockSchema } = require('./badgeQuantityLockV45');
@@ -114,6 +115,7 @@ function run() {
 
   ensurePrizeReserveSchema(db);
   ensureJuniorBrokerStage2Schema(db);
+  migrateActivatedBrokerDeliverySchema({ db });
   ensureContestJuniorFundingPoolSchema(db);
   ensureFreerollFundingSchema();
   ensureBadgeQuantityLockSchema(db);

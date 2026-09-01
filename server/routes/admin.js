@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require("../db");
 const requireAuth = require("../middleware/requireAuth");
 const { currentStonkUsdPriceMicros } = require("../contestScheduler");
+const { markActivatedBrokerDelivered } = require("../activatedBrokerDelivery");
 
 // Minimal admin gate: an allowlist of emails via env var, comma-separated.
 // Defaults to empty (nobody has access) so this doesn't accidentally ship
@@ -80,4 +81,24 @@ router.get("/revenue", requireAuth, requireAdmin, (req, res) => {
   });
 });
 
+router.post("/junior-broker-redemptions/:redemptionId/deliver", requireAuth, requireAdmin, (req, res) => {
+  try {
+    const delivery = markActivatedBrokerDelivered(db, { redemptionId: req.params.redemptionId });
+    return res.json(delivery);
+  } catch (err) {
+    if (err && err.code === 'REDEMPTION_NOT_FOUND') {
+      return res.status(404).json({ error: 'Redemption not found' });
+    }
+    if (err && err.code === 'DELIVERY_TIMESTAMP_MISSING') {
+      return res.status(409).json({ error: 'Delivered redemption is missing delivery timestamp' });
+    }
+    if (err && err.code === 'INVALID_REDEMPTION_STATUS') {
+      return res.status(409).json({ error: 'Redemption cannot be delivered from its current status' });
+    }
+    console.error('Activated broker delivery failed', err);
+    return res.status(500).json({ error: 'Activated broker delivery failed' });
+  }
+});
+
 module.exports = router;
+module.exports.requireAdmin = requireAdmin;
