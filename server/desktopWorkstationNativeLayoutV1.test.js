@@ -13,6 +13,7 @@ class ClassList{
 }
 class El{
   constructor(tag='div'){this.tagName=tag.toUpperCase();this.children=[];this.parentElement=null;this.classList=new ClassList();this.dataset={};this.style={};this.id='';this.offsetParent={};this._html='';}
+  get parentNode(){return this.parentElement;}
   appendChild(c){if(c.parentElement)c.parentElement.removeChild(c);this.children.push(c);c.parentElement=this;return c;}
   prepend(c){if(c.parentElement)c.parentElement.removeChild(c);this.children.unshift(c);c.parentElement=this;return c;}
   insertBefore(c,ref){if(c.parentElement)c.parentElement.removeChild(c);const i=this.children.indexOf(ref);if(i<0)return this.appendChild(c);this.children.splice(i,0,c);c.parentElement=this;return c;}
