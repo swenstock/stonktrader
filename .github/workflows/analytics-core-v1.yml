@@ -1,0 +1,36 @@
+name: Analytics Core V1
+
+on:
+  pull_request:
+    paths:
+      - 'public/v45-analytics-core-v1.js'
+      - 'public/v45-desktop-stage51-v55.js'
+      - 'public/v45-desktop-stage46-v51-pre.js'
+      - 'server/analyticsCoreV1.test.js'
+      - 'scripts/validate-stage51-header-analytics.js'
+      - '.github/workflows/analytics-core-v1.yml'
+  workflow_dispatch:
+
+jobs:
+  analytics-core-v1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+      - run: npm ci
+      - name: Syntax check analytics core extraction
+        run: |
+          node --check public/v45-analytics-core-v1.js
+          node --check public/v45-desktop-stage51-v55.js
+          node --check server/analyticsCoreV1.test.js
+          node --check scripts/validate-stage51-header-analytics.js
+      - name: Behavioral analytics core test
+        run: node server/analyticsCoreV1.test.js
+      - name: Stage 51 analytics validation
+        run: node scripts/validate-stage51-header-analytics.js
+      - name: Historical analytics supersession validation
+        run: node scripts/validate-stage49-real-analytics.js
