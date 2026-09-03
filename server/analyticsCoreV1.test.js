@@ -15,7 +15,16 @@ class Element{
   constructor(tag='div',doc=null){this.tagName=tag.toUpperCase();this.ownerDocument=doc;this.children=[];this.parentElement=null;this.dataset={};this.attributes={};this.classList=new ClassList(this);this._className='';this._text='';this.hidden=false;this.listeners={};this.style={};this.open=false;this.onclick=null;}
   set className(v){this.classList.fromString(v)} get className(){return this._className}
   set textContent(v){this._text=String(v);this.children=[];} get textContent(){return this._text+this.children.map(c=>c.textContent).join('');}
-  set innerHTML(v){this.children=[];this._text=String(v||'').replace(/<[^>]*>/g,' ');}
+  set innerHTML(v){
+    const html=String(v||'');this.children=[];this._text='';
+    if(html.includes('stage51-modal-panel-v55')){
+      const panel=this.ownerDocument.createElement('section');panel.className='stage51-modal-panel-v55';
+      const header=this.ownerDocument.createElement('header');const wrap=this.ownerDocument.createElement('div');const small=this.ownerDocument.createElement('small');small.textContent='PORTFOLIO ANALYSIS';const title=this.ownerDocument.createElement('h2');title.id='stage51ModalTitle';title.textContent='ANALYTICS';wrap.append(small,title);
+      const close=this.ownerDocument.createElement('button');close.className='stage51-modal-close-v55';close.textContent='×';header.append(wrap,close);
+      const content=this.ownerDocument.createElement('div');content.className='stage51-modal-content-v55';panel.append(header,content);this.appendChild(panel);return;
+    }
+    this._text=html.replace(/<[^>]*>/g,' ');
+  }
   get innerHTML(){return this._text;}
   appendChild(c){if(c.parentElement)c.parentElement.removeChild(c);this.children.push(c);c.parentElement=this;return c;}
   append(...xs){xs.forEach(x=>this.appendChild(x));}
