@@ -1,0 +1,23 @@
+name: Package Full Source
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build full tracked-source ZIP
+        run: |
+          git ls-files -z | xargs -0 zip -q SBC_FULL_SOURCE_${GITHUB_SHA}.zip
+          unzip -l SBC_FULL_SOURCE_${GITHUB_SHA}.zip > SBC_FULL_SOURCE_${GITHUB_SHA}.manifest.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbc-full-source
+          path: |
+            SBC_FULL_SOURCE_${{ github.sha }}.zip
+            SBC_FULL_SOURCE_${{ github.sha }}.manifest.txt
+          if-no-files-found: error
+          retention-days: 7
