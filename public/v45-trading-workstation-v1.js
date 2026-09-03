@@ -8,15 +8,12 @@ const BASKET_STORE='sbcLastBasketV45';
 const QUOTE_ROUTE='/api/quotes';
 let symbols=['AAPL','MSFT','NVDA','TSLA','AMZN'],timer=null;
 
-function tierKeyFor(el){
-  const t=String(el?.closest?.('.mini-tier,.session,.mc-card,.floor-clean-card,.mobile-path-row,.step,.sbc-jr4-card,.exchange-page,.badge-market,.ticket-market')?.textContent||el?.parentElement?.textContent||'').toUpperCase();
-  return t.includes('JUNIOR')||t.includes('JR.')||t.includes('BADGE')?'junior':t.includes('TRADER')?'trader':t.includes('CLERK')?'clerk':t.includes('RUNNER')?'runner':'junior';
-}
+function tierKeyFor(el){const t=String(el?.closest?.('.mini-tier,.session,.mc-card,.floor-clean-card,.mobile-path-row,.step')?.textContent||el?.parentElement?.textContent||'').toUpperCase();return t.includes('JUNIOR')||t.includes('JR.')?'junior':t.includes('TRADER')?'trader':t.includes('CLERK')?'clerk':t.includes('RUNNER')?'runner':'freeroll';}
 function turtleArt(key){try{return typeof TIER_DATA!=='undefined'&&TIER_DATA[key]?.art?TIER_DATA[key].art:''}catch(_){return''}}
 function normalizePortraits(){
-  const stale=$$('img').filter(im=>/stonkbroker-reward-crop|victory-broker\.svg|broker-icon|broker-avatar/i.test(String(im.getAttribute('src')||'')));
+  const stale=$$('img').filter(im=>/stonkbroker-reward-crop|victory-broker\.svg|broker-icon|broker-avatar/i.test(String(im.getAttribute('src')||''))&&im.closest('.mini-tier,.session,.mc-card,.floor-clean-card,.mobile-path-row,.step,.mobile-floor-brokers'));
   stale.forEach(im=>{const src=turtleArt(tierKeyFor(im));if(src){im.src=src;im.removeAttribute('srcset');im.dataset.sbcTurtleNormalized='1';}});
-  $$('.desktop-tier-icon,.mobile-tier-thumb,.mobile-session-broker,.mobile-contest-broker,.mobile-step-broker,.mobile-broker-anchor,.mobile-floor-broker,.sbc-jr4-badge-art img,.ticket-filter-art img,.mobile-exchange-art img').forEach(im=>{const src=turtleArt(tierKeyFor(im));if(src&&im.src!==src)im.src=src;});
+  $$('.desktop-tier-icon,.mobile-tier-thumb,.mobile-session-broker,.mobile-contest-broker,.mobile-step-broker,.mobile-broker-anchor,.mobile-floor-broker').forEach(im=>{const src=turtleArt(tierKeyFor(im));if(src&&im.src!==src)im.src=src;});
 }
 function parseSymbols(raw){return [...new Set(String(raw||'').split(/[|,;\s]+/).map(norm).filter(valid))].slice(0,30)}
 function savedBasketSymbols(storage=localStorage){try{const x=JSON.parse(storage.getItem(BASKET_STORE)||'null');return [...new Set((x?.rows||[]).map(r=>norm(r?.symbol)).filter(valid))].slice(0,30)}catch(_){return[]}}
