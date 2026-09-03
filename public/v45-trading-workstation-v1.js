@@ -59,7 +59,6 @@ function buildQuotePanel(){
 function installRenderRecovery(){
   const fn=window.renderPortfolio;if(typeof fn!=='function'||fn.__sbcContestRecoveryV1)return false;
   const wrapped=function(){
-    try{if(typeof window.showView==='function')window.showView('portfolio')}catch(_){}
     try{return fn.apply(this,arguments)}catch(err){
       console.error('SBC portfolio render recovery',err);const v=$('#view-portfolio');
       if(v){v.style.display='';v.classList.add('active');let box=$('#sbcPortfolioRecoveryV1',v);if(!box){box=document.createElement('div');box.id='sbcPortfolioRecoveryV1';box.className='panel sbc-portfolio-recovery-v1';v.prepend(box)}box.innerHTML='<h2>CONTEST LOADED</h2><p>The portfolio shell recovered from a display error. Refreshing the live workspace…</p>';setTimeout(()=>{try{fn.apply(window,arguments);box.remove()}catch(_){ }},250)}
