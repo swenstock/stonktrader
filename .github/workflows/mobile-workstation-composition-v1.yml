@@ -1,0 +1,30 @@
+name: Mobile Workstation Composition V1
+
+on:
+  pull_request:
+    paths:
+      - 'public/v45-trading-workstation-v1.css'
+      - 'server/tradingWorkstationV1.test.js'
+      - 'server/mobileWorkstationCompositionV1.test.js'
+      - '.github/workflows/mobile-workstation-composition-v1.yml'
+  workflow_dispatch:
+
+jobs:
+  mobile-workstation-composition-v1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+      - run: npm ci
+      - name: Syntax check composition tests
+        run: |
+          node --check server/tradingWorkstationV1.test.js
+          node --check server/mobileWorkstationCompositionV1.test.js
+      - name: Focused mobile composition regression
+        run: node server/mobileWorkstationCompositionV1.test.js
+      - name: Existing workstation acceptance
+        run: node server/tradingWorkstationV1.test.js
