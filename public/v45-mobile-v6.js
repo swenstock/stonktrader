@@ -3,7 +3,7 @@
 if(!window.matchMedia('(max-width:620px)').matches||window.__sbcMobileV6)return;
 window.__sbcMobileV6=true;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
-let positionsSheet=null;
+let positionsSheet=null,analyticsSheet=null,analyticsMounted=null,analyticsKind=null;
 const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
 
 function cleanupLobby(){
@@ -117,6 +117,71 @@ function renderPositions(q=''){
 function openPositions(){ensurePositionsSheet();renderPositions('');positionsSheet.hidden=false;document.body.classList.add('mobile-position-sheet-open-v6');setTimeout(()=> $('[data-v6-pos-search]',positionsSheet)?.focus(),80);}
 function closePositions(){if(!positionsSheet)return;positionsSheet.hidden=true;document.body.classList.remove('mobile-position-sheet-open-v6');}
 
+function analyticsCore(){return window.SBCAnalyticsCoreV1||null;}
+function neutralizeV5AnalyticsMarker(card){
+  if(card?.dataset?.mobileTradePanelV5==='analytics')card.removeAttribute('data-mobile-trade-panel-v5');
+  return card;
+}
+function analyticsSource(view,kind){
+  const core=analyticsCore();if(!core||!view)return null;
+  return neutralizeV5AnalyticsMarker(core.capture(view,kind));
+}
+function availableAnalytics(view){
+  return ['portfolio','advanced'].filter(kind=>!!analyticsSource(view,kind));
+}
+function ensureAnalyticsLauncher(){
+  const view=$('#view-portfolio');if(!view)return;
+  const kinds=availableAnalytics(view);let launch=$('#mobileAnalyticsLaunchV6',view);
+  if(!kinds.length){launch?.remove();return;}
+  if(!launch){
+    launch=document.createElement('section');launch.id='mobileAnalyticsLaunchV6';launch.className='mobile-analytics-launch-v6';
+    launch.innerHTML='<button type="button"><div><small>PERFORMANCE</small><b>ANALYTICS</b><span data-v6-analytics-summary>Portfolio performance</span></div><strong>›</strong></button>';
+    const positions=$('#mobilePositionsLaunchV6',view),chart=$('.chart-trade-card',view);
+    if(positions)positions.after(launch);else if(chart)chart.after(launch);else view.appendChild(launch);
+    $('button',launch).onclick=openAnalytics;
+  }
+  $('[data-v6-analytics-summary]',launch).textContent=kinds.length===2?'Portfolio • Advanced':kinds[0]==='portfolio'?'Portfolio analytics':'Advanced performance';
+}
+function ensureAnalyticsSheet(){
+  if(analyticsSheet)return analyticsSheet;
+  analyticsSheet=document.createElement('div');analyticsSheet.id='mobileAnalyticsSheetV6';analyticsSheet.className='mobile-analytics-sheet-v6';analyticsSheet.hidden=true;
+  analyticsSheet.innerHTML='<section role="dialog" aria-modal="true" aria-labelledby="mobileAnalyticsTitleV6"><div class="mobile-sheet-grab-v6"></div><header><div><small>PERFORMANCE</small><h2 id="mobileAnalyticsTitleV6">ANALYTICS</h2></div><button type="button" data-v6-analytics-close aria-label="Close analytics">×</button></header><div class="mobile-analytics-tabs-v6" role="tablist"><button type="button" data-v6-analytics-kind="portfolio">PORTFOLIO</button><button type="button" data-v6-analytics-kind="advanced">ADVANCED</button></div><div class="mobile-analytics-host-v6"></div></section>';
+  document.body.appendChild(analyticsSheet);
+  $('[data-v6-analytics-close]',analyticsSheet).onclick=closeAnalytics;
+  $$('[data-v6-analytics-kind]',analyticsSheet).forEach(b=>b.onclick=()=>showAnalytics(b.dataset.v6AnalyticsKind));
+  analyticsSheet.onclick=e=>{if(e.target===analyticsSheet)closeAnalytics();};
+  return analyticsSheet;
+}
+function syncAnalyticsChoices(){
+  const view=$('#view-portfolio'),sheet=ensureAnalyticsSheet();if(!view)return[];
+  const kinds=availableAnalytics(view);
+  $$('[data-v6-analytics-kind]',sheet).forEach(b=>{const available=kinds.includes(b.dataset.v6AnalyticsKind);b.hidden=!available;b.disabled=!available;});
+  return kinds;
+}
+function showAnalytics(kind){
+  const view=$('#view-portfolio'),core=analyticsCore(),sheet=ensureAnalyticsSheet();if(!view||!core)return false;
+  const kinds=syncAnalyticsChoices();if(!kinds.includes(kind))return false;
+  if(analyticsMounted&&analyticsKind===kind&&analyticsMounted.parentElement===$('.mobile-analytics-host-v6',sheet))return true;
+  if(analyticsMounted)core.restore(view,analyticsMounted);
+  const host=$('.mobile-analytics-host-v6',sheet);host.innerHTML='';
+  analyticsMounted=neutralizeV5AnalyticsMarker(core.mount(view,kind,host));analyticsKind=analyticsMounted?kind:null;
+  $$('[data-v6-analytics-kind]',sheet).forEach(b=>{const active=b.dataset.v6AnalyticsKind===analyticsKind;b.classList.toggle('active',active);b.setAttribute('aria-selected',String(active));});
+  return !!analyticsMounted;
+}
+function openAnalytics(){
+  const sheet=ensureAnalyticsSheet(),kinds=syncAnalyticsChoices();if(!kinds.length)return;
+  sheet.hidden=false;document.body.classList.add('mobile-analytics-sheet-open-v6');
+  showAnalytics(kinds.includes('portfolio')?'portfolio':kinds[0]);
+}
+function closeAnalytics(){
+  if(!analyticsSheet)return;
+  const view=$('#view-portfolio'),core=analyticsCore();
+  if(analyticsMounted&&view&&core)core.restore(view,analyticsMounted);
+  analyticsMounted=null;analyticsKind=null;
+  const host=$('.mobile-analytics-host-v6',analyticsSheet);if(host)host.innerHTML='';
+  analyticsSheet.hidden=true;document.body.classList.remove('mobile-analytics-sheet-open-v6');
+}
+
 function nearestScroller(target){
   let p=target?.parentElement;
   while(p&&p!==document.body){const cs=getComputedStyle(p);if(p.scrollHeight>p.clientHeight+20&&/(auto|scroll)/.test(cs.overflowY))return p;p=p.parentElement;}
@@ -139,7 +204,7 @@ function cleanupDeadMobile(){
   $$('#mobileTradeTabsV5,#mobileTradeContextV5,.mobile-step-nav').forEach(x=>x.classList.add('mobile-v6-retired'));
   $$('.mobile-floor-brokers').forEach(x=>x.remove());
 }
-function enhance(){cleanupLobby();cleanupDeadMobile();setupContestHeader();setupTradeFirst();ensurePositionsLauncher();bindFindMe();}
+function enhance(){cleanupLobby();cleanupDeadMobile();setupContestHeader();setupTradeFirst();ensurePositionsLauncher();ensureAnalyticsLauncher();bindFindMe();}
 window.__sbcMobileV6Enhance=enhance;
 function start(){enhance();}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();

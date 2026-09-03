@@ -3,7 +3,7 @@ const js=fs.readFileSync(path.join(__dirname,'..','public','v45-mobile-v6.js'),'
 const css=fs.readFileSync(path.join(__dirname,'..','public','v45-mobile-v6.css'),'utf8');
 const loader=fs.readFileSync(path.join(__dirname,'..','public','v45-mobile-v4.js'),'utf8');
 function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
-must(loader.includes('/v45-mobile-v6.css?v=6')&&loader.includes('/v45-mobile-v6.js?v=6'),'mobile v4 bootstrap loads Stage 35 v6 assets');
+must(loader.includes('/v45-mobile-v6.css?v=7')&&loader.includes('/v45-mobile-v6.js?v=7'),'mobile v4 bootstrap loads Stage 35 v6 assets');
 must(css.includes('.mobile-floor-brokers{display:none!important}')&&css.includes('.mobile-redundant-path-v6{display:none!important}'),'lobby broker strip and redundant Earn/Play/Win path are removed');
 must(css.includes('.mobile-how-scroll-v6')&&css.includes('scroll-snap-type:x mandatory'),'How It Works becomes intentional horizontal swipe cards');
 must(js.includes('mobile-contest-header-v6')&&css.includes('.mobile-native-contest-hero-v6{display:none!important}')&&css.includes('width:76px;height:76px'),'oversized Degen/native header is replaced by compact broker-led contest header');
