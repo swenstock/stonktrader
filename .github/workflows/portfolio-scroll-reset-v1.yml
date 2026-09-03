@@ -1,0 +1,29 @@
+name: Portfolio Scroll Reset V1
+
+on:
+  pull_request:
+    paths:
+      - 'public/v45-trading-workstation-v1.js'
+      - 'server/portfolioScrollResetV1.test.js'
+      - '.github/workflows/portfolio-scroll-reset-v1.yml'
+  workflow_dispatch:
+
+jobs:
+  portfolio-scroll-reset-v1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+      - run: npm ci
+      - name: Syntax check scroll-reset fix
+        run: |
+          node --check public/v45-trading-workstation-v1.js
+          node --check server/portfolioScrollResetV1.test.js
+      - name: Behavioral scroll-reset test
+        run: node server/portfolioScrollResetV1.test.js
+      - name: Existing workstation acceptance
+        run: node server/tradingWorkstationV1.test.js
