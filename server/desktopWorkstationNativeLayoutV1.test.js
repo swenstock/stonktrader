@@ -41,7 +41,7 @@ function matches(el,selector){
   return selector.split(',').some(raw=>{
     const s=raw.trim();
     if(s.startsWith('#'))return el.id===s.slice(1);
-    if(s.startsWith('.'))return el.classList.contains(s.slice(1));
+    if(s.startsWith('.'))return el.classList.contains(s.slice(1))||String(el.className||'').split(/\s+/).includes(s.slice(1));
     if(s==='img')return el.tagName==='IMG';
     if(s==='[data-sbc-quote-symbol]')return el.dataset.sbcQuoteSymbol!==undefined;
     return false;
