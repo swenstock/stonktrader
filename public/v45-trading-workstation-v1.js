@@ -44,6 +44,7 @@ async function refreshQuotes(){
   }catch(e){root.innerHTML=`<div class="sbc-quote-loading-v1">${String(e.message||e)}</div>`}
 }
 function buildQuotePanel(){
+  if(window.matchMedia('(min-width:901px)').matches)return;
   const v=$('#view-portfolio'),ticket=$('.quick-trade-clean',v);if(!v||!ticket||$('#sbcQuotePanelV1',v))return false;
   let grid=ticket.closest('.sbc-quote-oe-grid-v1');
   if(!grid){grid=document.createElement('div');grid.className='sbc-quote-oe-grid-v1';ticket.parentNode.insertBefore(grid,ticket);grid.appendChild(ticket)}

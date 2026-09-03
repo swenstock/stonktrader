@@ -35,6 +35,7 @@ function makeContext({throwRender=false}={}){
   };
   let renders=0,showCalls=0,scrollCalls=0;
   const window={
+    matchMedia(){return {matches:true};},
     renderPortfolio(){
       renders++;
       if(throwRender)throw new Error('boom');
