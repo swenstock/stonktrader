@@ -1,0 +1,30 @@
+name: Main Event Retirement Observer Removal
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'public/v45-main-event-retirement-v1.js'
+      - 'server/mainEventRetirementObserverRemovalV1.test.js'
+      - '.github/workflows/main-event-retirement-observer-removal.yml'
+  push:
+    branches: [fix/main-event-retirement-observer-removal-20260903]
+    paths:
+      - 'public/v45-main-event-retirement-v1.js'
+      - 'server/mainEventRetirementObserverRemovalV1.test.js'
+      - '.github/workflows/main-event-retirement-observer-removal.yml'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+      - name: Syntax check retirement owner and test
+        run: |
+          node --check public/v45-main-event-retirement-v1.js
+          node --check server/mainEventRetirementObserverRemovalV1.test.js
+      - name: Verify one-time Main Event retirement pass
+        run: node server/mainEventRetirementObserverRemovalV1.test.js
