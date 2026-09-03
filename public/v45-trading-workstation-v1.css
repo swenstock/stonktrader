@@ -9,12 +9,12 @@
 .sbc-portfolio-recovery-v1{margin:12px!important;padding:16px!important}.sbc-portfolio-recovery-v1 h2{margin:0 0 5px}.sbc-portfolio-recovery-v1 p{margin:0}
 .floor-clean-card>img,.desktop-tier-icon,.mobile-tier-thumb,.mobile-session-broker,.mobile-contest-broker,.mobile-step-broker,.mobile-broker-anchor,.mobile-floor-broker{object-fit:contain!important;object-position:center!important}
 
-/* Mobile intentionally stays split: OE LEFT / QUOTES RIGHT. The quote side is read-only. */
+/* Mobile composition: V6 owns Quick Trade with the chart; Quotes stack full-width below. */
 @media(max-width:900px){
-  #view-portfolio .sbc-quote-oe-grid-v1{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:7px;margin-top:8px;align-items:start}
+  #view-portfolio .sbc-quote-oe-grid-v1{grid-template-columns:minmax(0,1fr);gap:7px;margin-top:8px;align-items:start}
   #view-portfolio .sbc-quote-oe-grid-v1>.quick-trade-clean,#view-portfolio .sbc-quote-oe-grid-v1>.sbc-quote-panel-v1{width:auto!important;max-width:none!important;min-width:0!important;padding:8px!important;border-radius:12px!important}
   #view-portfolio .sbc-quote-oe-grid-v1>.quick-trade-clean{grid-column:1}
-  #view-portfolio .sbc-quote-oe-grid-v1>.sbc-quote-panel-v1{grid-column:2}
+  #view-portfolio .sbc-quote-oe-grid-v1>.sbc-quote-panel-v1{grid-column:1}
   .sbc-quote-head-v1{gap:4px;margin-bottom:6px;align-items:flex-start}.sbc-quote-head-v1 small{font-size:7px}.sbc-quote-head-v1 h2{font-size:12px;line-height:1.1}.sbc-quote-head-v1>button{min-height:27px!important;padding:4px 6px!important;font-size:8px!important}
   .sbc-quote-controls-v1{grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px}.sbc-quote-controls-v1 input{grid-column:1/-1;min-height:30px;padding:5px 6px;font-size:10px}.sbc-quote-controls-v1 button{min-height:28px!important;padding:4px!important;font-size:7px!important;line-height:1.05!important}
   .sbc-quote-cols-v1,.sbc-quote-row-v1{grid-template-columns:minmax(38px,.8fr) minmax(48px,1fr) minmax(42px,.8fr);gap:3px}.sbc-quote-cols-v1{padding:0 3px 4px;font-size:6px;letter-spacing:.04em}.sbc-quote-row-v1{padding:7px 3px}.sbc-quote-row-v1 b{font-size:9px}.sbc-quote-row-v1 span,.sbc-quote-row-v1 em{font-size:8px}.sbc-quote-rows-v1{min-height:142px;max-height:240px}.sbc-quote-panel-v1>p{font-size:7px;line-height:1.25;margin-top:5px}
