@@ -41,22 +41,22 @@ function findNativeModule(v,kind){
 function clearSourceMark(card){if(!card)return;card.removeAttribute('data-stage51-source');card.classList.remove('stage51-native-source-v55','stage51-modal-source-v55');}
 function findSource(v,kind){
   if(!v||!NATIVE_SIGNATURES[kind])return null;
-  const marked=$$('[data-stage51-source]',v).find(x=>x.dataset.stage51Source===kind);
+  const marked=$$('[data-stage51-source]').find(x=>x.dataset.stage51Source===kind);
   if(marked&&isSafeNativeModule(marked,v,kind))return marked;
   if(marked)clearSourceMark(marked);
   return findNativeModule(v,kind);
 }
 function capture(v,kind){
   if(!v||!NATIVE_SIGNATURES[kind])return null;
-  const stash=ensureStash(v);let card=$(`[data-stage51-source="${kind}"]`,v);
+  const stash=ensureStash(v);let card=$(`[data-stage51-source="${kind}"]`);
   if(card&&!isSafeNativeModule(card,v,kind)){clearSourceMark(card);card=null;}
   if(!card)card=findSource(v,kind);if(!card)return null;
   card.dataset.stage51Source=kind;card.classList.add('stage51-native-source-v55');card.classList.remove('stage52-retired-analytics-stray-v56');card.removeAttribute('aria-hidden');
-  $$(`[data-stage51-source="${kind}"]`,v).filter(x=>x!==card).forEach(clearSourceMark);
+  $$(`[data-stage51-source="${kind}"]`).filter(x=>x!==card).forEach(clearSourceMark);
   if(!card.closest('.stage51-modal-v55')&&card.parentElement!==stash)stash.appendChild(card);
   return card;
 }
-function getCaptured(v,kind){const card=v&&$(`[data-stage51-source="${kind}"]`,v);return isSafeNativeModule(card,v,kind)?card:null;}
+function getCaptured(v,kind){const card=$(`[data-stage51-source="${kind}"]`);return isSafeNativeModule(card,v,kind)?card:null;}
 function mount(v,kind,host){
   const card=capture(v,kind);if(!card||!host||!isSafeNativeModule(card,v,kind))return null;
   host.appendChild(card);return card;
