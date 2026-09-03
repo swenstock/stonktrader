@@ -84,9 +84,15 @@ function loadApi(){
   assert(!source.includes('.mobile-exchange-art img'), 'mobile exchange art must stay outside turtle normalizer');
 
   const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'v45-trading-workstation-v1.css'), 'utf8');
-  assert(css.includes('grid-template-columns:minmax(0,1fr) minmax(0,1fr)'), 'workstation must remain a two-column split');
-  assert(css.includes('grid-column:1'), 'Order Entry must be pinned left on mobile');
-  assert(css.includes('grid-column:2'), 'Quote window must be pinned right on mobile');
+  const desktopRule='#view-portfolio .sbc-quote-oe-grid-v1{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:stretch;width:100%;margin-top:14px}';
+  assert(css.includes(desktopRule), 'desktop workstation must remain the exact two-column split');
+  const mobileStart=css.indexOf('@media(max-width:900px){');
+  const mobileEnd=css.indexOf('@media(max-width:430px){');
+  const mobileCss=css.slice(mobileStart,mobileEnd);
+  assert(mobileStart>=0&&mobileEnd>mobileStart, 'mobile workstation media block must exist');
+  assert(mobileCss.includes('#view-portfolio .sbc-quote-oe-grid-v1{grid-template-columns:minmax(0,1fr);'), 'mobile workstation must collapse to one column');
+  assert(mobileCss.includes('#view-portfolio .sbc-quote-oe-grid-v1>.sbc-quote-panel-v1{grid-column:1}'), 'Quote window must occupy the single full-width mobile column');
+  assert(!mobileCss.includes('grid-column:2'), 'mobile workstation must not reserve a second quote column');
   assert(!css.includes('.sbc-jr4-badge-art img'), 'workstation CSS must not take ownership of human Badge art');
 
   console.log('tradingWorkstationV1 acceptance: PASS');
