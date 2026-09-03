@@ -1,16 +1,24 @@
 const fs=require('fs');
 const js=fs.readFileSync('public/v45-desktop-stage51-v55.js','utf8');
+const core=fs.readFileSync('public/v45-analytics-core-v1.js','utf8');
 const css=fs.readFileSync('public/v45-desktop-stage51-v55.css','utf8');
 const pre=fs.readFileSync('public/v45-desktop-stage46-v51-pre.js','utf8');
 function must(c,m){if(!c){console.error('FAIL:',m);process.exit(1)}console.log('PASS:',m)}
 must(pre.includes('window.__sbcDesktopStage47V52=true')&&pre.includes('window.__sbcDesktopStage48V53=true')&&pre.includes('window.__sbcDesktopStage49V54=true'),'retired analytics runtimes are pre-locked');
 must(!pre.includes('/v45-desktop-stage47-v52.js')&&!pre.includes('/v45-desktop-stage48-v53.js')&&!pre.includes('/v45-desktop-stage49-v54.js'),'retired analytics JS is not bootstrapped');
-must(/\/v45-desktop-stage51-v55\.css\?v=(63|64)/.test(pre)&&/\/v45-desktop-stage51-v55\.js\?v=(55|57|60|62)/.test(pre),'Stage 51 assets are bootstrapped');
+must(pre.includes('/v45-analytics-core-v1.js?v=1')&&pre.indexOf('/v45-analytics-core-v1.js?v=1')<pre.indexOf('/v45-desktop-stage51-v55.js?v=63'),'shared analytics core is loaded before Stage 51');
+must(/\/v45-desktop-stage51-v55\.css\?v=(63|64)/.test(pre)&&/\/v45-desktop-stage51-v55\.js\?v=63/.test(pre),'Stage 51 assets are bootstrapped');
 must(js.includes("label:'PORTFOLIO ANALYTICS'")&&js.includes("label:'ADVANCED PERFORMANCE CHARTS'"),'both requested header controls exist');
-must(js.includes('stage51-scan-guard-v55')&&js.includes("g.textContent='\\u200B'"),'Stage 43 text scanner guard is present');
-must(js.includes("b.onclick=()=>openModal(kind)")&&js.includes('expandNative(card)'),'header cards are clickable and open live analytics content');
+must(js.includes('stage51-scan-guard-v55')&&js.includes("g.textContent='\\u200B'"),'Stage 43 text scanner guard remains desktop-owned');
+must(core.includes("portfolio:['EQUITY CURVE','ALLOCATION BREAKDOWN','P&L DRIVERS']")&&core.includes("advanced:['VS. PRIZE LINE','CASH DEPLOYMENT','RANK MOVEMENT']"),'native analytics signatures are centralized in shared core');
+must(core.includes('function ownsCorePortfolio')&&core.includes('function isSafeNativeModule')&&core.includes('function findNativeModule')&&core.includes('function capture(')&&core.includes('function mount(')&&core.includes('function restore('),'shared core owns native discovery and lifecycle');
+must(!core.includes('addGuard(')&&!core.includes('standardizeToggle(')&&!core.includes('stage51-modal-panel-v55')&&!core.includes('MutationObserver'),'shared core contains no desktop presentation or observer behavior');
+must(js.includes('const card=core.capture(v,kind)')&&js.includes('addGuard(card);standardizeToggle(card);return card;'),'Stage 51 applies desktop presentation only after core capture');
+must(js.includes('current=core.mount(v,kind,content)')&&js.includes('core.restore(v,current)'),'desktop modal mount and restore route through shared core');
+must(!js.includes('function findNativeModule')&&!js.includes('function isSafeNativeModule')&&!js.includes('function ensureStash'),'Stage 51 no longer duplicates shared native ownership logic');
+must(js.includes("b.onclick=()=>openModal(kind)")&&js.includes('expandNative(current)'),'header cards remain clickable and expand live analytics content');
 must(css.includes('.stage51-analysis-card-v55')&&css.includes('height:54px!important'),'analytics controls are hard-capped compact cards');
 must(css.includes('.stage43-analysis-bottom-v48')&&css.includes('display:none!important'),'old bottom analytics launcher area is retired');
 must(css.includes('.stage51-native-source-v55 summary')&&css.includes('display:none!important'),'all redundant modal disclosure summary chrome is hidden');
 must(css.includes('scrollbar-gutter:stable both-edges'),'modal scroll width is reserved to prevent shifts');
-console.log('Stage 51 header analytics validation passed');
+console.log('Stage 51 shared-core analytics validation passed');
