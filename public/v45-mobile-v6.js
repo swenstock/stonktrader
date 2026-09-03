@@ -2,6 +2,7 @@
 'use strict';
 if(!window.matchMedia('(max-width:620px)').matches||window.__sbcMobileV6)return;
 window.__sbcMobileV6=true;
+window.__sbcMobileTradeTabsRetiredV6=true;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 let positionsSheet=null;
 const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
@@ -137,6 +138,8 @@ function bindFindMe(){
 
 function cleanupDeadMobile(){
   $$('#mobileTradeTabsV5,#mobileTradeContextV5,.mobile-step-nav').forEach(x=>x.classList.add('mobile-v6-retired'));
+  const view=$('#view-portfolio');
+  if(view)$$('[data-mobile-trade-panel-v5]',view).forEach(x=>{x.removeAttribute('data-mobile-trade-panel-v5');x.classList.remove('mobile-active-v5');});
   $$('.mobile-floor-brokers').forEach(x=>x.remove());
 }
 function enhance(){cleanupLobby();cleanupDeadMobile();setupContestHeader();setupTradeFirst();ensurePositionsLauncher();bindFindMe();}
