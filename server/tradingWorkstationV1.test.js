@@ -77,10 +77,17 @@ function loadApi(){
     assert(!source.includes(needle), `quote workstation must not contain order-submission path: ${needle}`);
   }
 
+  assert(source.includes("im.closest('.mini-tier,.session,.mc-card,.floor-clean-card,.mobile-path-row,.step,.mobile-floor-brokers')"), 'legacy portrait cleanup must stay scoped to turtle-tier contexts');
+  assert(!source.includes('.sbc-jr4-card,.exchange-page,.badge-market,.ticket-market'), 'Jr Stonk Broker Badge/exchange surfaces must not be classified as turtle tiers');
+  assert(!source.includes('.sbc-jr4-badge-art img'), 'human Jr Stonk Broker Badge art must not be normalized into turtle art');
+  assert(!source.includes('.ticket-filter-art img'), 'ticket-market art must stay outside turtle normalizer');
+  assert(!source.includes('.mobile-exchange-art img'), 'mobile exchange art must stay outside turtle normalizer');
+
   const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'v45-trading-workstation-v1.css'), 'utf8');
   assert(css.includes('grid-template-columns:minmax(0,1fr) minmax(0,1fr)'), 'workstation must remain a two-column split');
   assert(css.includes('grid-column:1'), 'Order Entry must be pinned left on mobile');
   assert(css.includes('grid-column:2'), 'Quote window must be pinned right on mobile');
+  assert(!css.includes('.sbc-jr4-badge-art img'), 'workstation CSS must not take ownership of human Badge art');
 
   console.log('tradingWorkstationV1 acceptance: PASS');
 })().catch(err=>{ console.error(err); process.exit(1); });
