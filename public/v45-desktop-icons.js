@@ -1,4 +1,14 @@
 (()=>{
+  function loadTradingWorkstation(){
+    if(!document.querySelector('link[data-sbc-trading-workstation-v1]')){
+      const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-trading-workstation-v1.css?v=20260903a';l.dataset.sbcTradingWorkstationV1='1';document.head.appendChild(l);
+    }
+    if(!window.__sbcTradingWorkstationV1&&!document.querySelector('script[data-sbc-trading-workstation-v1]')){
+      const s=document.createElement('script');s.src='/v45-trading-workstation-v1.js?v=20260903a';s.dataset.sbcTradingWorkstationV1='1';document.head.appendChild(s);
+    }
+  }
+  loadTradingWorkstation();
+
   const mq=window.matchMedia('(min-width:621px)');
   if(!mq.matches) return;
 
@@ -11,15 +21,11 @@
   function addTierIcons(){
     const rows=[...document.querySelectorAll('.mini-tier')];
     rows.forEach((row,i)=>{
-      if(row.querySelector('.desktop-tier-icon')) return;
       const src=art(tierOrder[i]||'runner');
       if(!src) return;
-      const icon=document.createElement('img');
-      icon.className='desktop-tier-icon';
-      icon.src=src;
-      icon.alt='';
-      icon.setAttribute('aria-hidden','true');
-      row.insertBefore(icon,row.firstChild);
+      let icon=row.querySelector('.desktop-tier-icon');
+      if(!icon){icon=document.createElement('img');icon.className='desktop-tier-icon';icon.alt='';icon.setAttribute('aria-hidden','true');row.insertBefore(icon,row.firstChild);}
+      if(icon.src!==src)icon.src=src;
     });
   }
 
