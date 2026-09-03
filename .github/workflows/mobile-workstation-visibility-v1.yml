@@ -1,0 +1,31 @@
+name: Mobile Workstation Visibility V1
+
+on:
+  pull_request:
+    paths:
+      - 'public/v45-mobile-v5.js'
+      - 'public/v45-mobile-v6.js'
+      - 'server/mobileWorkstationVisibilityV1.test.js'
+      - '.github/workflows/mobile-workstation-visibility-v1.yml'
+  workflow_dispatch:
+
+jobs:
+  mobile-workstation-visibility-v1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: npm
+      - run: npm ci
+      - name: Syntax check mobile visibility ownership
+        run: |
+          node --check public/v45-mobile-v5.js
+          node --check public/v45-mobile-v6.js
+          node --check server/mobileWorkstationVisibilityV1.test.js
+      - name: Behavioral V5/V6 ownership test
+        run: node server/mobileWorkstationVisibilityV1.test.js
+      - name: Existing Stage 35 validation
+        run: node scripts/validate-stage35-mobile-round2.js
