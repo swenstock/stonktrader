@@ -4,61 +4,23 @@ if(!window.matchMedia('(min-width:901px)').matches||window.__sbcDesktopStage51V5
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 const clean=s=>String(s||'').replace(/\s+/g,' ').trim();
 const norm=s=>clean(s).toUpperCase();
+const core=window.SBCAnalyticsCoreV1;if(!core)return;
 const META={
   portfolio:{label:'PORTFOLIO ANALYTICS',sub:'Equity curve • allocation • P&L drivers',icon:'📊'},
   advanced:{label:'ADVANCED PERFORMANCE CHARTS',sub:'Prize-line pressure • cash deployment • rank drivers',icon:'📈'}
 };
-const NATIVE_SIGNATURES={
-  portfolio:['EQUITY CURVE','ALLOCATION BREAKDOWN','P&L DRIVERS'],
-  advanced:['VS. PRIZE LINE','CASH DEPLOYMENT','RANK MOVEMENT']
-};
 let current=null;
-function ensureStash(v){let s=$('.stage51-native-stash-v55',v);if(!s){s=document.createElement('div');s.className='stage51-native-stash-v55';s.setAttribute('aria-hidden','true');v.appendChild(s);}return s;}
 function addGuard(el){if(!el||$('.stage51-scan-guard-v55',el))return;const g=document.createElement('span');g.className='stage51-scan-guard-v55';g.textContent='\u200B';el.prepend(g);}
-function hasNativeSignature(el,kind){if(!el)return false;const t=norm(el.textContent);return NATIVE_SIGNATURES[kind].every(x=>t.includes(x));}
-function hasOtherNativeSignature(el,kind){return Object.keys(NATIVE_SIGNATURES).some(k=>k!==kind&&hasNativeSignature(el,k));}
-function hasNativeToggle(el){
-  if(!el)return false;
-  if(el.matches('details'))return true;
-  return $$('button,summary,[role="button"]',el).some(x=>/EXPAND|COLLAPSE/.test(norm(x.textContent)));
-}
-function ownsCorePortfolio(el,v){
-  if(!el||!v||el===v)return true;
-  const core=['.trading-workspace-v47','.stage43-workspace-v48','.chart-trade-card','.holdings-card','.orders-activity-card','.orders-activity-v45','.quick-trade-clean'];
-  return core.some(s=>{const n=$(s,v);return !!n&&el.contains(n);});
-}
-function isSafeNativeModule(el,v,kind){return !!el&&hasNativeSignature(el,kind)&&!hasOtherNativeSignature(el,kind)&&!ownsCorePortfolio(el,v);}
-function promoteNativeModule(node,v,kind){
-  let outer=null,outerToggle=null;
-  for(let p=node;p&&p!==v;p=p.parentElement){
-    if(!isSafeNativeModule(p,v,kind))continue;
-    outer=p;if(hasNativeToggle(p))outerToggle=p;
-  }
-  return outerToggle||outer;
-}
-function findNativeModule(v,kind){
-  const candidates=$$('details,section,article,div',v).filter(x=>!x.closest('.stage51-header-strip-v55,.stage51-modal-v55,.stage51-native-stash-v55')&&hasNativeSignature(x,kind));
-  if(!candidates.length)return null;
-  candidates.sort((a,b)=>(a.querySelectorAll('*').length-b.querySelectorAll('*').length)||(a.textContent.length-b.textContent.length));
-  for(const candidate of candidates){const promoted=promoteNativeModule(candidate,v,kind);if(promoted)return promoted;}
-  return null;
-}
-function findSource(v,kind){
-  const marked=$$('[data-stage51-source]').find(x=>x.dataset.stage51Source===kind);
-  if(marked&&isSafeNativeModule(marked,v,kind))return marked;
-  if(marked){marked.removeAttribute('data-stage51-source');marked.classList.remove('stage51-native-source-v55','stage51-modal-source-v55');}
-  return findNativeModule(v,kind);
-}
 function retireLegacyDescriptions(v){
-  const stash=ensureStash(v),header=$('.stage51-header-strip-v55',v);
+  const stash=core.ensureStash(v),header=$('.stage51-header-strip-v55',v);
   const hits=$$('section,article,details,header,div',v).filter(x=>{
     if(x.closest('.stage51-header-strip-v55,.stage51-modal-v55,.stage51-native-stash-v55,[data-stage51-source]'))return false;
     if(header&&x.contains(header))return false;
-    if(ownsCorePortfolio(x,v))return false;
+    if(core.ownsCorePortfolio(x,v))return false;
     const t=norm(x.textContent),count=x.querySelectorAll('*').length;
     const labels=Object.values(META).filter(d=>t.includes(d.label)).length;
     const legacyCopy=/EQUITY CURVE|ALLOCATION|P&L DRIVERS|PRIZE-LINE PRESSURE|CASH DEPLOYMENT|MOVED YOUR RANK|RANK DRIVERS/.test(t);
-    return labels>0&&legacyCopy&&!Object.keys(NATIVE_SIGNATURES).some(k=>hasNativeSignature(x,k))&&t.length<=520&&count<=28;
+    return labels>0&&legacyCopy&&!Object.keys(core.NATIVE_SIGNATURES).some(k=>core.hasNativeSignature(x,k))&&t.length<=520&&count<=28;
   });
   hits.sort((a,b)=>(a.querySelectorAll('*').length-b.querySelectorAll('*').length)||(a.textContent.length-b.textContent.length));
   hits.forEach(x=>{x.classList.add('stage51-retired-description-v56');x.setAttribute('aria-hidden','true');if(x.parentElement!==stash)stash.appendChild(x);});
@@ -80,12 +42,8 @@ function standardizeToggle(card){
   sync();
 }
 function captureOne(v,kind){
-  const stash=ensureStash(v);let card=$(`[data-stage51-source="${kind}"]`);
-  if(card&&!isSafeNativeModule(card,v,kind)){card.removeAttribute('data-stage51-source');card.classList.remove('stage51-native-source-v55','stage51-modal-source-v55');card=null;}
-  if(!card)card=findSource(v,kind);if(!card)return null;
-  card.dataset.stage51Source=kind;card.classList.add('stage51-native-source-v55');card.classList.remove('stage52-retired-analytics-stray-v56');card.removeAttribute('aria-hidden');addGuard(card);standardizeToggle(card);
-  $$('[data-stage51-source="'+kind+'"]').filter(x=>x!==card).forEach(x=>{x.removeAttribute('data-stage51-source');x.classList.remove('stage51-native-source-v55','stage51-modal-source-v55');});
-  if(!card.closest('.stage51-modal-v55')&&card.parentElement!==stash)stash.appendChild(card);return card;
+  const card=core.capture(v,kind);if(!card)return null;
+  addGuard(card);standardizeToggle(card);return card;
 }
 function captureSources(v){captureOne(v,'portfolio');captureOne(v,'advanced');retireLegacyDescriptions(v);const old=$('.stage43-analysis-bottom-v48',v);if(old)old.classList.add('stage51-retired-bottom-v55');}
 function ensureModal(){
@@ -99,11 +57,11 @@ function expandNative(card){
   if(action)setTimeout(()=>{try{action.click();standardizeToggle(card);}catch{}},0);
 }
 function openModal(kind){
-  const v=$('#view-portfolio');if(!v)return;captureSources(v);const card=$(`[data-stage51-source="${kind}"]`);const m=ensureModal(),content=$('.stage51-modal-content-v55',m),title=$('#stage51ModalTitle',m);title.textContent=META[kind].label;content.innerHTML='';
-  if(!card||!isSafeNativeModule(card,v,kind)){content.innerHTML='<div class="stage51-loading-v55">Analytics are still loading. Close and try again in a moment.</div>';current=null;}else{current=card;card.classList.remove('stage52-retired-analytics-stray-v56');card.removeAttribute('aria-hidden');card.classList.add('stage51-modal-source-v55');content.appendChild(card);expandNative(card);}
+  const v=$('#view-portfolio');if(!v)return;captureSources(v);const card=core.getCaptured(v,kind);const m=ensureModal(),content=$('.stage51-modal-content-v55',m),title=$('#stage51ModalTitle',m);title.textContent=META[kind].label;content.innerHTML='';
+  if(!card||!core.isSafeNativeModule(card,v,kind)){content.innerHTML='<div class="stage51-loading-v55">Analytics are still loading. Close and try again in a moment.</div>';current=null;}else{current=core.mount(v,kind,content);current.classList.remove('stage52-retired-analytics-stray-v56');current.removeAttribute('aria-hidden');current.classList.add('stage51-modal-source-v55');expandNative(current);}
   m.hidden=false;document.body.classList.add('stage51-modal-open-v55');$('.stage51-modal-close-v55',m).focus();
 }
-function closeModal(){const m=$('.stage51-modal-v55');if(!m||m.hidden)return;const v=$('#view-portfolio'),stash=v&&ensureStash(v);if(current&&stash){current.classList.remove('stage51-modal-source-v55');stash.appendChild(current);}current=null;m.hidden=true;document.body.classList.remove('stage51-modal-open-v55');}
+function closeModal(){const m=$('.stage51-modal-v55');if(!m||m.hidden)return;const v=$('#view-portfolio');if(current&&v)core.restore(v,current);current=null;m.hidden=true;document.body.classList.remove('stage51-modal-open-v55');}
 function button(kind){const d=META[kind],b=document.createElement('button');b.type='button';b.className='stage51-analysis-card-v55';b.dataset.stage51Analytics=kind;b.innerHTML=`<span class="stage51-scan-guard-v55">\u200B</span><span class="stage51-card-icon-v55" aria-hidden="true">${d.icon}</span><span class="stage51-card-copy-v55"><b>${d.label}</b><small>${d.sub}</small></span><span class="stage51-card-open-v55" aria-hidden="true">›</span>`;b.onclick=()=>openModal(kind);return b;}
 function buildHeader(v){
   const metrics=$('.contest-metrics-strip-v46',v)||$('.header-metrics-v45',v);if(!metrics)return;
