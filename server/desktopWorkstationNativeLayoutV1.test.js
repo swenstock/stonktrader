@@ -27,7 +27,13 @@ class El{
   addEventListener(){}
   dispatchEvent(){}
   closest(sel){for(let p=this;p;p=p.parentElement)if(matches(p,sel))return p;return null;}
-  querySelector(sel){return queryAll(this,sel)[0]||null;}
+  querySelector(sel){
+    const found=queryAll(this,sel)[0];if(found)return found;
+    if(sel.startsWith('#')&&this._html.includes(`id="${sel.slice(1)}"`)){
+      const node=new El(sel.includes('Input')?'input':'button');node.id=sel.slice(1);this.appendChild(node);return node;
+    }
+    return null;
+  }
   querySelectorAll(sel){return queryAll(this,sel);}
 }
 function descendants(root){const out=[];for(const c of root.children)out.push(c,...descendants(c));return out;}
