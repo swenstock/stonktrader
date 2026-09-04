@@ -7,14 +7,20 @@
     if(!window.__sbcMobileV5&&!document.querySelector('script[data-sbc-mobile-v5]')){const s=document.createElement('script');s.src='/v45-mobile-v5.js?v=5';s.dataset.sbcMobileV5='1';document.head.appendChild(s);}
   }
   function loadV6(){
-    if(!document.querySelector('link[data-sbc-mobile-v6]')){const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-mobile-v6.css?v=6';l.dataset.sbcMobileV6='1';document.head.appendChild(l);}
-    if(!window.__sbcMobileV6&&!document.querySelector('script[data-sbc-mobile-v6]')){const s=document.createElement('script');s.src='/v45-mobile-v6.js?v=6';s.dataset.sbcMobileV6='1';document.head.appendChild(s);}
+    if(!document.querySelector('link[data-sbc-mobile-v6]')){const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-mobile-v6.css?v=7';l.dataset.sbcMobileV6='1';document.head.appendChild(l);}
+    if(!window.__sbcMobileV6&&!document.querySelector('script[data-sbc-mobile-v6]')){const s=document.createElement('script');s.src='/v45-mobile-v6.js?v=7';s.dataset.sbcMobileV6='1';document.head.appendChild(s);}
+  }
+  function loadAnalyticsCore(next){
+    if(window.SBCAnalyticsCoreV1){next();return;}
+    const existing=document.querySelector('script[data-sbc-analytics-core-v1]');
+    if(existing){existing.addEventListener('load',next,{once:true});return;}
+    const s=document.createElement('script');s.src='/v45-analytics-core-v1.js?v=1';s.dataset.sbcAnalyticsCoreV1='1';s.async=false;s.addEventListener('load',next,{once:true});document.head.appendChild(s);
   }
   function loadV7(){
     if(!document.querySelector('link[data-sbc-mobile-v7]')){const l=document.createElement('link');l.rel='stylesheet';l.href='/v45-mobile-v7.css?v=7';l.dataset.sbcMobileV7='1';document.head.appendChild(l);}
     if(!window.__sbcMobileV7&&!document.querySelector('script[data-sbc-mobile-v7]')){const s=document.createElement('script');s.src='/v45-mobile-v7.js?v=8';s.dataset.sbcMobileV7='1';document.head.appendChild(s);}
   }
-  loadV5();loadV6();loadV7();
+  loadV5();loadAnalyticsCore(loadV6);loadV7();
 
   function stripFloorIcons(){
     document.querySelectorAll('.mobile-floor-icons').forEach(x=>x.remove());
@@ -97,6 +103,6 @@
     const inv=document.querySelector('#view-exchange .portfolio h2');if(inv)inv.textContent='MY TICKETS';
   }
 
-  const start=()=>{loadV5();loadV6();loadV7();stripFloorIcons();setupExchange();};
+  const start=()=>{loadV5();loadAnalyticsCore(loadV6);loadV7();stripFloorIcons();setupExchange();};
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
