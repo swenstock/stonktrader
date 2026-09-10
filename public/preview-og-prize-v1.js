@@ -63,7 +63,7 @@ function addPrizeContext(){
   heads.forEach(h=>{if(h.querySelector('.sbc-selected-prize-pill'))return;const p=document.createElement('span');p.className='sbc-selected-prize-pill';p.textContent=`PRIZE: ${selectedPrize}`;h.appendChild(p)});
 }
 function patchPrizeLine(){
-  $$('*').forEach(el=>{if(el.children.length)return;const t=el.textContent||'';if(/TOP\s*10%/i.test(t)){const tier=tierFromText(el.closest('article,section,div')?.textContent)||'runner';el.textContent=`TOP ${PAYOUT[tier]||20}%`}}
+  $$('*').forEach(el=>{if(el.children.length)return;const t=el.textContent||'';if(/TOP\s*10%/i.test(t)){const tier=tierFromText(el.closest('article,section,div')?.textContent)||'runner';el.textContent=`TOP ${PAYOUT[tier]||20}%`;}});
 }
 function apply(){replaceText();removeRetired();patchTierCards();patchHowItWorks();patchPrizeLanguage();patchPrizeLine();addPrizeContext()}
 async function start(){selectedPrize=localStorage.getItem('sbcPreviewPrizeAsset')||'AI';try{const r=await fetch('/api/v2/catalog',{cache:'no-store'});if(r.ok)catalog=await r.json()}catch(_){}ensureModal();renderPrizeChoices();installPrizeGate();apply();[100,350,900,1800].forEach(ms=>setTimeout(apply,ms));let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;apply()})}).observe(document.body,{childList:true,subtree:true})}
