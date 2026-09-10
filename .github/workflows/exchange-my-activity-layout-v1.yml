@@ -1,0 +1,34 @@
+name: Exchange My Activity Layout V1
+
+on:
+  pull_request:
+    paths:
+      - 'public/v45-exchange-my-activity-v1.js'
+      - 'server/exchangeMyActivityLayoutV1.test.js'
+      - '.github/workflows/exchange-my-activity-layout-v1.yml'
+  workflow_dispatch:
+
+jobs:
+  exchange-my-activity-layout-v1:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm ci
+      - name: Syntax check changed files
+        run: |
+          node --check public/v45-exchange-my-activity-v1.js
+          node --check server/exchangeMyActivityLayoutV1.test.js
+      - name: Run focused layout regression
+        run: node server/exchangeMyActivityLayoutV1.test.js
+      - name: Run exchange activity acceptance
+        run: |
+          node server/exchangeHistoryV1.test.js
+          node server/exchangeHistoryStage2Ui.test.js
+          node server/exchangeHistoryStage3Preview.test.js
+          node server/exchangeHistoryStage4Modal.test.js
