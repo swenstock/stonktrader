@@ -44,6 +44,8 @@ const {attachWebSocket}=require('./ws');
 const ROOT=path.join(__dirname,'..');
 const PUBLIC=path.join(ROOT,'public');
 const CATALOG_PATH=path.join(ROOT,'config','product-catalog-v2.json');
+const TURTLE_ART_DIR=path.join(__dirname,'turtle_art_v1');
+const TURTLE_ART_FILES=Object.freeze({freeroll:'freeroll.png',runner:'runner.png',clerk:'clerk.png',trader:'trader.png',broker:'junior.png'});
 function readCatalog(){return JSON.parse(fs.readFileSync(CATALOG_PATH,'utf8'))}
 
 const app=express();
@@ -75,6 +77,11 @@ app.use('/api/test-clock',testClockRoutes);
 app.use('/api/dev',devRoutes);
 app.get('/api/v2/catalog',(_req,res)=>res.json(readCatalog()));
 app.get('/api/preview-health',(_req,res)=>res.json({ok:true,shell:'og-sbc-with-coin-prize-overlay-v1',catalogVersion:readCatalog().version,productionMainUntouched:true}));
+app.get('/preview-turtles/:tier.png',(req,res)=>{
+ const file=TURTLE_ART_FILES[req.params.tier];
+ if(!file)return res.status(404).end();
+ return res.sendFile(path.join(TURTLE_ART_DIR,file));
+});
 
 satelliteScheduler.start();marketOpenScheduler.start();marketQueueV14.start();
 
