@@ -19,12 +19,13 @@ jobs:
       - name: Syntax check preview files
         run: |
           node --check server/previewServer.js
-          node --check public/preview-v2/app.js
+          node --check public/preview-og-prize-v1.js
           node --check server/previewMemePrizeShellV1.test.js
       - name: Run preview architecture regression
         run: node server/previewMemePrizeShellV1.test.js
-      - name: Run proven market-data regressions
+      - name: Run proven workstation regressions
         run: |
           node server/simulatedQuoteEngine.test.js
           node server/tradingWorkstationV1.test.js
           node server/basketRealExecutionStageB.test.js
+          node server/matureChartOwnerV1.test.js
