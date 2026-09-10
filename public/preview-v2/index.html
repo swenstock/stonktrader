@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Stonk Broker Challenge — Preview</title>
+  <link rel="stylesheet" href="/preview-v2/styles.css?v=1">
+  <script defer src="/vendor/lightweight-charts-4.2.3.js"></script>
+  <script defer src="/preview-v2/app.js?v=1"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">🏆</span><div><b>STONK BROKER</b><small>CHALLENGE</small></div></div>
+    <nav><button data-view="lobby" class="active">LOBBY</button><button data-view="floor">TRADING FLOOR</button><button data-view="my">MY CONTESTS</button><button data-view="leaderboard">LEADERBOARD</button><button data-view="how">HOW IT WORKS</button></nav>
+    <div class="top-actions"><button id="themeToggle" class="icon-btn" aria-label="Toggle theme">☀︎ / ◐</button><button id="walletButton" class="wallet-btn">CONNECT WALLET</button></div>
+  </header>
+
+  <main>
+    <section id="view-lobby" class="view active">
+      <section class="hero panel">
+        <div class="hero-art"><img src="/approved-lobby-hero-widget-free.png" alt="Stonk Broker turtle art"></div>
+        <div class="hero-copy">
+          <span class="eyebrow">NEW PRIZE-POOL PREVIEW</span>
+          <h1>Trade fake stocks.<br><em>Win real meme coins.</em></h1>
+          <p>Pick your tier, contest length and prize coin. The paper-trading engine stays focused on stocks; the prize layer becomes simple, configurable and ready for on-chain settlement later.</p>
+          <div class="hero-badges"><span>$100K PAPER PORTFOLIO</span><span>REAL-TIME LEADERBOARDS</span><span>PRIZE ASSET REGISTRY</span></div>
+        </div>
+      </section>
+
+      <section class="selector panel">
+        <div class="selector-head"><div><span class="eyebrow">JOIN A CONTEST</span><h2>Choose your path</h2></div><div id="selectionSummary" class="selection-summary"></div></div>
+        <div class="steps">
+          <div class="step"><div class="step-title"><span>1</span><div><b>SELECT TIER</b><small>USD entry price, paid in SBC later</small></div></div><div id="tierChoices" class="choice-grid"></div></div>
+          <div class="step"><div class="step-title"><span>2</span><div><b>SELECT CATEGORY</b><small>One weekly freeroll stays free</small></div></div><div id="categoryChoices" class="choice-grid"></div></div>
+          <div class="step"><div class="step-title"><span>3</span><div><b>SELECT MEME COIN</b><small>Prize names come from one registry</small></div></div><div id="prizeChoices" class="choice-grid"></div></div>
+        </div>
+        <button id="findContest" class="primary big">FIND CONTESTS →</button>
+      </section>
+
+      <section class="dashboard-grid">
+        <article class="panel feature-card"><div class="card-head"><div><span class="eyebrow">WEEKLY FREEROLL</span><h3>One free shot every week</h3></div><span class="pill gold">FEATURED</span></div><img src="/rise-of-turtles-approved-final.png.png" alt="Turtle contest art"><div class="feature-copy"><b>Entry: FREE</b><span>Choose the weekly prize asset and compete without a paid entry.</span><button class="secondary" data-freeroll>VIEW FREEROLL</button></div></article>
+        <article class="panel"><div class="card-head"><div><span class="eyebrow">FEATURED PRIZE POOLS</span><h3>Configurable assets</h3></div></div><div id="featuredPools" class="pool-grid"></div></article>
+        <article class="panel"><div class="card-head"><div><span class="eyebrow">LIVE CONTESTS</span><h3>Current preview rooms</h3></div></div><div id="liveContests" class="contest-list"></div></article>
+        <article class="panel"><div class="card-head"><div><span class="eyebrow">LEADERBOARD SNAPSHOT</span><h3>Paper P&amp;L</h3></div></div><ol class="leader-list"><li><b>TurboTurtle</b><span>+24.7%</span></li><li><b>ShellSeeker</b><span>+18.6%</span></li><li><b>DiamondHands</b><span>+14.3%</span></li><li><b>StonkTurtle</b><span>+11.2%</span></li></ol></article>
+      </section>
+    </section>
+
+    <section id="view-floor" class="view">
+      <section class="contest-strip panel"><div><span class="eyebrow">ACTIVE CONTEST</span><h2 id="floorContestTitle">Runner • Hourly • AI</h2><p>Stocks are paper traded. Prize settlement is simulated in this preview.</p></div><div class="metric"><small>ENTRY</small><b id="floorEntry">$1</b><span>paid in SBC later</span></div><div class="metric"><small>PRIZE</small><b id="floorPrize">AI</b><span>quantity locked at funding</span></div><div class="metric"><small>RANK</small><b>#18</b><span>preview</span></div></section>
+
+      <section class="workspace">
+        <aside class="panel quotes-panel">
+          <div class="window-head"><div><span class="eyebrow">QUOTE WINDOW</span><h3>MARKET QUOTES</h3></div><span class="drag-dots">•••</span></div>
+          <div class="quote-tools"><input id="quoteInput" placeholder="AAPL|MSFT|NVDA"><button id="loadQuotes" class="secondary">LOAD</button></div>
+          <div class="quote-cols"><span>SYMBOL</span><span>LAST</span><span>CHANGE</span></div>
+          <div id="quoteRows" class="quote-rows"></div>
+          <button id="loadDefaultQuotes" class="text-btn">RESET DEFAULT QUOTES</button>
+        </aside>
+
+        <section class="panel chart-panel">
+          <div class="window-head"><div><span class="eyebrow">ACTIVE SYMBOL</span><h3 id="activeSymbolTitle">NVDA</h3></div><div class="chart-controls"><button data-interval="1m">1m</button><button data-interval="5m" class="active">5m</button><button data-interval="15m">15m</button><button data-interval="1h">1h</button><button data-interval="1D">1D</button></div></div>
+          <div id="chart" class="chart"></div>
+        </section>
+
+        <aside class="panel oe-panel">
+          <div class="window-head"><div><span class="eyebrow">ORDER ENTRY</span><h3>BASKET + SINGLE</h3></div><span class="drag-dots">•••</span></div>
+          <label>ACTIVE SYMBOL<input id="oeSymbol" value="NVDA"></label>
+          <div class="buy-sell"><button class="active">BUY</button><button>SELL</button></div>
+          <label>ORDER TYPE<select id="orderType"><option>Market</option><option>Limit</option></select></label>
+          <label>QUANTITY<input id="quantity" type="number" min="1" value="100"></label>
+          <button id="previewOrder" class="primary">PREVIEW ORDER</button>
+          <hr>
+          <label>BASKET SYMBOLS<textarea id="basketInput" rows="3">AAPL|MSFT|NVDA</textarea></label>
+          <button id="loadBasket" class="secondary">LOAD BASKET</button>
+          <div id="basketRows" class="basket-rows"></div>
+        </aside>
+      </section>
+
+      <section class="bottom-grid">
+        <article class="panel"><div class="card-head"><div><span class="eyebrow">PORTFOLIO</span><h3>MY POSITIONS</h3></div></div><div class="empty-state">Preview shell keeps this panel reserved for the existing per-contest $100K portfolio engine.</div></article>
+        <article class="panel"><div class="card-head"><div><span class="eyebrow">ACTIVITY</span><h3>ORDERS &amp; ACTIVITY</h3></div></div><div id="activityLog" class="activity-log"><div><span>READY</span><b>Select a quote or load a basket.</b></div></div></article>
+      </section>
+    </section>
+
+    <section id="view-my" class="view placeholder"><div class="panel"><span class="eyebrow">MY CONTESTS</span><h2>Designed for exact-entry ownership</h2><p>This preview reserves the page for contest cards that open the exact selected portfolio rather than an account-wide portfolio.</p></div></section>
+    <section id="view-leaderboard" class="view placeholder"><div class="panel"><span class="eyebrow">LEADERBOARD</span><h2>One ranking source per contest</h2><p>Future implementation will consume the same contest/portfolio IDs used by trading and settlement.</p></div></section>
+    <section id="view-how" class="view placeholder"><div class="panel"><span class="eyebrow">HOW IT WORKS</span><h2>Pick. Trade. Rank. Win.</h2><p>Choose a tier, timeframe and prize asset. Pay a USD-denominated entry in SBC, receive a dedicated $100K paper portfolio, trade stocks, and settle the locked prize quantity to the winners.</p></div></section>
+  </main>
+
+  <div id="walletModal" class="modal" hidden><div class="modal-card"><button id="walletClose" class="modal-close">×</button><span class="eyebrow">FUTURE WALLET ADAPTERS</span><h2>Connect</h2><p>The preview models provider boundaries without pretending to custody real assets.</p><div id="walletChoices" class="wallet-list"></div></div></div>
+  <div id="toast" class="toast" hidden></div>
+</body>
+</html>

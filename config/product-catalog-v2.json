@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "currency": {
+    "entryDisplayCurrency": "USD",
+    "paymentAssetId": "sbc",
+    "quoteLockSeconds": 60
+  },
+  "economics": {
+    "rakePct": 15,
+    "note": "Preview default only. Centralized so economics can change without UI rewrites."
+  },
+  "tiers": [
+    {"id":"runner","name":"Runner","entryUsd":1,"art":"/approved-lobby-hero-widget-free.png"},
+    {"id":"clerk","name":"Clerk","entryUsd":5,"art":"/rise-of-turtles-approved-final.png.png"},
+    {"id":"trader","name":"Trader","entryUsd":15,"art":"/rise-of-turtles-approved-final.png.png"},
+    {"id":"broker","name":"Broker","entryUsd":50,"art":"/approved-lobby-hero-reference.png"}
+  ],
+  "categories": [
+    {"id":"hourly","name":"Hourly","durationLabel":"1 hour","free":false},
+    {"id":"daily","name":"Daily","durationLabel":"1 trading day","free":false},
+    {"id":"weekly","name":"Weekly","durationLabel":"1 week","free":false},
+    {"id":"weekly-freeroll","name":"Weekly Freeroll","durationLabel":"1 week","free":true,"entryUsd":0,"singleGlobalContest":true}
+  ],
+  "prizeAssets": [
+    {"id":"ai","symbol":"AI","name":"AI","assetClass":"meme","enabled":true,"enabledForPrizes":true,"enabledForQuotes":false,"enabledForTrading":false,"decimals":6},
+    {"id":"boner","symbol":"BONER","name":"BONER","assetClass":"meme","enabled":true,"enabledForPrizes":true,"enabledForQuotes":false,"enabledForTrading":false,"decimals":6},
+    {"id":"incel","symbol":"INCEL","name":"INCEL","assetClass":"meme","enabled":true,"enabledForPrizes":true,"enabledForQuotes":false,"enabledForTrading":false,"decimals":6}
+  ],
+  "quoteDefaults": ["AAPL","MSFT","NVDA","TSLA","AMZN","GOOGL","HOOD","COIN"],
+  "walletAdapters": [
+    {"id":"phantom","name":"Phantom","kind":"external-wallet","status":"future"},
+    {"id":"walletconnect","name":"WalletConnect","kind":"external-wallet","status":"future"},
+    {"id":"web-wallet","name":"Web Wallet","kind":"embedded-wallet","status":"future"},
+    {"id":"robinhood-wallet","name":"Robinhood Wallet","kind":"external-wallet","status":"future"},
+    {"id":"robinhood-brokerage","name":"Robinhood Brokerage","kind":"brokerage-connector","status":"future-separate-auth"}
+  ],
+  "providerContracts": {
+    "marketData": ["simulated","live-equity","crypto"],
+    "payment": ["simulated-sbc","onchain-sbc"],
+    "prizeSettlement": ["simulated","onchain-token","tokenized-equity"]
+  }
+}

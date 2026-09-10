@@ -1,0 +1,30 @@
+name: Meme Prize Preview Shell V1
+
+on:
+  push:
+    branches:
+      - 'preview/meme-prize-shell-v1'
+  workflow_dispatch:
+
+jobs:
+  preview-shell-v1:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm ci
+      - name: Syntax check preview files
+        run: |
+          node --check server/previewServer.js
+          node --check public/preview-v2/app.js
+          node --check server/previewMemePrizeShellV1.test.js
+      - name: Run preview architecture regression
+        run: node server/previewMemePrizeShellV1.test.js
+      - name: Run proven market-data regressions
+        run: |
+          node server/simulatedQuoteEngine.test.js
+          node server/tradingWorkstationV1.test.js
+          node server/basketRealExecutionStageB.test.js
