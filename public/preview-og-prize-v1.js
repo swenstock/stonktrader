@@ -3,10 +3,11 @@
 if(window.__SBC_OG_PRIZE_PREVIEW_V1)return;window.__SBC_OG_PRIZE_PREVIEW_V1=true;
 const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
 let catalog=null, selectedPrize='AI', pendingButton=null, bypass=false;
-const ENTRY_USD={freeroll:0,runner:1,clerk:5,trader:15,junior:50,broker:50};
-const PAYOUT={freeroll:30,runner:30,clerk:25,trader:20,junior:20,broker:20};
 const norm=s=>String(s||'').trim().toUpperCase();
 function tierFromText(s){const t=norm(s);if(t.includes('FREE ROLL'))return'freeroll';if(t.includes('RUNNER'))return'runner';if(t.includes('CLERK'))return'clerk';if(t.includes('TRADER'))return'trader';if(t.includes('JR.')||t.includes('JUNIOR')||t.includes('BROKER'))return'broker';return null}
+function tierConfig(id){return (catalog?.tiers||[]).find(x=>x.id===id)||null}
+function entryUsd(id){return Number(tierConfig(id)?.entryUsd||0)}
+function paidPercent(id){const policyId=tierConfig(id)?.payoutPolicyId||id;return Number(catalog?.payoutPolicies?.[policyId]?.paidPercent||0)}
 function replaceText(root=document){
   const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const nodes=[];while(w.nextNode())nodes.push(w.currentNode);
   nodes.forEach(n=>{let s=n.nodeValue;if(!s||!s.trim())return;s=s.replace(/JR\.\s*STONKBROKER/gi,'BROKER').replace(/JR\.?\s*BROKER/gi,'BROKER').replace(/JUNIOR\s+STONKBROKER/gi,'BROKER').replace(/JUNIOR\s+BROKER/gi,'BROKER');n.nodeValue=s});
@@ -21,8 +22,8 @@ function removeRetired(){
 }
 function patchTierCards(){
   const cards=$$('article[id^="cleanCard-"],.mini-tier,.floor-clean-card');
-  cards.forEach(card=>{const tier=tierFromText(card.textContent);if(!tier)return;replaceText(card);
-    const price=ENTRY_USD[tier];
+  cards.forEach(card=>{const tier=tierFromText(card.textContent);const cfg=tierConfig(tier);if(!tier||!cfg)return;replaceText(card);
+    const price=entryUsd(tier);
     const candidates=$$('.price,.usd,.tier-price,.mini-tier-price,strong,b',card);
     candidates.forEach(el=>{const t=norm(el.textContent);if(t.includes('STONK')||/^≈?\s*\$/.test(el.textContent.trim())||t==='FREE'){
       if(tier==='freeroll'){if(t==='FREE'||t.includes('STONK')||t.startsWith('≈'))el.textContent='FREE';}
@@ -63,7 +64,7 @@ function addPrizeContext(){
   heads.forEach(h=>{if(h.querySelector('.sbc-selected-prize-pill'))return;const p=document.createElement('span');p.className='sbc-selected-prize-pill';p.textContent=`PRIZE: ${selectedPrize}`;h.appendChild(p)});
 }
 function patchPrizeLine(){
-  $$('*').forEach(el=>{if(el.children.length)return;const t=el.textContent||'';if(/TOP\s*10%/i.test(t)){const tier=tierFromText(el.closest('article,section,div')?.textContent)||'runner';el.textContent=`TOP ${PAYOUT[tier]||20}%`;}});
+  $$('*').forEach(el=>{if(el.children.length)return;const t=el.textContent||'';if(/TOP\s*10%/i.test(t)){const tier=tierFromText(el.closest('article,section,div')?.textContent)||'runner';const pct=paidPercent(tier);if(pct)el.textContent=`TOP ${pct}%`;}});
 }
 function apply(){replaceText();removeRetired();patchTierCards();patchHowItWorks();patchPrizeLanguage();patchPrizeLine();addPrizeContext()}
 async function start(){selectedPrize=localStorage.getItem('sbcPreviewPrizeAsset')||'AI';try{const r=await fetch('/api/v2/catalog',{cache:'no-store'});if(r.ok)catalog=await r.json()}catch(_){}ensureModal();renderPrizeChoices();installPrizeGate();apply();[100,350,900,1800].forEach(ms=>setTimeout(apply,ms));let pending=false;new MutationObserver(()=>{if(pending)return;pending=true;requestAnimationFrame(()=>{pending=false;apply()})}).observe(document.body,{childList:true,subtree:true})}
