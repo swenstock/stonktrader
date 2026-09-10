@@ -6,15 +6,18 @@ const server=fs.readFileSync('server/previewServer.js','utf8');
 const overlay=fs.readFileSync('public/preview-og-prize-v1.js','utf8');
 const overlayCss=fs.readFileSync('public/preview-og-prize-v1.css','utf8');
 
-assert.deepStrictEqual(catalog.tiers.map(x=>[x.id,x.entryUsd]),[['runner',1],['clerk',5],['trader',15],['broker',50]]);
+assert.deepStrictEqual(catalog.tiers.map(x=>[x.id,x.entryUsd]),[['freeroll',0],['runner',1],['clerk',5],['trader',15],['broker',50]]);
+assert.strictEqual(new Set(catalog.tiers.map(x=>x.art)).size,5,'every tier must have distinct art');
+for(const tier of catalog.tiers){assert(tier.art===`/preview-turtles/${tier.id}.png`,`unexpected art path for ${tier.id}`)}
 assert(catalog.sessions.some(x=>x.id==='weekly-freeroll'&&x.entryUsd===0));
 assert.deepStrictEqual(catalog.prizeAssets.filter(x=>x.enabled).map(x=>x.id),['ai','boner','incel']);
-assert(catalog.payoutPolicies.runner.paidPercent===30&&catalog.payoutPolicies.clerk.paidPercent===25&&catalog.payoutPolicies.trader.paidPercent===20&&catalog.payoutPolicies.broker.paidPercent===20);
+assert(catalog.payoutPolicies.freeroll.paidPercent===30&&catalog.payoutPolicies.runner.paidPercent===30&&catalog.payoutPolicies.clerk.paidPercent===25&&catalog.payoutPolicies.trader.paidPercent===20&&catalog.payoutPolicies.broker.paidPercent===20);
 assert(catalog.tiePolicy.finalTieRule==='split-combined-rank-prizes-equally');
-console.log('PASS: new prize variables remain centralized');
+console.log('PASS: all five tiers are first-class config entries with distinct OG turtle art');
 
 assert(server.includes("const {exactV45Shell}=require('./v45ExactShell')"));
-assert(server.includes("servedShell=servedShell"));
+assert(server.includes("TURTLE_ART_FILES=Object.freeze({freeroll:'freeroll.png',runner:'runner.png',clerk:'clerk.png',trader:'trader.png',broker:'junior.png'})"));
+assert(server.includes("app.get('/preview-turtles/:tier.png'"));
 assert(server.includes('/v45-basket-builder-v19.js'));
 assert(server.includes('/v45-basket-loader-v43.js'));
 assert(server.includes('/v45-mature-chart-owner-v1.js'));
@@ -22,9 +25,13 @@ assert(server.includes('/v45-desktop-trading-v45.js'));
 assert(server.includes('/v45-stage67-ux.js'));
 assert(server.includes('/preview-og-prize-v1.js'));
 assert(!server.includes("sendFile(path.join(PUBLIC,'preview-v2'"));
-console.log('PASS: preview root is the OG SBC exact shell with proven basket/chart/workstation enhancements');
+console.log('PASS: preview root remains the exact OG SBC shell and exposes only existing OG turtle assets');
 
-assert(overlay.includes("ENTRY_USD={freeroll:0,runner:1,clerk:5,trader:15,junior:50,broker:50}"));
+assert(!overlay.includes('const ENTRY_USD='));
+assert(!overlay.includes('const PAYOUT='));
+assert(overlay.includes('function tierConfig(id)'));
+assert(overlay.includes('function entryUsd(id)'));
+assert(overlay.includes('function paidPercent(id)'));
 assert(overlay.includes("selectedPrize=b.dataset.sbcPrize"));
 assert(overlay.includes('CHOOSE YOUR PRIZE'));
 assert(overlay.includes("TICKET EXCHANGE"));
@@ -32,7 +39,7 @@ assert(overlay.includes("GET PROMOTED"));
 assert(overlay.includes("replace(/JR\\.\\s*STONKBROKER/gi,'BROKER')"));
 assert(!overlay.toLowerCase().includes('sbc evolved'));
 assert(overlayCss.includes('[data-view="exchange"]'));
-console.log('PASS: overlay changes only prize-era surfaces, Broker naming and new prize choice');
+console.log('PASS: overlay reads tier price/payout from catalog and limits itself to prize-era changes');
 
 assert(server.includes("app.use('/api/portfolios',portfolioRoutes)"));
 assert(server.includes("app.use('/api/advanced-orders-v15',advancedOrdersV15Routes)"));
