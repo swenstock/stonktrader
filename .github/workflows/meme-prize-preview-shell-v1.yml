@@ -29,3 +29,14 @@ jobs:
           node server/tradingWorkstationV1.test.js
           node server/basketRealExecutionStageB.test.js
           node server/matureChartOwnerV1.test.js
+      - name: Boot preview server and verify health
+        run: |
+          PORT=3456 node server/previewServer.js > /tmp/sbc-preview.log 2>&1 &
+          pid=$!
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:3456/api/preview-health > /tmp/health.json; then break; fi
+            sleep 1
+          done
+          cat /tmp/health.json
+          curl -fsS http://127.0.0.1:3456/ | grep -q 'STONK BROKER CHALLENGE'
+          kill $pid || true
