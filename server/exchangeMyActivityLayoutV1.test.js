@@ -16,7 +16,7 @@ function between(source, start, end) {
 function styleOf(html, needle) {
   const i = html.indexOf(needle);
   assert(i >= 0, `Missing ${needle}`);
-  const start = html.lastIndexOf('style="', i);
+  const start = html.indexOf('style="', i);
   const end = html.indexOf('"', start + 7);
   assert(start >= 0 && end > start, `Missing style for ${needle}`);
   return html.slice(start + 7, end);
