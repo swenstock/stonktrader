@@ -1,77 +1,37 @@
-(()=>{
+(()=> {
 'use strict';
-const $=(s,r=document)=>r.querySelector(s),$$=(s,r=document)=>[...r.querySelectorAll(s)];
-const state={catalog:null,tier:'runner',category:'hourly',prize:'ai',symbols:[],activeSymbol:'NVDA',interval:'5m',chart:null,series:null};
+
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const state={catalog:null,tier:'runner',session:'morning-market',prize:'ai',symbols:[],activeSymbol:'NVDA',interval:'5m',chart:null,series:null};
 const fmtUsd=n=>`$${Number(n||0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2})}`;
 const norm=s=>String(s||'').trim().toUpperCase();
 const unique=arr=>[...new Set(arr)];
 function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>t.hidden=true,2600)}
-function showView(id){$$('.view').forEach(v=>v.classList.toggle('active',v.id===`view-${id}`));$$('[data-view]').forEach(b=>b.classList.toggle('active',b.dataset.view===id));if(id==='floor')setTimeout(()=>{state.chart?.applyOptions({width:$('#chart').clientWidth,height:$('#chart').clientHeight});loadBars()},40)}
-function choiceButton(kind,item,meta){const id=item.id,on=state[kind]===id;return `<button class="choice ${on?'active':''}" data-choice-kind="${kind}" data-choice-id="${id}"><b>${item.name}</b><small>${meta}</small></button>`}
-function selected(kind){const list=kind==='tier'?state.catalog.tiers:kind==='category'?state.catalog.categories:state.catalog.prizeAssets;return list.find(x=>x.id===state[kind])||list[0]}
-function renderSelectors(){
-  $('#tierChoices').innerHTML=state.catalog.tiers.map(x=>choiceButton('tier',x,fmtUsd(x.entryUsd))).join('');
-  $('#categoryChoices').innerHTML=state.catalog.categories.map(x=>choiceButton('category',x,x.free?'FREE':x.durationLabel)).join('');
-  $('#prizeChoices').innerHTML=state.catalog.prizeAssets.filter(x=>x.enabled).map(x=>choiceButton('prize',x,x.assetClass)).join('');
-  const t=selected('tier'),c=selected('category'),p=selected('prize'),entry=c.free?0:t.entryUsd;
-  $('#selectionSummary').textContent=`${t.name} • ${c.name} • ${p.symbol} • ${entry?fmtUsd(entry):'FREE'}`;
-  $('#floorContestTitle').textContent=`${t.name} • ${c.name} • ${p.symbol}`;
-  $('#floorEntry').textContent=entry?fmtUsd(entry):'FREE';
-  $('#floorPrize').textContent=p.symbol;
-  $$('[data-choice-kind]').forEach(b=>b.onclick=()=>{state[b.dataset.choiceKind]=b.dataset.choiceId;renderSelectors();renderContests()});
-}
-function renderPools(){
-  const sample={runner:100,clerk:500,trader:1500,broker:5000};
-  $('#featuredPools').innerHTML=state.catalog.prizeAssets.filter(x=>x.enabledForPrizes).map(x=>`<div class="pool"><div><strong>${x.symbol}</strong><span>${x.name} prize asset</span></div><b>${fmtUsd(sample[state.tier]||500)} target</b></div>`).join('');
-}
-function contestRows(){
-  const t=selected('tier'),p=selected('prize');
-  const cats=state.catalog.categories;
-  return cats.map((c,i)=>({tier:t,cat:c,prize:p,players:[38,112,284,641][i],ends:['42m','6h 18m','4d 3h','5d 22h'][i]}));
-}
-function renderContests(){
-  const rows=contestRows();
-  $('#liveContests').innerHTML=rows.map(x=>{const entry=x.cat.free?0:x.tier.entryUsd;return `<button class="contest-row" data-open-contest="${x.cat.id}"><div><b>${x.tier.name} • ${x.cat.name} • ${x.prize.symbol}</b><small>${entry?fmtUsd(entry):'FREE'} entry • ${x.players} players • ${x.ends}</small></div><strong>${x.prize.symbol}</strong></button>`}).join('');
-  $$('[data-open-contest]').forEach(b=>b.onclick=()=>{state.category=b.dataset.openContest;renderSelectors();showView('floor')});
-}
+function showView(id){$$('.view').forEach(v=>v.classList.toggle('active',v.id===`view-${id}`));$$('[data-nav]').forEach(b=>b.classList.toggle('active',b.dataset.nav===id||(b.dataset.nav==='tiers'&&['tiers','sessions','prizes','workstation'].includes(id))));if(id==='workstation'){updateWorkstationHeader();setTimeout(()=>{state.chart?.applyOptions({width:$('#chart').clientWidth,height:$('#chart').clientHeight});loadBars()},40)}window.scrollTo({top:0,behavior:'instant'})}
+const enabled=list=>list.filter(x=>x.enabled!==false);
+const tier=()=>enabled(state.catalog.tiers).find(x=>x.id===state.tier)||enabled(state.catalog.tiers)[0];
+const session=()=>enabled(state.catalog.sessions).find(x=>x.id===state.session)||enabled(state.catalog.sessions)[0];
+const prize=()=>enabled(state.catalog.prizeAssets).find(x=>x.id===state.prize)||enabled(state.catalog.prizeAssets)[0];
+function payoutPolicy(){const s=session(),id=s.payoutPolicyId||tier().payoutPolicyId;return state.catalog.payoutPolicies[id]||{paidPercent:20}}
+function entryUsd(){return session().free?0:tier().entryUsd}
+function renderTiers(){const items=[{id:'freeroll',name:'Free Roll',entryUsd:0,tagline:'PLAY FREE',accent:'#d7dbe1',art:'/approved-lobby-hero-widget-free.png',free:true},...enabled(state.catalog.tiers)];$('#tierGrid').innerHTML=items.map(x=>`<button class="tier-card" data-tier-card="${x.id}" style="--accent:${x.accent}"><div class="tier-art"><img src="${x.art}" alt="${x.name} turtle artwork"></div><div class="tier-copy"><span class="tier-price">${x.free?'FREE':fmtUsd(x.entryUsd)}</span><h2>${x.name}</h2><p>${x.tagline}</p><span class="tier-action">${x.free?'ENTER FREE ROLL':'SELECT LEVEL'} →</span></div></button>`).join('');$$('[data-tier-card]').forEach(btn=>btn.onclick=()=>{if(btn.dataset.tierCard==='freeroll'){state.tier='runner';state.session='weekly-freeroll';renderPrizes();showView('prizes');return}state.tier=btn.dataset.tierCard;if(session().free)state.session='morning-market';renderSessions();renderPrizes();showView('sessions')})}
+function renderSessions(){const t=tier();$('#sessionTierLine').textContent=`${t.name} · ${fmtUsd(t.entryUsd)} entry`;const rows=enabled(state.catalog.sessions).filter(x=>!x.free),players={'degen-hour':84,'morning-market':152,'afternoon-market':97,'daily-challenge':241,'weekly-portfolio':618};$('#sessionGrid').innerHTML=rows.map((x,i)=>`<button class="session-card" data-session-card="${x.id}"><div class="session-icon">${['⚡','☀️','🌇','📈','🗓️'][i]||'📊'}</div><div class="session-main"><span class="eyebrow">${x.category.toUpperCase()}</span><h2>${x.name}</h2><p>${x.scheduleLabel}</p><small>${players[x.id]||0} entries</small></div><div class="session-side"><span class="status ${x.status.toLowerCase()}">${x.status}</span><b>${fmtUsd(t.entryUsd)}</b><em>${x.actionLabel}</em></div></button>`).join('');$$('[data-session-card]').forEach(btn=>btn.onclick=()=>{state.session=btn.dataset.sessionCard;renderPrizes();showView('prizes')})}
+function renderPrizes(){const t=tier(),s=session(),policy=payoutPolicy();$('#prizeContext').textContent=`${s.free?'Free Roll':t.name} · ${s.name} · ${s.free?'FREE':fmtUsd(t.entryUsd)+' entry'}`;$('#paidPercent').textContent=`TOP ${policy.paidPercent}%`;const targets={ai:'1,250,000 AI',boner:'4,000,000 BONER',incel:'2,500,000 INCEL'},approx={ai:'≈ $1,250',boner:'≈ $1,080',incel:'≈ $1,320'};$('#prizeGrid').innerHTML=enabled(state.catalog.prizeAssets).filter(x=>x.enabledForPrizes).map(x=>`<button class="prize-card" data-prize-card="${x.id}" style="--prize:${x.accent}"><div class="coin-orb">${x.symbol.slice(0,2)}</div><span class="eyebrow">PRIZE ASSET</span><h2>${x.name}</h2><div class="prize-number">${targets[x.id]||x.symbol}</div><p>${approx[x.id]||'Approximate value shown at funding'}</p><div class="fund-bar"><i style="width:${x.id==='ai'?82:x.id==='boner'?64:73}%"></i></div><div class="prize-meta"><span>${s.free?'FREE ENTRY':fmtUsd(t.entryUsd)+' ENTRY'}</span><span>TOP ${policy.paidPercent}% PAID</span></div><span class="prize-action">PLAY FOR ${x.symbol} →</span></button>`).join('');$$('[data-prize-card]').forEach(btn=>btn.onclick=()=>{state.prize=btn.dataset.prizeCard;updateWorkstationHeader();showView('workstation')})}
+function updateWorkstationHeader(){if(!state.catalog)return;const t=tier(),s=session(),p=prize(),policy=payoutPolicy();$('#floorContestTitle').textContent=`${s.free?'Free Roll':t.name} • ${s.name} • ${p.symbol}`;$('#floorSchedule').textContent=s.scheduleLabel;$('#floorEntry').textContent=entryUsd()?fmtUsd(entryUsd()):'FREE';$('#floorPrize').textContent=p.symbol;$('#floorPrizeLine').textContent=`TOP ${policy.paidPercent}%`}
 async function fetchJson(url){const r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(`${r.status} ${r.statusText}`);return r.json()}
 function quoteChange(q){const n=Number(q?.changePct??q?.percentChange??q?.changePercent??q?.pctChange);return Number.isFinite(n)?n:null}
 function quotePrice(q){const n=Number(q?.price??q?.last??q?.lastPrice??q?.close);return Number.isFinite(n)?n:null}
-async function loadQuotes(){
-  if(!state.symbols.length)return;
-  const root=$('#quoteRows');root.innerHTML='<div class="empty-state">Loading quotes…</div>';
-  try{
-    const data=await fetchJson('/api/quotes?symbols='+encodeURIComponent(state.symbols.join(',')));
-    const rows=Array.isArray(data)?data:(data.quotes||[]),map=new Map(rows.map(x=>[norm(x.symbol||x.ticker),x]));
-    root.innerHTML=state.symbols.map(sym=>{const q=map.get(sym)||{},p=quotePrice(q),c=quoteChange(q);return `<button class="quote-row ${sym===state.activeSymbol?'active':''}" data-quote-symbol="${sym}"><b>${sym}</b><span>${p==null?'—':fmtUsd(p)}</span><em class="${c==null?'':c>=0?'pos':'neg'}">${c==null?'—':`${c>=0?'+':''}${c.toFixed(2)}%`}</em></button>`}).join('');
-    $$('[data-quote-symbol]').forEach(b=>b.onclick=()=>selectSymbol(b.dataset.quoteSymbol));
-  }catch(e){root.innerHTML=`<div class="empty-state">Quotes unavailable: ${e.message}</div>`}
-}
+async function loadQuotes(){if(!state.symbols.length)return;const root=$('#quoteRows');root.innerHTML='<div class="empty-state">Loading quotes…</div>';try{const data=await fetchJson('/api/quotes?symbols='+encodeURIComponent(state.symbols.join(',')));const rows=Array.isArray(data)?data:(data.quotes||[]),map=new Map(rows.map(x=>[norm(x.symbol||x.ticker),x]));root.innerHTML=state.symbols.map(sym=>{const q=map.get(sym)||{},p=quotePrice(q),c=quoteChange(q);return `<button class="quote-row ${sym===state.activeSymbol?'active':''}" data-quote-symbol="${sym}"><b>${sym}</b><span>${p==null?'—':fmtUsd(p)}</span><em class="${c==null?'':c>=0?'pos':'neg'}">${c==null?'—':`${c>=0?'+':''}${c.toFixed(2)}%`}</em></button>`}).join('');$$('[data-quote-symbol]').forEach(b=>b.onclick=()=>selectSymbol(b.dataset.quoteSymbol))}catch(e){root.innerHTML=`<div class="empty-state">Quotes unavailable: ${e.message}</div>`}}
 function selectSymbol(sym){state.activeSymbol=norm(sym);$('#activeSymbolTitle').textContent=state.activeSymbol;$('#oeSymbol').value=state.activeSymbol;loadQuotes();loadBars();log('SYMBOL',`${state.activeSymbol} loaded into chart and order entry`)}
 function parseBasket(raw){return unique(String(raw||'').split(/[|,;\s]+/).map(norm).filter(x=>/^[A-Z][A-Z0-9.\-]{0,9}$/.test(x))).slice(0,30)}
 function loadBasket(){const syms=parseBasket($('#basketInput').value);$('#basketRows').innerHTML=syms.map(s=>`<button class="basket-row" data-basket-symbol="${s}"><b>${s}</b><span>LOAD INTO OE</span></button>`).join('');$$('[data-basket-symbol]').forEach(b=>b.onclick=()=>selectSymbol(b.dataset.basketSymbol));log('BASKET',`${syms.length} symbols loaded`)}
-function chartTheme(){const light=document.documentElement.dataset.theme==='light';return{layout:{background:{type:'solid',color:light?'#ffffff':'#0b1620'},textColor:light?'#425b6b':'#94aebb'},grid:{vertLines:{color:light?'#edf2f6':'#19303e'},horzLines:{color:light?'#edf2f6':'#19303e'}},timeScale:{borderColor:light?'#d7e2ea':'#284455'},rightPriceScale:{borderColor:light?'#d7e2ea':'#284455'}}}
-function ensureChart(){if(state.chart)return;const el=$('#chart');if(!window.LightweightCharts||!el)return;state.chart=window.LightweightCharts.createChart(el,{width:el.clientWidth,height:el.clientHeight,...chartTheme()});state.series=state.chart.addCandlestickSeries({upColor:'#1eae61',downColor:'#db5757',borderVisible:false,wickUpColor:'#1eae61',wickDownColor:'#db5757'});window.addEventListener('resize',()=>state.chart?.applyOptions({width:el.clientWidth,height:el.clientHeight}));}
+function chartTheme(){const light=document.documentElement.dataset.theme==='light';return{layout:{background:{type:'solid',color:light?'#ffffff':'#08131d'},textColor:light?'#425b6b':'#94aebb'},grid:{vertLines:{color:light?'#edf2f6':'#172a37'},horzLines:{color:light?'#edf2f6':'#172a37'}},timeScale:{borderColor:light?'#d7e2ea':'#284455'},rightPriceScale:{borderColor:light?'#d7e2ea':'#284455'}}}
+function ensureChart(){if(state.chart)return;const el=$('#chart');if(!window.LightweightCharts||!el)return;state.chart=window.LightweightCharts.createChart(el,{width:el.clientWidth,height:el.clientHeight,...chartTheme()});state.series=state.chart.addCandlestickSeries({upColor:'#1eae61',downColor:'#db5757',borderVisible:false,wickUpColor:'#1eae61',wickDownColor:'#db5757'});window.addEventListener('resize',()=>state.chart?.applyOptions({width:el.clientWidth,height:el.clientHeight}))}
 async function loadBars(){ensureChart();if(!state.series)return;try{const d=await fetchJson(`/api/quotes/bars?symbol=${encodeURIComponent(state.activeSymbol)}&interval=${encodeURIComponent(state.interval)}`);const bars=(d.bars||[]).map(b=>({time:Math.floor(new Date(b.time).getTime()/1000),open:Number(b.open),high:Number(b.high),low:Number(b.low),close:Number(b.close)})).filter(b=>Number.isFinite(b.time)&&Number.isFinite(b.close));state.series.setData(bars);state.chart.timeScale().fitContent()}catch(e){toast(`Chart unavailable: ${e.message}`)}}
 function log(kind,text){const root=$('#activityLog'),row=document.createElement('div');row.innerHTML=`<span>${kind}</span><b>${text}</b>`;root.prepend(row)}
-function setupWallets(){
-  $('#walletChoices').innerHTML=state.catalog.walletAdapters.map(w=>`<div class="wallet-option"><div><b>${w.name}</b><span>${w.kind}</span></div><button class="secondary" data-wallet="${w.id}">SIMULATE</button></div>`).join('');
-  $$('[data-wallet]').forEach(b=>b.onclick=()=>{toast(`${b.dataset.wallet} adapter simulated — no real custody`);$('#walletButton').textContent='WALLET SIMULATED';$('#walletModal').hidden=true});
-}
-function bind(){
-  $$('[data-view]').forEach(b=>b.onclick=()=>showView(b.dataset.view));
-  $('#themeToggle').onclick=()=>{const next=document.documentElement.dataset.theme==='light'?'dark':'light';document.documentElement.dataset.theme=next;localStorage.setItem('sbcPreviewTheme',next);state.chart?.applyOptions(chartTheme())};
-  $('#walletButton').onclick=()=>$('#walletModal').hidden=false;$('#walletClose').onclick=()=>$('#walletModal').hidden=true;
-  $('#findContest').onclick=()=>showView('floor');$('[data-freeroll]').onclick=()=>{state.category='weekly-freeroll';renderSelectors();showView('floor')};
-  $('#loadQuotes').onclick=()=>{const next=parseBasket($('#quoteInput').value);if(next.length){state.symbols=next;loadQuotes()}};
-  $('#loadDefaultQuotes').onclick=()=>{state.symbols=[...state.catalog.quoteDefaults];$('#quoteInput').value=state.symbols.join('|');loadQuotes()};
-  $('#loadBasket').onclick=loadBasket;$('#previewOrder').onclick=()=>log('ORDER',`${$('#orderType').value} BUY ${$('#quantity').value} ${$('#oeSymbol').value} — preview only`);
-  $$('[data-interval]').forEach(b=>b.onclick=()=>{$$('[data-interval]').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.interval=b.dataset.interval;loadBars()});
-}
-async function start(){
-  const saved=localStorage.getItem('sbcPreviewTheme');if(saved)document.documentElement.dataset.theme=saved;
-  try{state.catalog=await fetchJson('/api/v2/catalog')}catch(e){document.body.innerHTML=`<pre>Preview catalog failed: ${e.message}</pre>`;return}
-  state.symbols=[...state.catalog.quoteDefaults];$('#quoteInput').value=state.symbols.join('|');renderSelectors();renderPools();renderContests();setupWallets();bind();ensureChart();loadQuotes();loadBars();loadBasket();
-}
+function setupWallets(){$('#walletChoices').innerHTML=state.catalog.walletAdapters.map(w=>`<div class="wallet-option"><div><b>${w.name}</b><span>${w.kind}</span></div><button class="secondary" data-wallet="${w.id}">SIMULATE</button></div>`).join('');$$('[data-wallet]').forEach(b=>b.onclick=()=>{toast(`${b.dataset.wallet} adapter simulated — no real custody`);$('#walletButton').textContent='WALLET SIMULATED';$('#walletModal').hidden=true})}
+function bind(){$$('[data-nav]').forEach(b=>b.onclick=()=>showView(b.dataset.nav));$('#themeToggle').onclick=()=>{const next=document.documentElement.dataset.theme==='light'?'dark':'light';document.documentElement.dataset.theme=next;localStorage.setItem('sbcPreviewTheme',next);state.chart?.applyOptions(chartTheme())};$('#walletButton').onclick=()=>$('#walletModal').hidden=false;$('#walletClose').onclick=()=>$('#walletModal').hidden=true;$('#homeFreeroll').onclick=()=>{state.tier='runner';state.session='weekly-freeroll';renderPrizes();showView('prizes')};$('#loadQuotes').onclick=()=>{const next=parseBasket($('#quoteInput').value);if(next.length){state.symbols=next;loadQuotes()}};$('#loadDefaultQuotes').onclick=()=>{state.symbols=[...state.catalog.quoteDefaults];$('#quoteInput').value=state.symbols.join('|');loadQuotes()};$('#loadBasket').onclick=loadBasket;$('#previewOrder').onclick=()=>log('ORDER',`${$('#orderType').value} BUY ${$('#quantity').value} ${$('#oeSymbol').value} — preview only`);$$('[data-interval]').forEach(b=>b.onclick=()=>{$$('[data-interval]').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.interval=b.dataset.interval;loadBars()})}
+async function start(){const saved=localStorage.getItem('sbcPreviewTheme');if(saved)document.documentElement.dataset.theme=saved;try{state.catalog=await fetchJson('/api/v2/catalog')}catch(e){document.body.innerHTML=`<pre>Preview catalog failed: ${e.message}</pre>`;return}state.symbols=[...state.catalog.quoteDefaults];$('#quoteInput').value=state.symbols.join('|');renderTiers();renderSessions();renderPrizes();setupWallets();bind();ensureChart();loadQuotes();loadBars();loadBasket()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
