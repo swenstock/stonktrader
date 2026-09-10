@@ -31,10 +31,12 @@ app.get('/api/preview-health', (_req, res) => res.json({
   productionMainUntouched: true
 }));
 
-app.use(express.static(PUBLIC));
+// Preview owns root. Do not let public/index.html (the legacy V45 redirect shell)
+// intercept '/' before the preview route.
 app.get('/', (_req, res) => res.sendFile(path.join(PUBLIC, 'preview-v2', 'index.html')));
 app.get('/preview', (_req, res) => res.sendFile(path.join(PUBLIC, 'preview-v2', 'index.html')));
 app.get('/preview/*', (_req, res) => res.sendFile(path.join(PUBLIC, 'preview-v2', 'index.html')));
+app.use(express.static(PUBLIC, { index: false }));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`SBC meme-prize preview running on ${PORT}`));
