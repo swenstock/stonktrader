@@ -16,10 +16,11 @@
     "note": "Preview values. Centralized so economics can change without UI rewrites."
   },
   "tiers": [
-    {"id":"runner","name":"Runner","entryUsd":1,"tagline":"START SMALL","accent":"#36d676","art":"/approved-lobby-hero-widget-free.png","enabled":true,"payoutPolicyId":"runner"},
-    {"id":"clerk","name":"Clerk","entryUsd":5,"tagline":"STEP IT UP","accent":"#4cb8ff","art":"/rise-of-turtles-approved-final.png.png","enabled":true,"payoutPolicyId":"clerk"},
-    {"id":"trader","name":"Trader","entryUsd":15,"tagline":"TRADE FOR MORE","accent":"#c983ff","art":"/rise-of-turtles-approved-final.png.png","enabled":true,"payoutPolicyId":"trader"},
-    {"id":"broker","name":"Broker","entryUsd":50,"tagline":"THE BIG SHOT","accent":"#f6c64d","art":"/approved-lobby-hero-reference.png","enabled":true,"payoutPolicyId":"broker"}
+    {"id":"freeroll","name":"Free Roll","entryUsd":0,"tagline":"PLAY FREE","accent":"#37d36b","art":"/preview-turtles/freeroll.png","enabled":true,"payoutPolicyId":"freeroll"},
+    {"id":"runner","name":"Runner","entryUsd":1,"tagline":"START SMALL","accent":"#36d676","art":"/preview-turtles/runner.png","enabled":true,"payoutPolicyId":"runner"},
+    {"id":"clerk","name":"Clerk","entryUsd":5,"tagline":"STEP IT UP","accent":"#4cb8ff","art":"/preview-turtles/clerk.png","enabled":true,"payoutPolicyId":"clerk"},
+    {"id":"trader","name":"Trader","entryUsd":15,"tagline":"TRADE FOR MORE","accent":"#c983ff","art":"/preview-turtles/trader.png","enabled":true,"payoutPolicyId":"trader"},
+    {"id":"broker","name":"Broker","entryUsd":50,"tagline":"THE BIG SHOT","accent":"#f6c64d","art":"/preview-turtles/broker.png","enabled":true,"payoutPolicyId":"broker"}
   ],
   "sessions": [
     {"id":"degen-hour","name":"Degen Hour","category":"hourly","scheduleLabel":"1 hour sprint","status":"LIVE","actionLabel":"PLAY NOW","enabled":true},
