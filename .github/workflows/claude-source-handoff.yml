@@ -1,0 +1,113 @@
+name: Claude SBC source handoff
+
+on:
+  push:
+    branches:
+      - 'preview/meme-prize-shell-v1'
+    paths:
+      - '.github/workflows/claude-source-handoff.yml'
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build exact-source handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT=handoff
+          PROD="$ROOT/production-main-889fac6"
+          PREV="$ROOT/current-preview"
+          mkdir -p "$PROD/server" "$PROD/public" "$PREV/server" "$PREV/public/preview-v2" "$PREV/config"
+
+          prod_files=(
+            server/index.js
+            server/v45ExactShell.js
+            public/v45-trading-workstation-v1.js
+            public/v45-desktop-icons.js
+            public/v45-ticket-market-v36.js
+            public/v45-ticket-native-hooks-v41.js
+            public/v45-stage4-junior-ui.js
+            public/v45-stage4-junior-ui.css
+            public/v45-lobby-install-v1.js
+            public/v45-lobby-install-v1.css
+            public/v45-my-tickets-cleanup-v37.js
+            public/v45-badge-market-stage4.js
+            public/v45-exchange-history-stage2-v1.js
+            public/v45-exchange-dialog-v1.js
+            public/v45-exchange-tier-integrity-v1.js
+            public/v45-exchange-layout-sales-v1.js
+            public/v45-exchange-my-activity-v1.js
+            public/v45-exchange-own-orders-v1.js
+            public/v45-exchange-routing-fill-v1.js
+            public/v45-badge-ownership-sync-v1.js
+            public/v45-badge-dialog-unified-v1.js
+            public/v45-ticket-market-v35.css
+            public/v45-mobile-v3.js
+            public/v45-mobile-v3.css
+            public/v45-mobile-v4.js
+            public/v45-mobile-v4.css
+            public/v45-basket-builder-v19.js
+            public/v45-basket-builder-v19.css
+            public/v45-basket-loader-v43.js
+            public/v45-mature-chart-owner-v1.js
+            public/v45-mature-chart-owner-v1.css
+            public/v45-desktop-trading-v45.js
+            public/v45-desktop-trading-v45.css
+            public/v45-stage67-ux.js
+            public/v45-stage67-ux.css
+            public/v45-active-symbol-sync-v1.js
+            public/v45-workspace-portfolio-v1.js
+            public/v45-portfolio-header-v44.js
+            public/v45-entry-actions-v20.js
+            public/v45-entry-actions-v20.css
+            public/v45-leaderboard-v30.js
+            public/v45-leaderboard-v30.css
+            public/v45-leaderboard-order-v31.js
+          )
+
+          for f in "${prod_files[@]}"; do
+            mkdir -p "$PROD/$(dirname "$f")"
+            git show 889fac6a8f0e4c709f4c42ba0f07a8681ed50dc1:"$f" > "$PROD/$f"
+          done
+
+          preview_files=(
+            server/previewServer.js
+            server/previewMemePrizeShellV1.test.js
+            config/product-catalog-v2.json
+            public/preview-og-prize-v1.js
+            public/preview-og-prize-v1.css
+            public/preview-v2/index.html
+            public/preview-v2/app.js
+            public/preview-v2/styles.css
+            SBC_MEME_PRIZE_PREVIEW_ARCHITECTURE.md
+            .github/workflows/meme-prize-preview-shell-v1.yml
+          )
+          for f in "${preview_files[@]}"; do
+            mkdir -p "$PREV/$(dirname "$f")"
+            cp "$f" "$PREV/$f"
+          done
+
+          {
+            echo "production_commit=889fac6a8f0e4c709f4c42ba0f07a8681ed50dc1"
+            echo "preview_commit=$(git rev-parse HEAD)"
+            echo
+            echo "Production files:"
+            printf '%s\n' "${prod_files[@]}"
+            echo
+            echo "Preview files:"
+            printf '%s\n' "${preview_files[@]}"
+          } > "$ROOT/SOURCE_MANIFEST.txt"
+
+          (cd "$ROOT" && find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256_MANIFEST.txt)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SBC_CLAUDE_EXACT_SOURCE_HANDOFF
+          path: handoff/
+          if-no-files-found: error
+          retention-days: 7
