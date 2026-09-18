@@ -3,6 +3,7 @@ process.env.PORT = process.env.PORT || '4173';
 process.env.DB_PATH = process.env.DB_PATH || `/tmp/sbc-test-clock-reconcile-${Date.now()}.db`;
 
 const assert = require('assert');
+const db = require('../db');
 const BASE = `http://localhost:${process.env.PORT}`;
 
 const TEST_EMAIL = 'clock-reconcile@sbc.test';
@@ -63,6 +64,11 @@ function findMorningFreeLevel(data) {
   const morning = data.categories.find(c => c.id === 'morning');
   return morning.levels.find(l => l.priceLevel === 'free');
 }
+function countOpenRowsForTierPrice(tierId, priceLevel) {
+  return db.prepare(
+    "SELECT COUNT(*) as n FROM satellites WHERE tier_id=? AND price_level=? AND status='open'"
+  ).get(tierId, priceLevel).n;
+}
 
 (async () => {
   require('../index.js');
@@ -95,13 +101,15 @@ function findMorningFreeLevel(data) {
   const freeLevel = morningLevelsBack.find(l => l.priceLevel === 'free');
   assert.strictEqual(freeLevel.status, 'open');
   assert.strictEqual(new Date(freeLevel.opensAt).getUTCDay(), 5);
+  assert.strictEqual(countOpenRowsForTierPrice('morning', 'free'), 1);
 
   await setClock('2026-09-21T10:00:00', auth);
   const clearRes = await clearClock(auth);
   assert.strictEqual(clearRes.res.status, 200);
   data = await getSatellites();
-  assert(data.categories.find(c => c.id === 'morning').levels
-    .filter(l => l.status === 'open').length <= 1);
+  for (const pl of ['free', 'runner', 'low', 'mid', 'high']) {
+    assert(countOpenRowsForTierPrice('morning', pl) <= 1, `duplicate open row for priceLevel=${pl}`);
+  }
 
   await setClock('2026-09-22T10:00:00', auth);
   data = await getSatellites();
@@ -117,8 +125,7 @@ function findMorningFreeLevel(data) {
   assert.strictEqual(backward.body.code, 'TEST_MODE_CLEANUP_REQUIRED');
 
   data = await getSatellites();
-  const stuckLevels = data.categories.find(c => c.id === 'morning').levels;
-  assert.strictEqual(stuckLevels.filter(l => l.status === 'open').length, 1);
+  assert.strictEqual(countOpenRowsForTierPrice('morning', 'free'), 1);
 
   console.log('testClockReconciliationV1: before/during/after/backward/clear/populated-block all verified against real auth, no sleep, no supertest');
   process.exit(0);
