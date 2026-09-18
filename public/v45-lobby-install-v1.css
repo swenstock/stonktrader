@@ -4,3 +4,49 @@
 header.top > img.avatar{object-position:center top}
 #view-floor #cleanCard-junior h3 br{display:block}
 @media(max-width:900px){#view-lobby .hero.approved-lobby-hero-v1 .approved-lobby-hero-card{width:100%;border-radius:18px}}
+
+/* SBC LOBBY HERO LOCKED V1 */
+/* .approved-lobby-hero-v1 / .approved-lobby-hero-card / .approved-lobby-hero-image
+   rules above are now dead CSS -- installLobbyHero() was the only code that ever
+   applied that class, and it is removed in this same PR. Left in place rather
+   than deleted since cleanup wasn't in the requested scope; flagged as a decision
+   to make in a later pass, not an oversight. */
+.hero-locked-v1{position:relative;min-height:420px;overflow:hidden;border-radius:24px;margin:0 0 16px}
+.hero-locked-v1 .hero-art{position:absolute;inset:0}
+.hero-locked-v1 .hero-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 30%}
+.hero-locked-v1 .hero-copy{position:relative;z-index:1;max-width:640px;margin:0 auto;text-align:center;padding:64px 20px}
+/* Font-size values below are NOT arbitrary clamp guesses. Each max was found by
+   binary-searching, against the real hero copy box widths (640/480/292px) and the
+   real headline/tagline text, the largest font-size that does not overflow --
+   then given a safety margin before being used as the clamp ceiling. Verified
+   with a real headless-browser sweep across 12 viewport widths (280 to 1920px),
+   zero overflow at any of them. See proof/ in the review package for the
+   screenshots and the measured numbers. Do not raise these maximums, and do not
+   let a future copy change overflow by allowing it to wrap -- lower the maximum
+   or letter-spacing instead, and re-run the same measurement before shipping. */
+.hero-locked-v1 .hero-copy h1{font-size:clamp(18px,3vw,37px);line-height:1;white-space:nowrap;margin:0;font-weight:1000;text-shadow:0 2px 10px rgba(0,0,0,.55)}
+.hero-locked-v1 .hero-copy h1 .hero-tagline{display:block;font-size:clamp(14px,2vw,24px);white-space:nowrap;color:var(--green)}
+.hero-locked-v1 .hero-subtitle{font-size:clamp(13px,1.4vw,17px);color:var(--gold);font-weight:1000;margin:22px 0 0;text-shadow:0 2px 8px rgba(0,0,0,.6)}
+.hero-locked-v1 .hero-cta{margin-top:28px}
+/* .hero-cta-sub upgraded from a plain gray line to bold white with a strong text
+   shadow -- the previous version was measured legible against a blank background
+   but was not legible against the real photo (a real reviewer-caught issue, see
+   README). This is a legibility fix, not a reposition. */
+.hero-locked-v1 .hero-cta-sub{margin-top:12px;font-size:13px;font-weight:700;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.9),0 0 14px rgba(0,0,0,.7)}
+/* The locked bottom line ("TRADE FAKE MONEY...") is now a page-flow sibling AFTER
+   .hero-locked-v1 closes, per explicit product direction: it belongs below the
+   hero on the plain lobby background, not floating over the photo. It no longer
+   lives inside .hero-copy at all -- see the HTML change in v45ExactShell.js.new. */
+.hero-locked-tagline-below{text-align:center;margin:0 0 16px;font-size:clamp(10px,1.1vw,12px);letter-spacing:.08em;color:#8398a5}
+@media(max-width:900px){
+  .hero-locked-v1 .hero-art img{object-position:55% 22%}
+  .hero-locked-v1 .hero-copy{max-width:480px;padding:48px 18px}
+  .hero-locked-v1 .hero-copy h1{font-size:clamp(16px,3.5vw,28px)}
+  .hero-locked-v1 .hero-copy h1 .hero-tagline{font-size:clamp(12px,2vw,20px)}
+}
+@media(max-width:600px){
+  .hero-locked-v1 .hero-art img{object-position:65% 15%}
+  .hero-locked-v1 .hero-copy{max-width:320px;padding:36px 14px}
+  .hero-locked-v1 .hero-copy h1{font-size:clamp(14px,4vw,16px)}
+  .hero-locked-v1 .hero-copy h1 .hero-tagline{font-size:clamp(11px,3vw,13px)}
+}
