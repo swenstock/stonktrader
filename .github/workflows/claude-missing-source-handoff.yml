@@ -1,0 +1,101 @@
+name: Claude missing-source handoff
+
+on:
+  push:
+    branches:
+      - 'preview/meme-prize-shell-v1'
+    paths:
+      - '.github/workflows/claude-missing-source-handoff.yml'
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Package exact missing production source
+        shell: bash
+        run: |
+          set -euo pipefail
+          PROD=889fac6a8f0e4c709f4c42ba0f07a8681ed50dc1
+          ROOT=claude_missing_source
+          mkdir -p "$ROOT/server/routes" "$ROOT/server/v45_exact" "$ROOT/server/turtle_art_v1" "$ROOT/public"
+
+          # Exact requested production files
+          git show "$PROD:public/v45-broker-race-ui.js" > "$ROOT/public/v45-broker-race-ui.js"
+          git show "$PROD:server/routes/testClock.js" > "$ROOT/server/routes/testClock.js"
+          git show "$PROD:server/routes/contests.js" > "$ROOT/server/routes/contests.js"
+          git show "$PROD:server/v45ExactShell.js" > "$ROOT/server/v45ExactShell.js"
+
+          # Entire encoded shell source and all canonical turtle art
+          git ls-tree -r --name-only "$PROD" server/v45_exact | while read -r f; do
+            rel="${f#server/v45_exact/}"
+            mkdir -p "$ROOT/server/v45_exact/$(dirname "$rel")"
+            git show "$PROD:$f" > "$ROOT/server/v45_exact/$rel"
+          done
+
+          git ls-tree -r --name-only "$PROD" server/turtle_art_v1 | while read -r f; do
+            rel="${f#server/turtle_art_v1/}"
+            mkdir -p "$ROOT/server/turtle_art_v1/$(dirname "$rel")"
+            git show "$PROD:$f" > "$ROOT/server/turtle_art_v1/$rel"
+          done
+
+          # Produce the exact reconstructed/decompressed shell that production code generates
+          node - <<'NODE'
+          const fs=require('fs');
+          const path=require('path');
+          const mod=require('./claude_missing_source/server/v45ExactShell.js');
+          if(!mod.exactV45Shell || !Buffer.isBuffer(mod.exactV45Shell)){
+            throw new Error('exactV45Shell buffer unavailable');
+          }
+          fs.writeFileSync('./claude_missing_source/EXACT_PRODUCTION_SHELL.html',mod.exactV45Shell);
+          NODE
+
+          cat > "$ROOT/README_FIRST.md" <<'EOF'
+          # Claude — missing source requested after Section 8 trace
+
+          This package contains the exact production-baseline files you requested.
+
+          Production source of truth:
+          `889fac6a8f0e4c709f4c42ba0f07a8681ed50dc1`
+
+          Included:
+          - complete `server/v45_exact/` encoded shell source
+          - complete `server/turtle_art_v1/`
+          - `server/v45ExactShell.js`
+          - reconstructed `EXACT_PRODUCTION_SHELL.html`
+          - `public/v45-broker-race-ui.js`
+          - `server/routes/testClock.js`
+          - `server/routes/contests.js`
+
+          Please continue the trace requested in your Section 8 response:
+          1. close the Test Clock -> session state -> CTA/backend acceptance path,
+          2. close Free Roll eligibility/entry gating,
+          3. trace the exact current How It Works copy/anchors in the shell,
+          4. trace broker-race/promotion ownership for complete removal,
+          5. return exact file/function surgery recommendations before any code change.
+
+          Do not propose hero art direction yet.
+          EOF
+
+          {
+            echo "production_commit=$PROD"
+            echo "packaging_branch_commit=$(git rev-parse HEAD)"
+            echo
+            find "$ROOT" -type f | sort
+          } > "$ROOT/SOURCE_MANIFEST.txt"
+
+          (
+            cd "$ROOT"
+            find . -type f ! -name SHA256_MANIFEST.txt -print0 | sort -z | xargs -0 sha256sum > SHA256_MANIFEST.txt
+          )
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SBC_CLAUDE_MISSING_SOURCE_HANDOFF
+          path: claude_missing_source/
+          if-no-files-found: error
+          retention-days: 7
