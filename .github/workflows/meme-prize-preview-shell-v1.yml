@@ -29,6 +29,10 @@ jobs:
           node server/tradingWorkstationV1.test.js
           node server/basketRealExecutionStageB.test.js
           node server/matureChartOwnerV1.test.js
+      - name: Run session UI truth + test clock reconciliation regressions
+        run: |
+          node server/tests/session-ui-truth-v1.test.js
+          node server/tests/testClockReconciliationV1.test.js
       - name: Boot preview server and verify health
         run: |
           PORT=3456 node server/previewServer.js > /tmp/sbc-preview.log 2>&1 &

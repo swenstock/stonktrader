@@ -69,22 +69,7 @@ function openNewSatellite(tier, now) {
   return sat;
 }
 
-function ensureOpenSatellites(now = testClock.getNow()) {
-  const testBypass = TEST_MODE && !testClock.getStatus().overridden;
-  for (const tier of TIERS) {
-    if (testBypass) {
-      const open = db.prepare("SELECT id FROM satellites WHERE tier_id=? AND price_level=? AND status='open'").get(tier.categoryId,tier.priceLevel);
-      if (!open) openNewSatellite(tier, now);
-      continue;
-    }
-    if ((tier.cadence === 'daily' || tier.cadence === 'hourly') && !isWeekday(now)) continue;
-    const win = windowFor(tier, now);
-    if (!win || now.getTime() < win.opensAt.getTime()) continue;
-    const existing = db.prepare('SELECT id FROM satellites WHERE tier_id=? AND price_level=? AND opens_at=?')
-      .get(tier.categoryId,tier.priceLevel,win.opensAt.toISOString());
-    if (!existing) openNewSatellite(tier, now);
-  }
-}
+
 
 function rankSatellite(satellite) {
   const entries = db.prepare('SELECT * FROM satellite_entries WHERE satellite_id=?').all(satellite.id);
@@ -132,14 +117,83 @@ function resolveSatellite(satellite) {
   });
 }
 
-function tick(now = testClock.getNow()) {
-  ensureOpenSatellites(now);
+const TEST_VOIDED_STATUS = 'test_voided'; // distinct from 'blocked' (settlement
+// failure, via blockSettlement) and 'resolved' (a settlement that actually ran).
+
+class TestModeCleanupRequiredError extends Error {
+  constructor(satellites) {
+    super(`Test-mode clock jump left ${satellites.length} satellite(s) with existing entries outside their window. Manual test-mode cleanup required.`);
+    this.code = 'TEST_MODE_CLEANUP_REQUIRED';
+    this.satellites = satellites.map(s => ({
+      id: s.id, tier_id: s.tier_id, price_level: s.price_level,
+      opens_at: s.opens_at, locks_at: s.locks_at,
+    }));
+  }
+}
+
+// Closes 'open' rows whose window no longer contains `now`, in both directions.
+// Forward (locks_at <= now): identical to the try/catch that used to live
+// directly inside tick() -- moved here unchanged.
+// Backward (TEST_MODE, now < opens_at): only safe to silently retire if nobody
+// entered. Populated rows are never touched here.
+function closeOutOfWindowOpenSatellites(now) {
   const open = db.prepare("SELECT * FROM satellites WHERE status='open'").all();
+  const skipTierKeys = new Set();
+  const needsManualCleanup = [];
   for (const sat of open) {
-    if (new Date(sat.locks_at).getTime() <= now.getTime()) {
+    const opensAtMs = new Date(sat.opens_at).getTime();
+    const locksAtMs = new Date(sat.locks_at).getTime();
+    if (locksAtMs <= now.getTime()) {
       try { resolveSatellite(sat); }
       catch (err) { blockSettlement(sat, err.code || 'SETTLEMENT_ERROR', err.message); }
+      continue;
     }
+    if (TEST_MODE && now.getTime() < opensAtMs) {
+      const entryCount = db.prepare('SELECT COUNT(*) as n FROM satellite_entries WHERE satellite_id=?').get(sat.id).n;
+      if (entryCount === 0) {
+        db.prepare('UPDATE satellites SET status=? WHERE id=?').run(TEST_VOIDED_STATUS, sat.id);
+      } else {
+        skipTierKeys.add(`${sat.tier_id}::${sat.price_level}`);
+        needsManualCleanup.push(sat);
+      }
+    }
+  }
+  return { skipTierKeys, needsManualCleanup };
+}
+
+function ensureOpenSatellites(now = testClock.getNow(), skipTierKeys = new Set()) {
+  const testBypass = TEST_MODE && !testClock.getStatus().overridden;
+  for (const tier of TIERS) {
+    if (skipTierKeys.has(`${tier.categoryId}::${tier.priceLevel}`)) continue;
+    if (testBypass) {
+      const open = db.prepare("SELECT id FROM satellites WHERE tier_id=? AND price_level=? AND status='open'").get(tier.categoryId,tier.priceLevel);
+      if (!open) openNewSatellite(tier, now);
+      continue;
+    }
+    if ((tier.cadence === 'daily' || tier.cadence === 'hourly') && !isWeekday(now)) continue;
+    const win = windowFor(tier, now);
+    if (!win || now.getTime() < win.opensAt.getTime()) continue;
+    const existing = db.prepare('SELECT id FROM satellites WHERE tier_id=? AND price_level=? AND opens_at=?')
+      .get(tier.categoryId,tier.priceLevel,win.opensAt.toISOString());
+    if (!existing) openNewSatellite(tier, now);
+  }
+}
+
+function reconcileNow(now = testClock.getNow()) {
+  const { skipTierKeys, needsManualCleanup } = closeOutOfWindowOpenSatellites(now);
+  ensureOpenSatellites(now, skipTierKeys);
+  if (needsManualCleanup.length) throw new TestModeCleanupRequiredError(needsManualCleanup);
+}
+
+function tick(now = testClock.getNow()) {
+  try {
+    reconcileNow(now);
+  } catch (err) {
+    if (err.code === 'TEST_MODE_CLEANUP_REQUIRED') {
+      console.error('[satelliteSchedulerV45] ' + err.message, err.satellites);
+      return;
+    }
+    throw err;
   }
 }
 
@@ -150,7 +204,8 @@ function start() {
 }
 
 module.exports = {
-  start, tick, resolveSatellite, ensureOpenSatellites,
+  start, tick, resolveSatellite, ensureOpenSatellites, reconcileNow,
+  TestModeCleanupRequiredError, TEST_VOIDED_STATUS,
   TIERS, CATEGORIES, PRICE_LEVEL_NAMES,
   engineVersion:'v45',
 };

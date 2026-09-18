@@ -430,7 +430,154 @@ function buildExactV45Shell() {
   if (html.length !== EXPECTED_BYTES || sha256 !== EXPECTED_SHA256) {
     throw new Error(`Exact V45 integrity failure: ${html.length} bytes ${sha256}`);
   }
-  return applyLobbyHeroLockedV1Patch(applyLobbyMainEventLiveMarketRetirementPatch(applyStaticLeaderPositionRetirementPatch(applyTurtleTierArtPatch(applyChartPresentationTuning(applyLegacyOrdersSurfaceRetirementPatch(applyRealQuickTradePatch(applyRealChartDataPatch(html))))))));
+  return applySessionUiTruthV1Patch(applyLobbyHeroLockedV1Patch(applyLobbyMainEventLiveMarketRetirementPatch(applyStaticLeaderPositionRetirementPatch(applyTurtleTierArtPatch(applyChartPresentationTuning(applyLegacyOrdersSurfaceRetirementPatch(applyRealQuickTradePatch(applyRealChartDataPatch(html)))))))));
+}
+
+
+
+// SBC SESSION UI TRUTH V1
+// Replaces the derivation of PLAY NOW/RESERVE NOW inside renderSessions()/openTier()
+// with backend-driven state from /api/satellites, via public/session-ui-truth-v1.js
+// and public/v45-backend-authority-v1.js (both loaded as separate <script> tags,
+// see server/previewServer.js and server/index.js). SESSION_UI and sessionUI(name)
+// in the base shell are deliberately left untouched -- openStandingModal() still
+// depends on sessionUI() for its (unrelated, cosmetic) youRank/youPnl/cashRank/
+// cashPnl/gap fields, which have nothing to do with open/reserve status.
+const OLD_OPEN_TIER_BLOCK = `function openTier(key){
+ const t=TIER_DATA[key];
+ document.getElementById('tierArt').src=t.art;
+ document.getElementById('tierName').textContent=t.name+' LOBBY';
+ document.getElementById('tierTag').textContent=t.tag;
+ document.getElementById('tierTag').style.color=t.accent;
+ document.getElementById('tierDesc').textContent=t.desc;
+ document.getElementById('tierPrice').textContent=t.price===0?'FREE':t.price.toLocaleString()+' STONK';
+ document.getElementById('tierUsd').textContent=t.price===0?'Zero-risk entry':'≈ '+t.usd+' at current reference';
+ currentTierKey=key;
+ currentEventId='morning';
+ renderSessions(key);
+ showView('tier');
+}`;
+
+const NEW_OPEN_TIER_BLOCK = `async function openTier(key){
+ const t=TIER_DATA[key];
+ document.getElementById('tierArt').src=t.art;
+ document.getElementById('tierName').textContent=t.name+' LOBBY';
+ document.getElementById('tierTag').textContent=t.tag;
+ document.getElementById('tierTag').style.color=t.accent;
+ document.getElementById('tierDesc').textContent=t.desc;
+ document.getElementById('tierPrice').textContent=t.price===0?'FREE':t.price.toLocaleString()+' STONK';
+ document.getElementById('tierUsd').textContent=t.price===0?'Zero-risk entry':'\\u2248 '+t.usd+' at current reference';
+ currentTierKey=key;
+ currentEventId='morning';
+ showView('tier');
+ renderSessions(key, null);
+ const categories = await window.SBCSessionUiTruthV1.fetchSatelliteLevels(window.SBCBackendAuthorityV1);
+ renderSessions(key, categories);
+}`;
+
+const OLD_RENDER_SESSIONS_BLOCK = `function renderSessions(key){
+  const t=TIER_DATA[key];
+  const grid=document.getElementById('sessionGrid');
+  const visibleSessions=SESSIONS.filter(s=>!(key==='freeroll' && s.name==='DEGEN RACE TO THE CLOSE'));
+  grid.innerHTML=visibleSessions.map((s,i)=>{
+   const e=Math.max(12,Math.round(s.entries*(key==='freeroll'?2.2:key==='runner'?1.5:key==='clerk'?1:key==='trader'?.55:.28)));
+   const price=t.price===0?'FREE':t.price.toLocaleString()+' STONK';
+   const special=s.format==='Degen'?' degen':'';
+   const live=s.status==='LIVE'?' live':'';
+   const ui=sessionUI(s.name);
+   const playNow=ui.mode==='play';
+   return \`<article class="session panel">
+     <div class="session-icon">\${s.icon}</div>
+     <div>
+       <h3>\${s.name}</h3>
+       <p>\${s.time}</p>
+       <div class="session-meta">
+         <span class="pill\${live}">\${s.status}</span>
+         <span class="pill\${special}">\${s.format.toUpperCase()}</span>
+         <span class="pill">\${e.toLocaleString()} ENTRIES</span>
+       </div>
+       <div class="session-time-row">
+         <span class="time-chip \${playNow?'play':'reserve'}">\${playNow ? ('PLAY NOW • ' + (ui.ends || 'LIVE')) : 'RESERVE NOW'}</span>
+         <span class="session-time-copy">\${ui.start}</span>
+       </div>
+       <div class="session-preview \${playNow?'live-preview':''}">
+         <b>\${ui.previewTitle}</b>
+         <span>\${ui.previewText}</span>
+       </div>
+     </div>
+     <div class="session-side">
+       <div class="session-right">
+         <strong>\${price}</strong>
+         <span>\${t.price===0?'FREE':t.usd}</span>
+         <button onclick="event.stopPropagation();beginPortfolioFlow('\${s.name}','\${key}','\${playNow?'live':'reserve'}','tier',1)">\${ui.button}</button>
+       </div>
+       \${playNow ? \`<button class="secondary" onclick="event.stopPropagation();openStandingModal('\${s.name}','\${t.name}')">CURRENT STANDING</button>
+       <button class="secondary" onclick="event.stopPropagation();showView('leaders')">LEADERBOARD</button>\` : \`\`}
+     </div>
+   </article>\`
+  }).join('');
+}`;
+
+const NEW_RENDER_SESSIONS_BLOCK = `function renderSessions(key, categories){
+ const t=TIER_DATA[key];
+ const grid=document.getElementById('sessionGrid');
+ const visibleSessions=SESSIONS.filter(s=>!(key==='freeroll' && s.name==='DEGEN RACE TO THE CLOSE'));
+ grid.innerHTML=visibleSessions.map((s,i)=>{
+  const e=Math.max(12,Math.round(s.entries*(key==='freeroll'?2.2:key==='runner'?1.5:key==='clerk'?1:key==='trader'?.55:.28)));
+  const price=t.price===0?'FREE':t.price.toLocaleString()+' STONK';
+  const special=s.format==='Degen'?' degen':'';
+  const level=window.SBCSessionUiTruthV1.findLevel(categories, s.name, key, window.SBCBackendAuthorityV1);
+  const live=level?.status==='open'?' live':'';
+  const ui=window.SBCSessionUiTruthV1.sessionUIFromBackend(level);
+  const playNow=ui.mode==='play';
+  return \`<article class="session panel">
+    <div class="session-icon">\${s.icon}</div>
+    <div>
+      <h3>\${s.name}</h3>
+      <p>\${s.time}</p>
+      <div class="session-meta">
+        <span class="pill\${live}">\${level?.status?.toUpperCase() || s.status}</span>
+        <span class="pill\${special}">\${s.format.toUpperCase()}</span>
+        <span class="pill">\${e.toLocaleString()} ENTRIES</span>
+      </div>
+      <div class="session-time-row">
+        <span class="time-chip \${playNow?'play':'reserve'}">\${playNow ? ('PLAY NOW \\u2022 ' + (ui.ends || 'LIVE')) : ui.button}</span>
+        <span class="session-time-copy">\${ui.start}</span>
+      </div>
+      <div class="session-preview \${playNow?'live-preview':''}">
+        <b>\${ui.previewTitle}</b>
+        <span>\${ui.previewText}</span>
+      </div>
+    </div>
+    <div class="session-side">
+      <div class="session-right">
+        <strong>\${price}</strong>
+        <span>\${t.price===0?'FREE':t.usd}</span>
+        <button onclick="event.stopPropagation();beginPortfolioFlow('\${s.name}','\${key}','\${playNow?'live':'reserve'}','tier',1)">\${ui.button}</button>
+      </div>
+      \${playNow ? \`<button class="secondary" onclick="event.stopPropagation();openStandingModal('\${s.name}','\${t.name}')">CURRENT STANDING</button>
+      <button class="secondary" onclick="event.stopPropagation();showView('leaders')">LEADERBOARD</button>\` : \`\`}
+    </div>
+  </article>\`
+ }).join('');
+}`;
+
+const SESSION_UI_TRUTH_V1_MARKER = '<!-- SBC SESSION UI TRUTH V1 -->';
+function applySessionUiTruthV1Patch(html) {
+  let source = Buffer.isBuffer(html) ? html.toString("utf8") : String(html);
+  if (source.includes(SESSION_UI_TRUTH_V1_MARKER)) return Buffer.from(source, "utf8");
+
+  if (countOccurrences(source, OLD_RENDER_SESSIONS_BLOCK) !== 1) {
+    throw new Error('Exact V45 session-ui-truth-v1 compatibility failure: renderSessions block');
+  }
+  source = source.replace(OLD_RENDER_SESSIONS_BLOCK, NEW_RENDER_SESSIONS_BLOCK);
+
+  if (countOccurrences(source, OLD_OPEN_TIER_BLOCK) !== 1) {
+    throw new Error('Exact V45 session-ui-truth-v1 compatibility failure: openTier block');
+  }
+  source = source.replace(OLD_OPEN_TIER_BLOCK, `${SESSION_UI_TRUTH_V1_MARKER}\n${NEW_OPEN_TIER_BLOCK}`);
+
+  return Buffer.from(source, "utf8");
 }
 
 const exactV45Shell = buildExactV45Shell();
@@ -454,4 +601,6 @@ module.exports = {
   LOBBY_MAIN_EVENT_LIVE_MARKET_RETIREMENT_MARKER,
   applyLobbyHeroLockedV1Patch,
   LOBBY_HERO_LOCKED_V1_MARKER,
+  applySessionUiTruthV1Patch,
+  SESSION_UI_TRUTH_V1_MARKER,
 };
