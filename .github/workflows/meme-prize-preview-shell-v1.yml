@@ -44,3 +44,6 @@ jobs:
           cat /tmp/health.json
           curl -fsS http://127.0.0.1:3456/ | grep -q 'STONK BROKER CHALLENGE'
           kill $pid || true
+      - name: Show preview server boot log
+        if: always()
+        run: cat /tmp/sbc-preview.log || true

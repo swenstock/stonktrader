@@ -86,9 +86,15 @@ function findMorningFreeLevel(data) {
   await setClock('2026-09-18T10:00:00', auth);
   data = await getSatellites();
   const morningLevelsBack = data.categories.find(c => c.id === 'morning').levels;
-  const openOnes = morningLevelsBack.filter(l => l.status === 'open');
-  assert.strictEqual(openOnes.length, 1);
-  assert.strictEqual(new Date(openOnes[0].opensAt).getUTCDay(), 5);
+  assert.strictEqual(morningLevelsBack.length, 5);
+  const byPriceLevel = {};
+  for (const l of morningLevelsBack) byPriceLevel[l.priceLevel] = (byPriceLevel[l.priceLevel] || 0) + 1;
+  for (const [priceLevel, count] of Object.entries(byPriceLevel)) {
+    assert.strictEqual(count, 1, `duplicate level entries for priceLevel=${priceLevel}`);
+  }
+  const freeLevel = morningLevelsBack.find(l => l.priceLevel === 'free');
+  assert.strictEqual(freeLevel.status, 'open');
+  assert.strictEqual(new Date(freeLevel.opensAt).getUTCDay(), 5);
 
   await setClock('2026-09-21T10:00:00', auth);
   const clearRes = await clearClock(auth);
